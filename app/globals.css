@@ -1,0 +1,368 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+:root {
+  --radius: 0.625rem;
+  --background: #ffffff;
+  --foreground: #2b2626;
+  --card: #ffffff;
+  --card-foreground: #2b2626;
+  --popover: #ffffff;
+  --popover-foreground: #2b2626;
+  --primary: #e63946;
+  --primary-foreground: #ffffff;
+  --secondary: #f5f5f5;
+  --secondary-foreground: #2b2626;
+  --muted: #f8f8f8;
+  --muted-foreground: #6b7280;
+  --accent: #f5f5f5;
+  --accent-foreground: #2b2626;
+  --destructive: #ef4444;
+  --border: #e5e7eb;
+  --input: #f9fafb;
+  --ring: #e63946;
+}
+
+.dark {
+  --background: #ffffff;
+  --foreground: #2b2626;
+  --card: #ffffff;
+  --card-foreground: #2b2626;
+  --popover: #ffffff;
+  --popover-foreground: #2b2626;
+  --primary: #e63946;
+  --primary-foreground: #ffffff;
+  --secondary: #f5f5f5;
+  --secondary-foreground: #2b2626;
+  --muted: #f8f8f8;
+  --muted-foreground: #6b7280;
+  --accent: #f5f5f5;
+  --accent-foreground: #2b2626;
+  --destructive: #ef4444;
+  --border: #e5e7eb;
+  --input: #f9fafb;
+  --ring: #e63946;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  
+  /* Nuevas clases personalizadas para el diseño minimalista */
+  .title-hero {
+    @apply text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight text-foreground;
+  }
+
+  .title-section {
+    @apply text-3xl sm:text-4xl font-semibold tracking-tight text-foreground;
+  }
+
+  .subtitle-hero {
+    @apply text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed;
+  }
+
+  .subtitle-section {
+    @apply text-base text-muted-foreground max-w-2xl mx-auto leading-relaxed;
+  }
+
+  /* Botón CTA moderno y minimalista */
+  .btn-primary {
+    @apply bg-primary text-primary-foreground px-8 py-4 rounded-2xl font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 active:scale-95;
+  }
+
+  .btn-secondary {
+    @apply bg-secondary text-secondary-foreground px-6 py-3 rounded-xl font-medium text-base border border-border hover:bg-accent transition-all duration-300;
+  }
+
+  /* Efectos de hover y animaciones */
+  .hover-lift {
+    @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-lg;
+  }
+
+  .card-modern {
+    @apply bg-card border border-border rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-300;
+  }
+
+  /* Gradientes sutiles */
+  .gradient-bg {
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  }
+
+  .gradient-accent {
+    background: linear-gradient(135deg, #eb3254 0%, #d91f3f 100%);
+  }
+}
+
+/* Nuevas animaciones personalizadas para botones y elementos */
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(230, 57, 70, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(230, 57, 70, 0.6), 0 0 40px rgba(230, 57, 70, 0.3);
+  }
+}
+
+@keyframes float-gentle {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes bounce-gentle {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes scale-pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+/* Clases de animación personalizadas */
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.animate-float-gentle {
+  animation: float-gentle 3s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  animation: shimmer 2s ease-in-out infinite;
+}
+
+.animate-bounce-gentle {
+  animation: bounce-gentle 2s ease-in-out infinite;
+}
+
+.animate-scale-pulse {
+  animation: scale-pulse 2s ease-in-out infinite;
+}
+
+/* Efectos especiales para botones */
+.btn-winning {
+  @apply relative overflow-hidden bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 text-white font-bold;
+  background-size: 200% 100%;
+  animation: shimmer 3s ease-in-out infinite;
+}
+
+.btn-winning:hover {
+  background-position: right center;
+  transform: scale(1.05);
+  box-shadow: 0 10px 25px rgba(251, 191, 36, 0.4);
+}
+
+/* Efectos para texto destacado */
+.text-winning {
+  @apply font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500;
+  animation: scale-pulse 2s ease-in-out infinite;
+}
+
+/* Efectos de partículas brillantes */
+.particle {
+  @apply absolute w-2 h-2 bg-yellow-300 rounded-full;
+  animation: bounce-gentle 2s ease-in-out infinite;
+}
+
+/* Efectos de hover mejorados para tarjetas */
+.card-winning {
+  @apply transition-all duration-500 hover:scale-105 hover:shadow-2xl;
+  background: linear-gradient(135deg, #ffffff 0%, #fef3c7 100%);
+}
+
+.card-winning:hover {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border-color: #f59e0b;
+}
+
+/* Utilidades para gradientes animados */
+.bg-size-200 {
+  background-size: 200% 200%;
+}
+
+@keyframes gradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-gradient {
+  animation: gradient 8s ease infinite;
+}
+
+@keyframes gradient-move {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-gradient-move {
+  animation: gradient-move 3s ease-in-out infinite;
+}
+
+@keyframes arrow-move {
+  0% {
+    transform: translateX(0px);
+  }
+  50% {
+    transform: translateX(8px);
+  }
+  100% {
+    transform: translateX(0px);
+  }
+}
+
+.animate-arrow-move {
+  animation: arrow-move 3s ease-in-out infinite;
+}
+
+@keyframes arrow-dynamic {
+  0% {
+    transform: translateX(0px) scale(1);
+  }
+  25% {
+    transform: translateX(4px) scale(1.1);
+  }
+  50% {
+    transform: translateX(8px) scale(1.2);
+  }
+  75% {
+    transform: translateX(4px) scale(1.1);
+  }
+  100% {
+    transform: translateX(0px) scale(1);
+  }
+}
+
+.animate-arrow-dynamic {
+  animation: arrow-dynamic 2s ease-in-out infinite;
+}
+
+@keyframes cart-slide {
+  0% {
+    transform: translateX(0px);
+  }
+  50% {
+    transform: translateX(6px);
+  }
+  100% {
+    transform: translateX(0px);
+  }
+}
+
+.animate-cart-slide {
+  animation: cart-slide 3s ease-in-out infinite;
+}
+
+@keyframes progress-fill {
+  0% {
+    transform: scaleX(0);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+}
+
+.animate-progress-fill {
+  animation: progress-fill 1.5s ease-out forwards;
+  transform-origin: left;
+}
+
+@keyframes progress-shine {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-progress-shine {
+  animation: progress-shine 1.5s ease-in-out infinite;
+  background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.6), transparent);
+}
