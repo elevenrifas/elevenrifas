@@ -1,0 +1,106 @@
+/* Estilos específicos para el panel de administración */
+
+/* Variables de color personalizadas para admin */
+.admin-theme {
+  --admin-primary: hsl(var(--primary));
+  --admin-primary-foreground: hsl(var(--primary-foreground));
+  --admin-secondary: hsl(var(--secondary));
+  --admin-secondary-foreground: hsl(var(--secondary-foreground));
+  --admin-accent: hsl(var(--accent));
+  --admin-accent-foreground: hsl(var(--accent-foreground));
+  --admin-muted: hsl(var(--muted));
+  --admin-muted-foreground: hsl(var(--muted-foreground));
+  --admin-border: hsl(var(--border));
+  --admin-ring: hsl(var(--ring));
+}
+
+/* Animaciones suaves para elementos del admin */
+.admin-card {
+  transition: all 0.2s ease-in-out;
+}
+
+.admin-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* Estilos para las cards de estadísticas */
+.stats-card {
+  background: linear-gradient(135deg, hsl(var(--card)) 0%, hsl(var(--card)) 100%);
+  border: 1px solid hsl(var(--border) / 0.1);
+  backdrop-filter: blur(10px);
+}
+
+/* Estilos para los botones de acción */
+.action-button {
+  transition: all 0.2s ease-in-out;
+}
+
+.action-button:hover {
+  transform: scale(1.02);
+}
+
+/* Estilos para el formulario de login */
+.login-container {
+  background: linear-gradient(135deg, hsl(var(--background)) 0%, hsl(var(--muted) / 0.1) 100%);
+}
+
+/* Estilos para el loader */
+.admin-loader {
+  animation: spin 1s linear infinite;
+}
+
+/* ESTILOS PARA EL SIDEBAR ACTIVO */
+/* Estado activo principal */
+[data-active="true"] {
+  background-color: #ff0000 !important;
+  color: white !important;
+  border-left: 4px solid #ff0000 !important;
+  font-weight: bold !important;
+  border-radius: 8px !important;
+  position: relative !important;
+  transition: all 0.2s ease-in-out !important;
+  box-shadow: 0 2px 8px rgba(255, 0, 0, 0.3) !important;
+}
+
+/* Hover para items activos */
+[data-active="true"]:hover {
+  background-color: #cc0000 !important;
+  transform: translateX(2px) !important;
+  box-shadow: 0 4px 12px rgba(255, 0, 0, 0.4) !important;
+}
+
+/* Estilos para el sidebar en hover (items no activos) */
+[data-slot="sidebar-menu-button"]:hover:not([data-active="true"]) {
+  background-color: hsl(var(--muted) / 0.2) !important;
+  color: hsl(var(--foreground)) !important;
+  transform: translateX(2px) !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+/* Estilos base para todos los botones del sidebar */
+[data-slot="sidebar-menu-button"] {
+  transition: all 0.2s ease-in-out !important;
+  border-radius: 8px !important;
+  margin: 2px 8px !important;
+  padding: 8px 12px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  color: hsl(var(--muted-foreground)) !important;
+  position: relative !important;
+}
+
+/* Efecto de transición suave para todos los cambios */
+[data-slot="sidebar-menu-button"] * {
+  transition: all 0.2s ease-in-out !important;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

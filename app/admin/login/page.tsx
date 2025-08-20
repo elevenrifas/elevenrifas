@@ -1,0 +1,38 @@
+import { LoginForm } from "../components/login-form"
+import Image from "next/image"
+
+export default function AdminLoginPage() {
+  return (
+    <div className="flex min-h-full w-full items-center justify-center bg-gradient-to-br from-background via-background to-muted/20 p-4 sm:p-6 md:p-10">
+      <div className="w-full max-w-md">
+        {/* Header con logo y título */}
+        <div className="mb-8 text-center">
+          <div className="flex justify-center mb-6">
+            <Image
+              src="/E_LOGO.png"
+              alt="ElevenRifas Logo"
+              width={120}
+              height={120}
+              className="h-20 w-auto sm:h-24 drop-shadow-lg"
+              priority
+            />
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
+            Panel de Administración
+          </h1>
+          <p className="text-muted-foreground text-base sm:text-lg">
+            Inicia sesión para continuar
+          </p>
+        </div>
+        
+        {/* Formulario de login */}
+        <LoginForm />
+        
+        {/* Footer informativo */}
+        <div className="mt-8 text-center text-sm text-muted-foreground">
+          <p>© 2024 ElevenRifas. Todos los derechos reservados.</p>
+        </div>
+      </div>
+    </div>
+  )
+}

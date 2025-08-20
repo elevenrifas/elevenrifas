@@ -1,23 +1,78 @@
 "use client";
-import { useSearchParams } from "next/navigation";
 import { useState, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowRight, CheckCircle, Copy, Smartphone, Wallet, DollarSign, ChevronDown } from "lucide-react";
+import { ArrowRight, CheckCircle, Copy, Smartphone, Wallet, ChevronDown, FileText, Check, CreditCard, Zap, Globe, Banknote } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { formatCurrencyVE } from "@/lib/formatters";
+import { useRifas, useTicketNumbersFromContext } from "@/lib/context/RifasContext";
 import { Rifa, DatosPersona, DatosPago } from "@/types";
-
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 // Componente para el Paso 1: Cantidad de tickets
-function PasoCantidad({ cantidad, setCantidad, precioTicket }: {
+function PasoCantidad({ cantidad, setCantidad, precioTicket, rifaId }: {
   cantidad: number;
   setCantidad: (cantidad: number) => void;
   precioTicket: number;
+  rifaId: string;
 }) {
-  const opciones = [1, 2, 3, 4, 5, 10, 15, 20, 25];
+  const { ticketNumbers: opciones, loading, error } = useTicketNumbersFromContext(rifaId);
+
+  // Mostrar loading mientras se cargan los números
+  if (loading) {
+    return (
+      <div className="space-y-8">
+        <div className="text-center space-y-4">
+          <h2 className="text-3xl font-bold text-foreground">¿Cuántos tickets quieres?</h2>
+          <p className="text-xl text-muted-foreground">Cargando opciones...</p>
+        </div>
+        <div className="flex justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </div>
+    );
+  }
+
+  // Mostrar error si hay problema
+  if (error) {
+    return (
+      <div className="space-y-8">
+        <div className="text-center space-y-4">
+          <h2 className="text-3xl font-bold text-foreground">¿Cuántos tickets quieres?</h2>
+          <p className="text-xl text-red-500">❌ {error}</p>
+          <p className="text-sm text-muted-foreground">No se pueden cargar las opciones de tickets desde la base de datos</p>
+        </div>
+        
+        <div className="text-center">
+          <Button 
+            onClick={() => window.location.reload()} 
+            variant="outline"
+            className="px-6 py-3"
+          >
+            🔄 Reintentar
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Si no hay opciones de tickets, mostrar mensaje
+  if (opciones.length === 0) {
+    return (
+      <div className="space-y-8">
+        <div className="text-center space-y-4">
+          <h2 className="text-3xl font-bold text-foreground">¿Cuántos tickets quieres?</h2>
+          <p className="text-xl text-muted-foreground">No hay opciones de tickets disponibles</p>
+          <p className="text-sm text-muted-foreground">Contacta al administrador para configurar las opciones</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Asegurar opciones únicas para evitar claves duplicadas
+  const opcionesUnicas = Array.from(new Set(opciones));
 
   return (
     <div className="space-y-8">
@@ -27,9 +82,9 @@ function PasoCantidad({ cantidad, setCantidad, precioTicket }: {
       </div>
 
       <div className="grid grid-cols-3 gap-4 max-w-2xl mx-auto">
-        {opciones.map((opcion) => (
+        {opcionesUnicas.map((opcion: number, idx: number) => (
           <button
-            key={opcion}
+            key={`${opcion}-${idx}`}
             onClick={() => setCantidad(opcion)}
             className={`p-6 rounded-2xl border-2 transition-all duration-300 hover:scale-105 ${
               cantidad === opcion
@@ -60,17 +115,20 @@ function PasoMetodoPago({ metodoPago, setMetodoPago }: {
   const metodos = [
     { id: "pago_movil", nombre: "Pago Móvil", icono: <Smartphone className="h-8 w-8" />, descripcion: "Transferencia bancaria vía móvil" },
     { id: "binance", nombre: "Binance", icono: <Wallet className="h-8 w-8" />, descripcion: "Pago con USDT (TRC20)" },
-    { id: "zelle", nombre: "Zelle", icono: <DollarSign className="h-8 w-8" />, descripcion: "Transferencia bancaria internacional" }
+    { id: "zelle", nombre: "Zelle", icono: <Globe className="h-8 w-8" />, descripcion: "Transferencia bancaria internacional" },
+    { id: "zinli", nombre: "Zinli", icono: <Zap className="h-8 w-8" />, descripcion: "Pago a billetera digital" },
+    { id: "paypal", nombre: "PayPal", icono: <CreditCard className="h-8 w-8" />, descripcion: "Pago online internacional" },
+    { id: "efectivo", nombre: "Efectivo", icono: <Banknote className="h-8 w-8" />, descripcion: "Pago físico en efectivo" }
   ];
 
   return (
     <div className="space-y-8">
       <div className="text-center space-y-4">
         <h2 className="text-3xl font-bold text-foreground">Método de pago</h2>
-        <p className="text-xl text-muted-foreground">Elige cómo quieres realizar el pago</p>
+        <p className="text-xl text-muted-foreground">Elige tu método de pago</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+      <div className="grid grid-cols-2 gap-6 max-w-4xl mx-auto">
         {metodos.map((metodo) => (
           <button
             key={metodo.id}
@@ -433,8 +491,445 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
           </div>
         );
 
+        case "zinli":
+          return (
+            <div className="space-y-6">
+              <div className="rounded-lg border border-border p-4 bg-secondary/20">
+                <div className="text-sm text-muted-foreground space-y-2">
+                  <div className="font-medium">📱 Datos para Zinli:</div>
+                  <div className="flex items-center justify-between">
+                    <span>• <strong>Usuario:</strong> @elevenrifas</span>
+                    <button
+                      onClick={() => copiarAlPortapapeles('@elevenrifas')}
+                      className="ml-2 p-1 hover:bg-gray-100 rounded transition-colors"
+                      title="Copiar usuario"
+                    >
+                      <Copy className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>• <strong>Monto:</strong> {formatCurrencyVE(cantidad * precioTicket)}</span>
+                    <button
+                      onClick={() => copiarAlPortapapeles((cantidad * precioTicket).toString())}
+                      className="ml-2 p-1 hover:bg-gray-100 rounded transition-colors"
+                      title="Copiar monto"
+                    >
+                      <Copy className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>• <strong>Referencia:</strong> Tu nombre + fecha</span>
+                    <button
+                      onClick={() => copiarAlPortapapeles('REF123456')}
+                      className="ml-2 p-1 hover:bg-gray-100 rounded transition-colors"
+                      title="Copiar referencia"
+                    >
+                      <Copy className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">Usuario de Zinli</label>
+                <input
+                  type="text"
+                  value={datosPago.usuarioZinli || ""}
+                  onChange={(e) => handleChange("usuarioZinli", e.target.value)}
+                  placeholder="@tuusuario"
+                  className="w-full px-4 py-3 rounded-xl border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">Referencia</label>
+                <input
+                  type="text"
+                  value={datosPago.referencia || ""}
+                  onChange={(e) => handleChange("referencia", e.target.value)}
+                  placeholder="REF123456"
+                  className="w-full px-4 py-3 rounded-xl border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+            </div>
+          );
+
+        case "paypal":
+          return (
+            <div className="space-y-6">
+              <div className="rounded-lg border border-border p-4 bg-secondary/20">
+                <div className="text-sm text-muted-foreground space-y-2">
+                  <div className="font-medium">💳 Datos para PayPal:</div>
+                  <div className="flex items-center justify-between">
+                    <span>• <strong>Correo:</strong> pagos@elevenrifas.com</span>
+                    <button
+                      onClick={() => copiarAlPortapapeles('pagos@elevenrifas.com')}
+                      className="ml-2 p-1 hover:bg-gray-100 rounded transition-colors"
+                      title="Copiar correo"
+                    >
+                      <Copy className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>• <strong>Monto:</strong> ${((cantidad * precioTicket) / 145).toFixed(2)} USD</span>
+                    <button
+                      onClick={() => copiarAlPortapapeles(((cantidad * precioTicket) / 145).toFixed(2))}
+                      className="ml-2 p-1 hover:bg-gray-100 rounded transition-colors"
+                      title="Copiar monto"
+                    >
+                      <Copy className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>• <strong>Referencia:</strong> Tu nombre + fecha</span>
+                    <button
+                      onClick={() => copiarAlPortapapeles('REF123456')}
+                      className="ml-2 p-1 hover:bg-gray-100 rounded transition-colors"
+                      title="Copiar referencia"
+                    >
+                      <Copy className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">Correo de PayPal</label>
+                <input
+                  type="email"
+                  value={datosPago.correoPaypal || ""}
+                  onChange={(e) => handleChange("correoPaypal", e.target.value)}
+                  placeholder="tu@email.com"
+                  className="w-full px-4 py-3 rounded-xl border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">Referencia</label>
+                <input
+                  type="text"
+                  value={datosPago.referencia || ""}
+                  onChange={(e) => handleChange("referencia", e.target.value)}
+                  placeholder="REF123456"
+                  className="w-full px-4 py-3 rounded-xl border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+            </div>
+          );
+
+        case "efectivo":
+          return (
+            <div className="space-y-6">
+              <div className="rounded-lg border border-border p-4 bg-secondary/20">
+                <div className="text-sm text-muted-foreground space-y-2">
+                  <div className="font-medium">💵 Datos para Pago en Efectivo:</div>
+                  <div className="flex items-center justify-between">
+                    <span>• <strong>Dirección:</strong> Av. Principal #123, Caracas</span>
+                    <button
+                      onClick={() => copiarAlPortapapeles('Av. Principal #123, Caracas')}
+                      className="ml-2 p-1 hover:bg-gray-100 rounded transition-colors"
+                      title="Copiar dirección"
+                    >
+                      <Copy className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>• <strong>Horario:</strong> Lunes a Viernes 9:00 AM - 6:00 PM</span>
+                    <button
+                      onClick={() => copiarAlPortapapeles('Lunes a Viernes 9:00 AM - 6:00 PM')}
+                      className="ml-2 p-1 hover:bg-gray-100 rounded transition-colors"
+                      title="Copiar horario"
+                    >
+                      <Copy className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>• <strong>Monto:</strong> {formatCurrencyVE(cantidad * precioTicket)}</span>
+                    <button
+                      onClick={() => copiarAlPortapapeles((cantidad * precioTicket).toString())}
+                      className="ml-2 p-1 hover:bg-gray-100 rounded transition-colors"
+                      title="Copiar monto"
+                    >
+                      <Copy className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>• <strong>Contacto:</strong> 0412-555-0123</span>
+                    <button
+                      onClick={() => copiarAlPortapapeles('0412-555-0123')}
+                      className="ml-2 p-1 hover:bg-gray-100 rounded transition-colors"
+                      title="Copiar contacto"
+                    >
+                      <Copy className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">Fecha de visita</label>
+                <input
+                  type="date"
+                  value={datosPago.fechaVisita || ""}
+                  onChange={(e) => handleChange("fechaVisita", e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+
+            </div>
+          );
+
+      case "zelle":
+        return (
+          <div className="space-y-6">
+            <div className="rounded-lg border border-border p-4 bg-secondary/20">
+              <div className="text-sm text-muted-foreground space-y-2">
+                <div className="font-medium">💳 Datos para Zelle:</div>
+                <div className="flex items-center justify-between">
+                  <span>• <strong>Email:</strong> pagos@elevenrifas.com</span>
+                  <button
+                    onClick={() => copiarAlPortapapeles('pagos@elevenrifas.com')}
+                    className="ml-2 p-1 hover:bg-gray-100 rounded transition-colors"
+                    title="Copiar email"
+                  >
+                    <Copy className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                  </button>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>• <strong>Banco:</strong> Bank of America</span>
+                  <button
+                    onClick={() => copiarAlPortapapeles('Bank of America')}
+                    className="ml-2 p-1 hover:bg-gray-100 rounded transition-colors"
+                    title="Copiar banco"
+                  >
+                    <Copy className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                  </button>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>• <strong>Monto:</strong> ${(cantidad * precioTicket / 145).toFixed(2)} USD</span>
+                  <button
+                    onClick={() => copiarAlPortapapeles((cantidad * precioTicket / 145).toFixed(2))}
+                    className="ml-2 p-1 hover:bg-gray-100 rounded transition-colors"
+                    title="Copiar monto"
+                  >
+                    <Copy className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">Email de pago</label>
+              <input
+                type="email"
+                value={datosPago.correoZelle || ""}
+                onChange={(e) => handleChange("correoZelle", e.target.value)}
+                placeholder="tu@email.com"
+                className="w-full px-4 py-3 rounded-xl border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">Banco de pago</label>
+              <input
+                type="text"
+                value={datosPago.bancoZelle || ""}
+                onChange={(e) => handleChange("bancoZelle", e.target.value)}
+                placeholder="Tu banco"
+                className="w-full px-4 py-3 rounded-xl border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">Referencia</label>
+              <input
+                type="text"
+                value={datosPago.referencia || ""}
+                onChange={(e) => handleChange("referencia", e.target.value)}
+                placeholder="REF123456"
+                className="w-full px-4 py-3 rounded-xl border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+          </div>
+        );
+
+      case "zinli":
+        return (
+          <div className="space-y-6">
+            <div className="rounded-lg border border-border p-4 bg-secondary/20">
+              <div className="text-sm text-muted-foreground space-y-2">
+                <div className="font-medium">⚡ Datos para Zinli:</div>
+                <div className="flex items-center justify-between">
+                  <span>• <strong>Usuario:</strong> @elevenrifas</span>
+                  <button
+                    onClick={() => copiarAlPortapapeles('@elevenrifas')}
+                    className="ml-2 p-1 hover:bg-gray-100 rounded transition-colors"
+                    title="Copiar usuario"
+                  >
+                    <Copy className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                  </button>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>• <strong>Monto:</strong> ${(cantidad * precioTicket / 145).toFixed(2)} USD</span>
+                  <button
+                    onClick={() => copiarAlPortapapeles((cantidad * precioTicket / 145).toFixed(2))}
+                    className="ml-2 p-1 hover:bg-gray-100 rounded transition-colors"
+                    title="Copiar monto"
+                  >
+                    <Copy className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">Usuario Zinli</label>
+              <input
+                type="text"
+                value={datosPago.usuarioZinli || ""}
+                onChange={(e) => handleChange("usuarioZinli", e.target.value)}
+                placeholder="@tuusuario"
+                className="w-full px-4 py-3 rounded-xl border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">Referencia</label>
+              <input
+                type="text"
+                value={datosPago.referencia || ""}
+                onChange={(e) => handleChange("referencia", e.target.value)}
+                placeholder="REF123456"
+                className="w-full px-4 py-3 rounded-xl border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+          </div>
+        );
+
+      case "paypal":
+        return (
+          <div className="space-y-6">
+            <div className="rounded-lg border border-border p-4 bg-secondary/20">
+              <div className="text-sm text-muted-foreground space-y-2">
+                <div className="font-medium">💳 Datos para PayPal:</div>
+                <div className="flex items-center justify-between">
+                  <span>• <strong>Email:</strong> pagos@elevenrifas.com</span>
+                  <button
+                    onClick={() => copiarAlPortapapeles('pagos@elevenrifas.com')}
+                    className="ml-2 p-1 hover:bg-gray-100 rounded transition-colors"
+                    title="Copiar email"
+                  >
+                    <Copy className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                  </button>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>• <strong>Monto:</strong> ${(cantidad * precioTicket / 145).toFixed(2)} USD</span>
+                  <button
+                    onClick={() => copiarAlPortapapeles((cantidad * precioTicket / 145).toFixed(2))}
+                    className="ml-2 p-1 hover:bg-gray-100 rounded transition-colors"
+                    title="Copiar monto"
+                  >
+                    <Copy className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">Email de pago</label>
+              <input
+                type="email"
+                value={datosPago.correoPaypal || ""}
+                onChange={(e) => handleChange("correoPaypal", e.target.value)}
+                placeholder="tu@email.com"
+                className="w-full px-4 py-3 rounded-xl border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">Referencia</label>
+              <input
+                type="text"
+                value={datosPago.referencia || ""}
+                onChange={(e) => handleChange("referencia", e.target.value)}
+                placeholder="REF123456"
+                className="w-full px-4 py-3 rounded-xl border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+          </div>
+        );
+
+      case "efectivo":
+        return (
+          <div className="space-y-6">
+            <div className="rounded-lg border border-border p-4 bg-secondary/20">
+              <div className="text-sm text-muted-foreground space-y-2">
+                <div className="font-medium">💵 Datos para Pago en Efectivo:</div>
+                <div className="flex items-center justify-between">
+                  <span>• <strong>Dirección:</strong> Av. Principal, Caracas</span>
+                  <button
+                    onClick={() => copiarAlPortapapeles('Av. Principal, Caracas')}
+                    className="ml-2 p-1 hover:bg-gray-100 rounded transition-colors"
+                    title="Copiar dirección"
+                  >
+                    <Copy className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                  </button>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>• <strong>Horario:</strong> Lunes a Viernes 9:00 AM - 5:00 PM</span>
+                  <button
+                    onClick={() => copiarAlPortapapeles('Lunes a Viernes 9:00 AM - 5:00 PM')}
+                    className="ml-2 p-1 hover:bg-gray-100 rounded transition-colors"
+                    title="Copiar horario"
+                  >
+                    <Copy className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                  </button>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>• <strong>Monto:</strong> {formatCurrencyVE(cantidad * precioTicket)}</span>
+                  <button
+                    onClick={() => copiarAlPortapapeles((cantidad * precioTicket).toString())}
+                    className="ml-2 p-1 hover:bg-gray-100 rounded transition-colors"
+                    title="Copiar monto"
+                  >
+                    <Copy className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">Fecha de visita</label>
+              <input
+                type="date"
+                value={datosPago.fechaVisita || ""}
+                onChange={(e) => handleChange("fechaVisita", e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">Notas adicionales</label>
+              <textarea
+                value={datosPago.notas || ""}
+                onChange={(e) => handleChange("notas", e.target.value)}
+                placeholder="Información adicional sobre tu visita..."
+                rows={3}
+                className="w-full px-4 py-3 rounded-xl border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+              />
+            </div>
+            </div>
+          );
+
       default:
-        return null;
+        return (
+          <div className="text-center py-8">
+            <div className="text-6xl mb-4">❓</div>
+            <h3 className="text-xl font-semibold text-foreground mb-2">Método de pago no reconocido</h3>
+            <p className="text-muted-foreground">Por favor, selecciona un método de pago válido.</p>
+          </div>
+        );
     }
   };
 
@@ -495,11 +990,19 @@ function PasoReportePago({ rifa, cantidad, metodoPago, datosPersona }: {
               </div>
               <div>
                 <span className="font-medium">Total:</span>
-                <p className="text-primary font-semibold">{formatCurrencyVE(cantidad * rifa.precioTicket)}</p>
+                                  <p className="text-primary font-semibold">{formatCurrencyVE(cantidad * rifa.precio_ticket)}</p>
               </div>
               <div>
                 <span className="font-medium">Método:</span>
-                <p className="text-muted-foreground">{metodoPago === "pago_movil" ? "Pago Móvil" : metodoPago === "binance" ? "Binance" : "Zelle"}</p>
+                <p className="text-muted-foreground">{
+                  metodoPago === "pago_movil" ? "Pago Móvil" : 
+                  metodoPago === "binance" ? "Binance" : 
+                  metodoPago === "zelle" ? "Zelle" :
+                  metodoPago === "zinli" ? "Zinli" :
+                  metodoPago === "paypal" ? "PayPal" : 
+                  metodoPago === "efectivo" ? "Efectivo" :
+                  metodoPago
+                }</p>
               </div>
             </div>
           </CardContent>
@@ -536,7 +1039,7 @@ function PasoReportePago({ rifa, cantidad, metodoPago, datosPersona }: {
         {/* Botón para volver al inicio */}
         <div className="text-center pt-4">
           <Link href="/">
-            <Button className="px-8 py-3 text-lg font-medium bg-gradient-to-r from-primary via-red-500 to-pink-500 bg-[length:200%_100%] animate-gradient-move">
+            <Button className="px-8 py-3 text-lg font-medium bg-gradient-to-r from-primary via-red-500 to-yellow-500 bg-[length:200%_100%] animate-gradient-move">
               <CheckCircle className="mr-2 h-5 w-5" />
               Volver al Inicio
             </Button>
@@ -548,13 +1051,8 @@ function PasoReportePago({ rifa, cantidad, metodoPago, datosPersona }: {
 }
 
 function ComprarPageContent() {
-  const searchParams = useSearchParams();
-  const rifaId = searchParams.get('rifaId');
-  const titulo = searchParams.get('titulo');
-  const descripcion = searchParams.get('descripcion');
-  const precioTicket = Number(searchParams.get('precioTicket'));
-  const imagen = searchParams.get('imagen');
-
+  const { rifas, rifaActiva } = useRifas();
+  
   // Estado para los 5 pasos - MOVIDO AL INICIO para evitar hooks condicionales
   const [pasoActual, setPasoActual] = useState(1);
   const [cantidad, setCantidad] = useState(0);
@@ -566,32 +1064,142 @@ function ComprarPageContent() {
     correo: ""
   });
   const [datosPago, setDatosPago] = useState<DatosPago>({});
-
-  // Validar que todos los parámetros estén presentes
-  if (!rifaId || !titulo || !descripcion || !precioTicket || !imagen) {
+  
+  // Estado para el modal de términos y condiciones
+  const [showTerminosModal, setShowTerminosModal] = useState(false);
+  const [aceptadoTerminos, setAceptadoTerminos] = useState(false);
+  
+  console.log('🔍 Contexto de rifas:', { rifas: rifas.length, rifaActiva });
+  
+  // Si no hay rifa activa, mostrar mensaje de error
+  if (!rifaActiva) {
+    console.log('❌ No hay rifa activa en el contexto');
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
-        <div className="pt-20 flex items-center justify-center p-4">
-          <div className="max-w-md w-full text-center space-y-6">
-            <div className="text-red-500 text-6xl">⚠️</div>
-            <h1 className="text-2xl font-bold">Rifa no encontrada</h1>
-            <p className="text-muted-foreground">No se encontró la información de la rifa. Por favor, selecciona una rifa válida.</p>
-            <Link href="/">
-              <Button className="w-full">
-                Volver al inicio
-              </Button>
-            </Link>
+        <div className="container mx-auto px-4 py-20 text-center">
+          <h1 className="text-3xl font-bold text-foreground mb-4">
+            ❌ No hay rifa seleccionada
+          </h1>
+          <p className="text-muted-foreground mb-8">
+            Por favor, selecciona una rifa desde la página principal
+          </p>
+          
+          {/* Debug info */}
+          <div className="bg-gray-100 p-4 rounded-lg mb-4 text-left">
+            <h3 className="font-semibold mb-2">🔍 Información de Debug:</h3>
+            <p>Rifas en contexto: {rifas.length}</p>
+            <p>Rifa activa: {rifaActiva ? (rifaActiva as Rifa).titulo : 'null'}</p>
+            <p>LocalStorage: {typeof window !== 'undefined' ? localStorage.getItem('rifaActiva') || 'vacío' : 'no disponible'}</p>
           </div>
+          
+          <Link href="/" className="text-primary hover:underline">
+            ← Volver al inicio
+          </Link>
         </div>
       </div>
     );
   }
 
-  const rifa = { id: rifaId, titulo, descripcion, precioTicket, imagen };
+  const rifa = rifaActiva;
 
-  const siguientePaso = () => setPasoActual(pasoActual + 1);
+  // NUEVA FUNCIÓN: Reportar pago y crear tickets
+  const reportarPagoYCrearTickets = async () => {
+    try {
+      console.log("🚀 Iniciando reporte de pago y creación de tickets");
+      
+      // Preparar datos para el nuevo sistema de pagos
+      const datosPagoCompleto = {
+        // Datos del pago
+        tipo_pago: metodoPago as 'pago_movil' | 'binance' | 'zelle' | 'zinli' | 'paypal' | 'efectivo',
+        monto_bs: cantidad * rifa.precio_ticket,
+        monto_usd: (cantidad * rifa.precio_ticket) / 145, // Tasa de cambio
+        tasa_cambio: 145,
+        referencia: `REF-${Date.now()}`,
+        telefono_pago: datosPago.telefonoPago || datosPersona.telefono,
+        banco_pago: datosPago.bancoPago,
+        cedula_pago: datosPago.cedulaPago || datosPersona.cedula,
+        id_binance: datosPago.idBinance,
+        correo_zelle: datosPago.correoZelle,
+        banco_zelle: datosPago.bancoZelle,
+        usuario_zinli: datosPago.usuarioZinli,
+        correo_paypal: datosPago.correoPaypal,
+        fecha_visita: datosPago.fechaVisita,
+        notas: `Compra de ${cantidad} tickets para rifa ${rifa.titulo}`,
+        
+        // Datos de los tickets
+        cantidad_tickets: cantidad,
+        rifa_id: rifa.id,
+        nombre: datosPersona.nombre,
+        cedula: datosPersona.cedula,
+        telefono: datosPersona.telefono,
+        email: datosPersona.correo
+      };
+
+      console.log("📊 Datos del pago preparados:", datosPagoCompleto);
+      console.log("🔍 Tipo de cantidad_tickets:", typeof datosPagoCompleto.cantidad_tickets, "Valor:", datosPagoCompleto.cantidad_tickets);
+      console.log("🔍 Tipo de rifa_id:", typeof datosPagoCompleto.rifa_id, "Valor:", datosPagoCompleto.rifa_id);
+      
+      // LOG DETALLADO DE TODOS LOS CAMPOS
+      console.log("🔍 VERIFICACIÓN DETALLADA DE TIPOS:");
+      Object.entries(datosPagoCompleto).forEach(([key, value]) => {
+        console.log(`  ${key}: ${typeof value} = ${value}`);
+      });
+
+      // Importar la función dinámicamente para evitar problemas de SSR
+      const { reportarPagoConTickets } = await import('@/lib/database/pagos');
+      
+      // Ejecutar la transacción completa usando el nuevo sistema
+      const resultado = await reportarPagoConTickets(datosPagoCompleto);
+      
+      if (resultado.success) {
+        console.log("✅ Pago procesado exitosamente:", resultado);
+        
+        // Mostrar mensaje de éxito
+        toast.success(`¡Pago reportado exitosamente! ${resultado.tickets_creados} tickets creados`);
+        
+        // Informar sobre el bloqueo automático
+        toast.info("Tickets bloqueados hasta verificar el pago");
+        
+        // Continuar al siguiente paso (confirmación)
+        setPasoActual(5);
+        
+      } else {
+        console.error("❌ Error al procesar pago:", resultado.error);
+        toast.error(`Error al procesar el pago: ${resultado.error}`);
+      }
+      
+    } catch (error) {
+      console.error("💥 Error inesperado al procesar pago:", error);
+      toast.error("Error inesperado al procesar el pago");
+    }
+  };
+
+  const siguientePaso = async () => {
+    // Mostrar términos y condiciones en el paso 1 (antes de continuar)
+    if (pasoActual === 1 && !aceptadoTerminos) {
+      setShowTerminosModal(true);
+      return;
+    }
+    
+    // Si estamos en el paso 4 (Reportar Pago), ejecutar la lógica de crear pago
+    if (pasoActual === 4) {
+      await reportarPagoYCrearTickets();
+      return;
+    }
+    
+    // En otros casos, continuar al siguiente paso
+    setPasoActual(pasoActual + 1);
+  };
+  
   const pasoAnterior = () => setPasoActual(pasoActual - 1);
+  
+  const confirmarTerminos = () => {
+    setAceptadoTerminos(true);
+    setShowTerminosModal(false);
+    // Ahora sí continuar al siguiente paso
+    setPasoActual(pasoActual + 1);
+  };
 
   // Función para determinar si puede continuar al siguiente paso
   const puedeContinuar = (): boolean => {
@@ -610,6 +1218,16 @@ function ComprarPageContent() {
       default:
         return false;
     }
+  };
+  
+  // Función para determinar si puede continuar considerando términos y condiciones
+  const puedeContinuarConTerminos = (): boolean => {
+    // En el paso 1, solo verificar que haya seleccionado cantidad (no términos)
+    if (pasoActual === 1) {
+      return puedeContinuar();
+    }
+    // En otros pasos, solo verificar la validación normal
+    return puedeContinuar();
   };
 
   // Función para obtener el texto del botón según el paso
@@ -630,7 +1248,8 @@ function ComprarPageContent() {
           <PasoCantidad
             cantidad={cantidad}
             setCantidad={setCantidad}
-            precioTicket={precioTicket}
+                         precioTicket={rifa.precio_ticket}
+             rifaId={rifa.id}
           />
         );
       case 2:
@@ -654,7 +1273,7 @@ function ComprarPageContent() {
             datosPago={datosPago}
             setDatosPago={setDatosPago}
             cantidad={cantidad}
-            precioTicket={precioTicket}
+                         precioTicket={rifa.precio_ticket}
           />
         );
       case 5:
@@ -674,6 +1293,67 @@ function ComprarPageContent() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar showBackButton={pasoActual < 5} onBack={pasoActual > 1 ? pasoAnterior : () => window.location.href = '/'} />
+      
+      {/* Modal de Términos y Condiciones */}
+      <Dialog open={showTerminosModal} onOpenChange={setShowTerminosModal}>
+        <DialogContent className="w-[90vw] sm:w-auto sm:max-w-md md:max-w-lg lg:max-w-xl max-h-[60vh] overflow-y-auto rounded-xl border border-border/60 bg-white/95 backdrop-blur-sm shadow-lg p-0">
+          <DialogHeader className="px-5 pt-4 pb-3 border-b border-border/50 text-center items-center">
+            <DialogTitle className="flex items-center justify-center gap-2 text-base sm:text-lg">
+              <FileText className="h-4 w-4 text-primary" />
+              Términos y Condiciones
+            </DialogTitle>
+            <DialogDescription className="mt-1 text-xs text-muted-foreground text-center">
+              Lee y acepta los términos
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="px-5 py-4 space-y-4 text-sm text-muted-foreground leading-relaxed">
+            <div className="space-y-1.5">
+              <h4 className="font-medium text-foreground text-sm text-center sm:text-left">Participación</h4>
+              <ul className="list-disc list-inside space-y-1 ml-2">
+                <li>Mayor de 18 años</li>
+                <li>No garantiza ganar</li>
+                <li>Números aleatorios</li>
+              </ul>
+            </div>
+            
+            <div className="space-y-1.5">
+              <h4 className="font-medium text-foreground text-sm text-center sm:text-left">Proceso</h4>
+              <ul className="list-disc list-inside space-y-1 ml-2">
+                <li>Verificación 24-48h</li>
+                <li>Tickets por correo</li>
+              </ul>
+            </div>
+            
+            <div className="space-y-1.5">
+              <h4 className="font-medium text-foreground text-sm text-center sm:text-left">Privacidad</h4>
+              <ul className="list-disc list-inside space-y-1 ml-2">
+                <li>Solo para gestión</li>
+                <li>No compartimos datos</li>
+              </ul>
+            </div>
+          </div>
+          
+          <DialogFooter className="px-5 py-4 border-t border-border/50 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowTerminosModal(false)}
+              size="sm"
+              className="w-full sm:w-auto"
+            >
+              Cancelar
+            </Button>
+            <Button 
+              onClick={confirmarTerminos}
+              size="sm"
+              className="w-full sm:w-auto bg-gradient-to-r from-primary via-red-500 to-yellow-500 bg-[length:200%_100%] animate-gradient-move"
+            >
+              <Check className="mr-1 h-3 w-3" />
+              Acepto y Continuar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       
       <main className="pt-4 pb-40">
                   {/* Indicador de pasos */}
@@ -699,7 +1379,7 @@ function ComprarPageContent() {
                 {/* Título de la rifa - Ahora arriba y con más espacio */}
                 <div className="flex-1">
                   <h3 className="text-lg font-semibold text-foreground leading-tight">
-                    {titulo}
+                    {rifa.titulo}
                   </h3>
                 </div>
                 
@@ -708,28 +1388,28 @@ function ComprarPageContent() {
                   <div className="space-y-1 text-sm">
                     {cantidad > 0 ? (
                       <>
-                        <div className="text-primary font-semibold">
-                          {formatCurrencyVE(precioTicket)} × {cantidad}
-                        </div>
-                        <div className="text-muted-foreground">
-                          Tasa: 145 | ${(precioTicket / 145).toFixed(2)} USD c/u
-                        </div>
-                        <div className="text-primary font-semibold text-base">
-                          Total: {formatCurrencyVE(cantidad * precioTicket)}
-                        </div>
-                        <div className="text-muted-foreground text-xs">
-                          Total USD: ${((cantidad * precioTicket) / 145).toFixed(2)}
-                        </div>
+                                                  <div className="text-primary font-semibold">
+                            {formatCurrencyVE(rifa.precio_ticket)} × {cantidad}
+                          </div>
+                          <div className="text-muted-foreground">
+                            Tasa: 145 | ${(rifa.precio_ticket / 145).toFixed(2)} USD c/u
+                          </div>
+                          <div className="text-primary font-semibold text-base">
+                            Total: {formatCurrencyVE(cantidad * rifa.precio_ticket)}
+                          </div>
+                          <div className="text-muted-foreground text-xs">
+                            Total USD: ${((cantidad * rifa.precio_ticket) / 145).toFixed(2)}
+                          </div>
                       </>
                     ) : (
-                      <>
-                        <div className="text-muted-foreground">
-                          Precio: {formatCurrencyVE(precioTicket)}
-                        </div>
-                        <div className="text-muted-foreground">
-                          Tasa: 145 | ${(precioTicket / 145).toFixed(2)} USD c/u
-                        </div>
-                      </>
+                                              <>
+                          <div className="text-muted-foreground">
+                            Precio: {formatCurrencyVE(rifa.precio_ticket)}
+                          </div>
+                          <div className="text-muted-foreground">
+                            Tasa: 145 | ${(rifa.precio_ticket / 145).toFixed(2)} USD c/u
+                          </div>
+                        </>
                     )}
                   </div>
 
@@ -737,8 +1417,8 @@ function ComprarPageContent() {
                   <div className="ml-6">
                     <Button 
                       onClick={siguientePaso}
-                      disabled={!puedeContinuar()}
-                      className="px-8 py-3 text-lg font-bold bg-gradient-to-r from-primary via-red-500 to-pink-500 bg-[length:200%_100%] animate-gradient-move"
+                      disabled={!puedeContinuarConTerminos()}
+                      className="px-8 py-3 text-lg font-bold bg-gradient-to-r from-primary via-red-500 to-yellow-500 bg-[length:200%_100%] animate-gradient-move"
                     >
                       {getTextoBoton()}
                       <ArrowRight className="ml-2 h-5 w-5" />

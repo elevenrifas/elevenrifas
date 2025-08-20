@@ -23,5 +23,12 @@
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules",
+    "database/scripts/**",
+    "database/queries/**",
+    "toolbox/**",
+    "lib/database/ejemplo-uso.ts",
+    "lib/database/test-imports.ts"
+  ]
 }

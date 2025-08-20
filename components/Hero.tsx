@@ -37,14 +37,14 @@ export function Hero() {
       
       {/* Elementos decorativos sutiles */}
       <div className="absolute inset-0 pointer-events-none">
-        <div className={`absolute top-20 left-10 w-32 h-32 bg-[#e63946]/5 rounded-full blur-3xl transition-all duration-1000 ${isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-50'}`}></div>
-        <div className={`absolute top-40 right-20 w-24 h-24 bg-[#e63946]/3 rounded-full blur-2xl transition-all duration-1000 delay-300 ${isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-50'}`}></div>
+        <div className={`absolute top-20 left-10 w-32 h-32 bg-[#fb0413]/5 rounded-full blur-3xl transition-all duration-1000 ${isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-50'}`}></div>
+        <div className={`absolute top-40 right-20 w-24 h-24 bg-[#fb0413]/3 rounded-full blur-2xl transition-all duration-1000 delay-300 ${isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-50'}`}></div>
       </div>
 
       <div className="relative z-10 container mx-auto px-4 sm:px-6 py-12">
         <div className="text-center space-y-0">
           {/* Badge personalizado "Rifas Premium" */}
-          <div className={`inline-flex items-center gap-2 bg-gradient-to-r from-[#e63946] to-[#e63946]/80 backdrop-blur-sm text-white px-6 py-3 rounded-full text-sm font-bold shadow-lg transition-all duration-1000 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
+          <div className={`inline-flex items-center gap-2 bg-gradient-to-r from-[#fb0413] to-[#fb0413]/80 backdrop-blur-sm text-white px-6 py-3 rounded-full text-sm font-bold shadow-lg transition-all duration-1000 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
             <Star className="w-5 h-5 text-yellow-300" />
             <span>RIFAS PREMIUM</span>
           </div>
@@ -73,18 +73,18 @@ export function Hero() {
         {/* Recuadro rojo curvo MUCHO MÁS ALTO que se extiende más allá del viewport */}
         <div className={`relative mt-8 transition-all duration-1000 delay-600 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
           {/* Recuadro principal rojo - MUCHO MÁS ALTO */}
-          <div className="relative bg-[#e63946] rounded-3xl p-6 lg:p-8 shadow-2xl min-h-[600px] lg:min-h-[800px] flex flex-col items-center justify-start">
+          <div className="relative bg-[#fb0413] rounded-3xl p-6 lg:p-8 shadow-2xl min-h-[600px] lg:min-h-[800px] flex flex-col items-center justify-start">
             {/* Contenido dentro del recuadro rojo - MÁS PEGADO AL TOPE */}
             <div className="text-center text-white space-y-6 mt-8 lg:mt-12">
               {/* Texto animado "¿LISTO PARA GANAR?" */}
               <div className="my-6">
-                <div className="flex flex-wrap items-center justify-center gap-3 lg:gap-4 text-4xl lg:text-6xl font-black text-yellow-300">
+                <div className="flex flex-wrap items-center justify-center gap-3 lg:gap-4 text-4xl lg:text-6xl font-black text-yellow-100">
                   {['¿LISTO', 'PARA', 'GANAR?'].map((word, index) => (
                     <span
                       key={index}
                       className={`inline-block transition-all duration-300 ${
                         pulseIndex === index 
-                          ? 'scale-125 text-yellow-100 drop-shadow-lg' 
+                          ? 'scale-125 text-yellow-300 drop-shadow-lg' 
                           : 'scale-100'
                       }`}
                       style={{
@@ -105,7 +105,7 @@ export function Hero() {
                 {/* Botón principal con efectos mejorados */}
                 <Button 
                   onClick={scrollToRifas}
-                  className="group relative bg-white text-[#e63946] hover:bg-white/90 px-12 py-6 rounded-2xl font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 active:scale-95 overflow-hidden"
+                  className="group relative bg-white text-[#fb0413] hover:bg-white/90 px-12 py-6 rounded-2xl font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 active:scale-95 overflow-hidden"
                 >
                   {/* Efecto de brillo que se mueve */}
                   <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:translate-x-full transition-transform duration-1000"></div>
@@ -126,7 +126,7 @@ export function Hero() {
                   >
                     {/* Efecto de borde brillante */}
                     <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                    <div className="absolute inset-[2px] rounded-2xl bg-[#e63946]"></div>
+                    <div className="absolute inset-[2px] rounded-2xl bg-[#fb0413]"></div>
                     
                     {/* Contenido del botón */}
                     <div className="relative flex items-center gap-2">
@@ -151,7 +151,7 @@ export function Hero() {
                 />
                 
                 {/* Efecto de brillo sutil */}
-                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#e63946]/10 rounded-3xl"></div>
+                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#fb0413]/10 rounded-3xl"></div>
                 
                 {/* Efecto de partículas brillantes */}
                 <div className="absolute inset-0 pointer-events-none">

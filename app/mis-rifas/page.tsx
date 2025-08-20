@@ -1,61 +1,54 @@
 "use client";
 import { useState } from "react";
-import { RifaComprada } from "@/types";
+import { RifaConTickets } from "@/types";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Search, User, Mail, Ticket, Calendar, DollarSign } from "lucide-react";
+import { Search, User, Mail, Ticket, Calendar, DollarSign, AlertCircle } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { formatCurrencyVE } from "@/lib/formatters";
+import { obtenerRifasConTickets } from "@/lib/database/tickets";
 
 export default function MisRifasPage() {
   const [tipoBusqueda, setTipoBusqueda] = useState<"cedula" | "email">("cedula");
   const [valorBusqueda, setValorBusqueda] = useState("");
-  const [rifasEncontradas, setRifasEncontradas] = useState<RifaComprada[]>([]);
+  const [rifasEncontradas, setRifasEncontradas] = useState<RifaConTickets[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
-
-  // Datos de ejemplo - en producción esto vendría de una base de datos
-  const rifasEjemplo = [
-    {
-      id: 1,
-      titulo: "Toyota 4Runner TRD Pro",
-      imagen: "/images/2022_Toyota_4Runner_TRD_Pro_Lime_Rush_001.jpeg",
-      numerosComprados: ["0001", "0045", "0123", "0256", "0789"],
-      precioTicket: 145,
-      fechaCompra: "2024-01-15",
-      estado: "activa"
-    },
-    {
-      id: 2,
-      titulo: "Toyota Camry",
-      imagen: "/images/camry.jpeg",
-      numerosComprados: ["0012", "0078", "0234"],
-      precioTicket: 145,
-      fechaCompra: "2024-01-10",
-      estado: "activa"
-    }
-  ];
+  const [error, setError] = useState<string | null>(null);
 
   const buscarRifas = async () => {
     if (!valorBusqueda.trim()) return;
     
     setIsLoading(true);
     setHasSearched(true);
+    setError(null);
     
-    // Simular búsqueda - en producción esto sería una llamada a la API
-    setTimeout(() => {
-      setRifasEncontradas(rifasEjemplo);
+    try {
+      const rifas = await obtenerRifasConTickets(tipoBusqueda, valorBusqueda.trim());
+      setRifasEncontradas(rifas);
+    } catch (err) {
+      console.error('Error al buscar rifas:', err);
+      setError('Error al conectar con la base de datos. Intenta nuevamente.');
+      setRifasEncontradas([]);
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   const limpiarBusqueda = () => {
     setValorBusqueda("");
     setRifasEncontradas([]);
     setHasSearched(false);
+    setError(null);
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      buscarRifas();
+    }
   };
 
   return (
@@ -118,6 +111,7 @@ export default function MisRifasPage() {
                       placeholder={tipoBusqueda === "cedula" ? "Ej: 12345678" : "Ej: usuario@email.com"}
                       value={valorBusqueda}
                       onChange={(e) => setValorBusqueda(e.target.value)}
+                      onKeyPress={handleKeyPress}
                       className="flex-1"
                     />
                     <Button 
@@ -145,6 +139,18 @@ export default function MisRifasPage() {
               </CardContent>
             </Card>
 
+            {/* Error */}
+            {error && (
+              <Card className="mb-6 border-red-200 bg-red-50">
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-3 text-red-700">
+                    <AlertCircle className="h-5 w-5" />
+                    <p>{error}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Resultados */}
             {hasSearched && (
               <div className="space-y-6">
@@ -160,12 +166,12 @@ export default function MisRifasPage() {
                     </h2>
                     <div className="grid gap-6">
                       {rifasEncontradas.map((rifa) => (
-                        <Card key={rifa.id} className="overflow-hidden">
+                        <Card key={rifa.rifa_id} className="overflow-hidden">
                           <div className="md:flex">
                             {/* Imagen */}
                             <div className="md:w-48 md:h-32 flex-shrink-0">
                               <Image
-                                src={rifa.imagen}
+                                src={rifa.imagen_url}
                                 alt={rifa.titulo}
                                 width={192}
                                 height={128}
@@ -184,18 +190,18 @@ export default function MisRifasPage() {
                                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-muted-foreground mb-4">
                                     <div className="flex items-center gap-2">
                                       <Ticket className="h-4 w-4 text-primary" />
-                                      <span>{rifa.numerosComprados.length} tickets</span>
+                                      <span>{rifa.total_tickets} tickets</span>
                                     </div>
                                     <div className="flex items-center gap-2">
                                       <DollarSign className="h-4 w-4 text-primary" />
-                                      <span>{formatCurrencyVE(rifa.precioTicket)} c/u</span>
+                                      <span>{formatCurrencyVE(rifa.precio_promedio)} c/u</span>
                                     </div>
                                     <div className="flex items-center gap-2">
                                       <Calendar className="h-4 w-4 text-primary" />
-                                      <span>{new Date(rifa.fechaCompra).toLocaleDateString()}</span>
+                                      <span>{new Date(rifa.tickets[0]?.fecha_compra || '').toLocaleDateString()}</span>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                      <div className={`w-2 h-2 rounded-full ${rifa.estado === 'activa' ? 'bg-green-500' : 'bg-gray-500'}`}></div>
+                                      <div className={`w-2 h-2 rounded-full ${rifa.activa ? 'bg-green-500' : 'bg-gray-500'}`}></div>
                                       <span className="capitalize">{rifa.estado}</span>
                                     </div>
                                   </div>
@@ -208,12 +214,12 @@ export default function MisRifasPage() {
                                   Números comprados:
                                 </h4>
                                 <div className="flex flex-wrap gap-2">
-                                  {rifa.numerosComprados.map((numero, index) => (
+                                  {rifa.tickets.map((ticket) => (
                                     <div
-                                      key={index}
+                                      key={ticket.id}
                                       className="px-3 py-1 bg-primary/10 text-primary font-mono text-sm rounded-lg border border-primary/20"
                                     >
-                                      {numero.padStart(4, '0')}
+                                      {ticket.numero_ticket.padStart(4, '0')}
                                     </div>
                                   ))}
                                 </div>

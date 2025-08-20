@@ -1,13 +1,37 @@
 // Tipos para el sistema de rifas
 
 export interface Rifa {
-  id: string | number;
+  id: string;
   titulo: string;
   descripcion: string;
-  precioTicket: number;
-  imagen: string;
-  estado?: string;
-  activa?: boolean;
+  precio_ticket: number;
+  imagen_url: string;
+  estado: 'activa' | 'cerrada' | 'finalizada';
+  fecha_creacion: string;
+  fecha_culminacion?: string;
+  fecha_cierre?: string;
+  total_tickets: number;
+  tickets_disponibles: number;
+  premio_principal?: string;
+  condiciones?: string;
+  activa: boolean;
+  tipo_rifa: string;
+  categoria: string;
+  marca?: string;
+  modelo?: string;
+  ano?: number;
+  color?: string;
+  valor_estimado_usd?: number;
+  destacada: boolean;
+  orden: number;
+  slug: string;
+  numero_tickets_comprar?: number[];
+  categorias_rifas?: {
+    id: string;
+    nombre: string;
+    icono: string;
+    color: string;
+  };
 }
 
 export interface DatosPersona {
@@ -26,6 +50,10 @@ export interface DatosPago {
   emailZelle?: string;
   correoZelle?: string;
   bancoZelle?: string;
+  usuarioZinli?: string;
+  correoPaypal?: string;
+  fechaVisita?: string;
+  notas?: string;
 }
 
 export interface RifaComprada {
@@ -36,6 +64,46 @@ export interface RifaComprada {
   precioTicket: number;
   fechaCompra: string;
   estado: string;
+}
+
+// Nuevas interfaces para tickets
+export interface TicketConRifa {
+  id: string;
+  rifa_id: string;
+  numero_ticket: string;
+  precio: number;
+  nombre: string;
+  cedula: string;
+  telefono?: string;
+  correo: string;
+  estado: 'reservado' | 'pagado' | 'verificado' | 'cancelado';
+  fecha_compra: string;
+  fecha_verificacion?: string;
+  bloqueado_por_pago: boolean;
+  pago_bloqueante_id?: string;
+  fecha_bloqueo?: string;
+  estado_verificacion: string;
+  pago_bloqueador_id?: string;
+  pago_id?: string;
+  email?: string;
+  rifa: {
+    id: string;
+    titulo: string;
+    imagen_url: string;
+    estado: string;
+    activa: boolean;
+  };
+}
+
+export interface RifaConTickets {
+  rifa_id: string;
+  titulo: string;
+  imagen_url: string;
+  estado: string;
+  activa: boolean;
+  tickets: TicketConRifa[];
+  total_tickets: number;
+  precio_promedio: number;
 }
 
 export interface MetodoPago {

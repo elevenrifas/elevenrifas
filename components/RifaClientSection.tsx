@@ -18,6 +18,13 @@ export function RifaClientSection({ rifas }: Props) {
   const endIndex = startIndex + rifasPerPage;
   const currentRifas = rifas.slice(startIndex, endIndex);
   
+  // Debug: Verificar que no hay duplicados
+  console.log('🔍 Rifas totales:', rifas.length);
+  console.log('🔍 Rifas actuales:', currentRifas.length);
+  console.log('🔍 IDs de rifas actuales:', currentRifas.map(r => r.id));
+  console.log('🔍 IDs únicos de rifas actuales:', [...new Set(currentRifas.map(r => r.id))]);
+  console.log('🔍 Hay duplicados en currentRifas:', currentRifas.length !== [...new Set(currentRifas.map(r => r.id))].length);
+  
   const goToNextPage = () => {
     if (currentPage < totalPages) {
       setCurrentPage(currentPage + 1);
@@ -61,9 +68,15 @@ export function RifaClientSection({ rifas }: Props) {
 
         {/* Grid de rifas paginado */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-          {currentRifas.map((rifa) => (
-            <RifaCard key={rifa.id} rifa={rifa} />
-          ))}
+          {currentRifas
+            .filter((rifa, index, array) => {
+              // Filtrar duplicados por ID
+              const firstIndex = array.findIndex(r => r.id === rifa.id);
+              return firstIndex === index;
+            })
+            .map((rifa, index) => (
+              <RifaCard key={`${rifa.id}-${index}-${currentPage}`} rifa={rifa} />
+            ))}
         </div>
 
         {/* Paginador - Siempre visible */}

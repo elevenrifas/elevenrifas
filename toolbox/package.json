@@ -1,0 +1,42 @@
+{
+  "name": "eleven-rifas-toolbox",
+  "version": "1.0.0",
+  "description": "Caja de herramientas para gestión de base de datos de Eleven Rifas",
+  "main": "toolbox.js",
+  "scripts": {
+    "start": "node toolbox.js",
+    "check": "node toolbox.js --check",
+    "setup": "node toolbox.js --setup",
+    "example": "node example-usage.js",
+    "example:basic": "node example-usage.js --basico",
+    "example:data": "node example-usage.js --datos",
+    "example:queries": "node example-usage.js --queries",
+    "example:setup": "node example-usage.js --setup",
+    "test": "node toolbox.js --check && node example-usage.js --basico"
+  },
+  "keywords": [
+    "toolbox",
+    "database",
+    "supabase",
+    "rifas",
+    "sql",
+    "management"
+  ],
+  "author": "Eleven Rifas Team",
+  "license": "MIT",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0"
+  },
+  "devDependencies": {},
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/eleven-rifas.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-username/eleven-rifas/issues"
+  },
+  "homepage": "https://github.com/your-username/eleven-rifas#readme"
+}
