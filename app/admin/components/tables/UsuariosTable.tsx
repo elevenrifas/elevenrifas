@@ -4,7 +4,7 @@ import * as React from "react"
 import { ColumnDef } from "@tanstack/react-table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { DataTable } from "../data-table"
+import { DataTable } from "../data-table/DataTable"
 import { 
   DropdownMenu, 
   DropdownMenuContent, 

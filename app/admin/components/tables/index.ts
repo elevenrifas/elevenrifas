@@ -2,9 +2,9 @@
 // 🎛️ TABLES COMPONENTS - EXPORTS
 // =====================================================
 
-export { RifasTable, rifasColumns } from "./RifasTable"
-export { CategoriasRifasTable, categoriasColumns } from "./CategoriasRifasTable"
+export { RifasTable } from "./RifasTable"
+export { CategoriasRifasTable } from "./CategoriasRifasTable"
 export { PagosTable, pagosColumns } from "./PagosTable"
 export { ProfilesTable, profilesColumns } from "./ProfilesTable"
-export { TicketsTable, ticketsColumns } from "./TicketsTable"
+export { TicketsTable } from "./TicketsTable"
 export { UsuariosTable, usuariosColumns } from "./UsuariosTable"

@@ -20,85 +20,146 @@ export function useAdminAuth() {
   const router = useRouter()
 
   useEffect(() => {
-    // Obtener sesión actual
-    const getSession = async () => {
+    let mounted = true
+
+    // Función para verificar sesión
+    const checkSession = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession()
+        console.log('🔍 Verificando sesión...')
         
-        if (session?.user) {
+        // Obtener sesión actual
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+        
+        if (sessionError) {
+          console.error('❌ Error obteniendo sesión:', sessionError)
+          if (mounted) {
+            setLoading(false)
+          }
+          return
+        }
+
+        if (!session?.user) {
+          console.log('❌ No hay sesión activa')
+          if (mounted) {
+            setUser(null)
+            setProfile(null)
+            setIsAdmin(false)
+            setLoading(false)
+          }
+          return
+        }
+
+        console.log('✅ Usuario encontrado:', session.user.email)
+        if (mounted) {
           setUser(session.user)
+        }
+
+        // Verificar rol de admin
+        console.log('🔍 Verificando rol de admin...')
+        console.log('🔍 Buscando perfil para usuario ID:', session.user.id)
+        
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('id, email, role, created_at')
+          .eq('id', session.user.id)
+          .eq('role', 'admin')
+          .single()
+
+        console.log('🔍 Resultado de búsqueda de perfil:')
+        console.log('🔍 - Profile data:', profileData)
+        console.log('🔍 - Profile error:', profileError)
+        
+        if (profileError || !profileData) {
+          console.log('❌ Usuario no es admin:', profileError?.message)
           
-          // Verificar si es admin
-          const { data: profileData, error } = await supabase
+          // Vamos a verificar si el usuario existe en profiles pero con otro rol
+          console.log('🔍 Verificando si el usuario existe en profiles...')
+          const { data: anyProfile, error: anyProfileError } = await supabase
             .from('profiles')
             .select('id, email, role, created_at')
             .eq('id', session.user.id)
-            .eq('role', 'admin')
             .single()
-
-          if (error || !profileData) {
-            // No es admin, redirigir a login
-            await supabase.auth.signOut()
-            router.push('/admin/login')
-            return
+          
+          console.log('🔍 Perfil encontrado (cualquier rol):', anyProfile)
+          console.log('🔍 Error de perfil (cualquier rol):', anyProfileError)
+          
+          if (mounted) {
+            setProfile(null)
+            setIsAdmin(false)
+            setLoading(false)
           }
+          return
+        }
 
+        console.log('✅ Usuario confirmado como admin')
+        if (mounted) {
           setProfile(profileData)
           setIsAdmin(true)
-        } else {
-          // No hay sesión, redirigir a login
-          router.push('/admin/login')
+          setLoading(false)
         }
+
       } catch (error) {
-        console.error('Error verificando autenticación:', error)
-        router.push('/admin/login')
-      } finally {
-        setLoading(false)
+        console.error('❌ Error inesperado:', error)
+        if (mounted) {
+          setUser(null)
+          setProfile(null)
+          setIsAdmin(false)
+          setLoading(false)
+        }
       }
     }
 
-    getSession()
+    // Verificar sesión inicial
+    checkSession()
 
     // Escuchar cambios en la autenticación
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('🔄 Evento de autenticación:', event, session?.user?.email)
+        
         if (event === 'SIGNED_IN' && session?.user) {
-          setUser(session.user)
-          
-          // Verificar si es admin
-          const { data: profileData, error } = await supabase
-            .from('profiles')
-            .select('id, email, role, created_at')
-            .eq('id', session.user.id)
-            .eq('role', 'admin')
-            .single()
-
-          if (error || !profileData) {
-            await supabase.auth.signOut()
-            router.push('/admin/login')
-            return
+          console.log('✅ Usuario inició sesión, verificando...')
+          if (mounted) {
+            setUser(session.user)
+            setLoading(true)
           }
-
-          setProfile(profileData)
-          setIsAdmin(true)
+          // Verificar rol de admin
+          await checkSession()
         } else if (event === 'SIGNED_OUT') {
-          setUser(null)
-          setProfile(null)
-          setIsAdmin(false)
-          router.push('/admin/login')
+          console.log('❌ Usuario cerró sesión')
+          if (mounted) {
+            setUser(null)
+            setProfile(null)
+            setIsAdmin(false)
+            setLoading(false)
+          }
+        } else if (event === 'TOKEN_REFRESHED' && session?.user) {
+          console.log('🔄 Token refrescado, verificando sesión...')
+          if (mounted) {
+            setUser(session.user)
+            setLoading(true)
+          }
+          await checkSession()
         }
       }
     )
 
-    return () => subscription.unsubscribe()
-  }, [router])
+    return () => {
+      mounted = false
+      subscription.unsubscribe()
+    }
+  }, [])
 
   const signOut = async () => {
     try {
+      console.log('🚪 Cerrando sesión...')
       await supabase.auth.signOut()
+      setUser(null)
+      setProfile(null)
+      setIsAdmin(false)
       router.push('/admin/login')
     } catch (error) {
-      console.error('Error al cerrar sesión:', error)
+      console.error('❌ Error al cerrar sesión:', error)
     }
   }
 

@@ -26,8 +26,59 @@ export default function AdminRifasPage() {
 
   const handleExport = (rifas: any[]) => {
     console.log("Exportar rifas:", rifas)
-    // Aquí implementarías la lógica real de exportación
-    // Por ejemplo, generar CSV, PDF, etc.
+    
+    try {
+      // Crear headers del CSV
+      const headers = [
+        'ID',
+        'Título',
+        'Descripción',
+        'Precio Ticket',
+        'Estado',
+        'Total Tickets',
+        'Tickets Disponibles',
+        'Fecha Creación',
+        'Fecha Cierre',
+        'Categoría ID'
+      ]
+      
+      // Convertir datos a filas CSV
+      const csvRows = [
+        headers.join(','), // Primera fila: headers
+        ...rifas.map(rifa => [
+          rifa.id,
+          `"${rifa.titulo}"`, // Comillas para evitar problemas con comas
+          `"${rifa.descripcion}"`,
+          rifa.precio_ticket,
+          rifa.estado,
+          rifa.total_tickets,
+          rifa.tickets_disponibles,
+          rifa.fecha_creacion,
+          rifa.fecha_cierre,
+          rifa.categoria_id
+        ].join(','))
+      ]
+      
+      // Crear contenido CSV
+      const csvContent = csvRows.join('\n')
+      
+      // Crear blob y descargar
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+      const link = document.createElement('a')
+      const url = URL.createObjectURL(blob)
+      
+      link.setAttribute('href', url)
+      link.setAttribute('download', `rifas_${new Date().toISOString().split('T')[0]}.csv`)
+      link.style.visibility = 'hidden'
+      
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      
+      console.log('✅ Archivo CSV descargado exitosamente')
+    } catch (error) {
+      console.error('Error al exportar a CSV:', error)
+    }
   }
 
   return (

@@ -137,4 +137,58 @@ export interface DatosPagoZelle {
   monto: number;
 }
 
+// Tipos para Tickets
+export interface Ticket {
+  id: string
+  rifa_id: string | null
+  numero_ticket: string
+  precio: number
+  nombre: string
+  cedula: string
+  telefono: string | null
+  correo: string
+  estado: 'reservado' | 'pagado' | 'verificado' | 'cancelado'
+  fecha_compra: string | null
+  fecha_verificacion: string | null
+  bloqueado_por_pago: boolean | null
+  pago_bloqueante_id: string | null
+  fecha_bloqueo: string | null
+  estado_verificacion: 'pendiente' | 'verificado' | 'rechazado' | null
+  pago_bloqueador_id: string | null
+  pago_id: string | null
+  email: string | null
+}
+
+export interface AdminTicket extends Ticket {
+  rifas?: {
+    id: string
+    titulo: string
+  }
+  pagos?: {
+    id: string
+    monto_bs: number
+    monto_usd: number
+    estado: string
+    tipo_pago: string
+  }
+}
+
+export interface CreateTicketData {
+  rifa_id: string
+  numero_ticket: string
+  precio: number
+  nombre: string
+  cedula: string
+  telefono?: string
+  correo: string
+  estado?: 'reservado' | 'pagado' | 'verificado' | 'cancelado'
+  email?: string
+}
+
+export interface UpdateTicketData extends Partial<CreateTicketData> {
+  estado_verificacion?: 'pendiente' | 'verificado' | 'rechazado'
+  bloqueado_por_pago?: boolean
+  fecha_verificacion?: string
+}
+
 

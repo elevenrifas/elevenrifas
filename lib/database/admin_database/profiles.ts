@@ -1,101 +1,112 @@
-import { supabase } from "@/lib/database"
-import type { Database } from "@/types/supabase"
+// =====================================================
+// 🛠️ ADMIN DB - PROFILES
+// =====================================================
+// Lógica de base de datos exclusiva para el panel de administración
+// =====================================================
+
+import { 
+  adminSupabase, 
+  createAdminQuery, 
+  safeAdminQuery, 
+  applyOrdering,
+  applyPagination
+} from '@/lib/database'
+import type { Database } from '@/types/supabase'
 
 type Profile = Database['public']['Tables']['profiles']['Row']
+type ProfileInsert = Database['public']['Tables']['profiles']['Insert']
+type ProfileUpdate = Database['public']['Tables']['profiles']['Update']
 
-export async function adminListProfiles(): Promise<Profile[]> {
-  try {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .order('created_at', { ascending: false })
+export type AdminProfile = Profile
 
-    if (error) {
-      console.error('Error fetching profiles:', error)
-      throw error
-    }
+export async function adminListProfiles(params?: {
+  ordenarPor?: string
+  orden?: 'asc' | 'desc'
+  limite?: number
+  offset?: number
+}) {
+  const {
+    ordenarPor = 'created_at',
+    orden = 'desc',
+    limite = 1000,
+    offset = 0
+  } = params || {}
 
-    return data || []
-  } catch (error) {
-    console.error('Error in adminListProfiles:', error)
-    throw error
-  }
+  return safeAdminQuery(
+    async () => {
+      let query = createAdminQuery('profiles').select('*')
+      
+      // Aplicar ordenamiento usando helper
+      query = applyOrdering(query, ordenarPor, orden)
+      
+      // Aplicar paginación usando helper
+      query = applyPagination(query, limite, offset)
+
+      const result = await query
+      
+      return { 
+        data: result.data || [],
+        error: null,
+        total: result.data?.length || 0
+      }
+    },
+    'Error al listar perfiles'
+  )
 }
 
-export async function adminCreateProfile(profileData: Database['public']['Tables']['profiles']['Insert']): Promise<Profile> {
-  try {
-    const { data, error } = await supabase
-      .from('profiles')
-      .insert(profileData)
-      .select()
-      .single()
-
-    if (error) {
-      console.error('Error creating profile:', error)
-      throw error
-    }
-
-    return data
-  } catch (error) {
-    console.error('Error in adminCreateProfile:', error)
-    throw error
-  }
+export async function adminGetProfile(id: string) {
+  return safeAdminQuery(
+    async () => {
+      return createAdminQuery('profiles')
+        .select('*')
+        .eq('id', id)
+        .single()
+    },
+    'Error al obtener perfil'
+  )
 }
 
-export async function adminUpdateProfile(id: string, profileData: Database['public']['Tables']['profiles']['Update']): Promise<Profile> {
-  try {
-    const { data, error } = await supabase
-      .from('profiles')
-      .update(profileData)
-      .eq('id', id)
-      .select()
-      .single()
-
-    if (error) {
-      console.error('Error updating profile:', error)
-      throw error
-    }
-
-    return data
-  } catch (error) {
-    console.error('Error in adminUpdateProfile:', error)
-    throw error
-  }
+export async function adminCreateProfile(profileData: ProfileInsert) {
+  return safeAdminQuery(
+    async () => {
+      const { data, error } = await createAdminQuery('profiles')
+        .insert(profileData)
+        .select()
+        .single()
+      
+      if (error) throw error
+      return { data, error: null }
+    },
+    'Error al crear perfil'
+  )
 }
 
-export async function adminDeleteProfile(id: string): Promise<void> {
-  try {
-    const { error } = await supabase
-      .from('profiles')
-      .delete()
-      .eq('id', id)
-
-    if (error) {
-      console.error('Error deleting profile:', error)
-      throw error
-    }
-  } catch (error) {
-    console.error('Error in adminDeleteProfile:', error)
-    throw error
-  }
+export async function adminUpdateProfile(id: string, profileData: ProfileUpdate) {
+  return safeAdminQuery(
+    async () => {
+      const { data, error } = await createAdminQuery('profiles')
+        .update(profileData)
+        .eq('id', id)
+        .select()
+        .single()
+      
+      if (error) throw error
+      return { data, error: null }
+    },
+    'Error al actualizar perfil'
+  )
 }
 
-export async function adminGetProfile(id: string): Promise<Profile | null> {
-  try {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', id)
-      .single()
-
-    if (error) {
-      console.error('Error fetching profile:', error)
-      throw error
-    }
-
-    return data
-  } catch (error) {
-    console.error('Error in adminGetProfile:', error)
-    throw error
-  }
+export async function adminDeleteProfile(id: string) {
+  return safeAdminQuery(
+    async () => {
+      const { error } = await createAdminQuery('profiles')
+        .delete()
+        .eq('id', id)
+      
+      if (error) throw error
+      return { data: null, error: null }
+    },
+    'Error al eliminar perfil'
+  )
 }

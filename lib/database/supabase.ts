@@ -1,7 +1,7 @@
 // =====================================================
 // 🔌 CLIENTE SUPABASE CENTRALIZADO - ELEVEN RIFAS
 // =====================================================
-// Clientes para operaciones del lado del cliente (browser)
+// Cliente único para operaciones del lado del cliente (browser)
 // Para operaciones del servidor, usar lib/database/supabase-server.ts
 // =====================================================
 
@@ -13,34 +13,17 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
 // =====================================================
-// CLIENTES DEL LADO DEL CLIENTE (BROWSER)
+// CLIENTE ÚNICO DEL LADO DEL CLIENTE (BROWSER)
 // =====================================================
 
-// Cliente principal para operaciones del lado del cliente
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey)
-
-// Cliente para operaciones que requieren autenticación
-export const supabaseAuth = createClient<Database>(
-  supabaseUrl,
-  supabaseAnonKey,
-  {
-    auth: {
-      autoRefreshToken: true,
-      persistSession: true,
-      detectSessionInUrl: true
-    }
+// Cliente único para operaciones del lado del cliente
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true,
+    storageKey: 'eleven-rifas-auth'
   }
-)
+})
 
-// Cliente universal compatible con ambos contextos
-export const supabaseUniversal = createClient<Database>(
-  supabaseUrl,
-  supabaseAnonKey,
-  {
-    auth: {
-      autoRefreshToken: true,
-      persistSession: true,
-      detectSessionInUrl: true
-    }
-  }
-)
+// NOTA: Solo exportar el cliente principal para evitar múltiples instancias
