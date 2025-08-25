@@ -89,3 +89,4 @@ npm install
 - ✅ Dependencias limpias y compatibles
 - ✅ Configuración mínima para Vercel
 - ✅ Listo para deploy automático
+
