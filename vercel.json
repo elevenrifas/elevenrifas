@@ -1,16 +1,15 @@
 {
-  "buildCommand": "npm run build",
+  "buildCommand": "npm run build:vercel-safe",
   "outputDirectory": ".next",
   "framework": "nextjs",
-  "installCommand": "npm install",
+  "installCommand": "npm ci --only=production",
   "devCommand": "npm run dev",
-  "build": {
-    "env": {
-      "NEXT_TELEMETRY_DISABLED": "1"
-    }
-  },
+  "regions": ["iad1"],
   "functions": {
     "app/**/*.tsx": {
+      "maxDuration": 30
+    },
+    "app/api/**/*.ts": {
       "maxDuration": 30
     }
   },
@@ -31,6 +30,12 @@
           "value": "1; mode=block"
         }
       ]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/"
     }
   ]
 }

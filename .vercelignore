@@ -1,30 +1,62 @@
-# Archivos de desarrollo que pueden causar conflictos en Vercel
+# Archivos de desarrollo y testing
+toolbox/
+scripts/
+docs/
+*.md
+*.log
+
+# Archivos de configuración local
 .env.local
 .env.development
 .env.test
 
-# Archivos de toolbox que no son necesarios en producción
-toolbox/
-scripts/
+# Archivos de desarrollo
+.eslintrc*
+.prettierrc*
+.editorconfig
 
-# Archivos de documentación
-*.md
-docs/
+# Archivos de testing
+coverage/
+.nyc_output/
+test/
+__tests__/
+*.test.*
+*.spec.*
 
-# Archivos de configuración local
-.eslintrc.local
-.prettierrc.local
-
-# Archivos temporales
-*.tmp
-*.temp
-
-# Logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+# Archivos de build local
+.next/
+out/
+dist/
+build/
 
 # Archivos de sistema
 .DS_Store
 Thumbs.db
+
+# Archivos de IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Archivos temporales
+*.tmp
+*.temp
+.cache/
+
+# Archivos de base de datos local
+*.db
+*.sqlite
+
+# Archivos de logs
+logs/
+*.log
+
+# Archivos de backup
+*.bak
+*.backup
+
+# Archivos de documentación
+README.md
+CHANGELOG.md
+LICENSE

@@ -6,7 +6,7 @@
 // =====================================================
 
 import { useCallback, useRef, useEffect } from 'react'
-import { log, loggerConfig } from '@/toolbox/utils/logger'
+import { log, loggerConfig } from '@/lib/utils/logger'
 
 export interface UseLoggerOptions {
   context?: string
