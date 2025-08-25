@@ -15,6 +15,15 @@ const nextConfig: NextConfig = {
   experimental: {
     // Optimizar el bundle
     optimizePackageImports: ['@radix-ui/react-icons', 'lucide-react'],
+    // Resolver conflicto con lightningcss en Vercel
+    turbo: {
+      rules: {
+        '*.css': {
+          loaders: ['@tailwindcss/postcss'],
+          as: '*.css',
+        },
+      },
+    },
   },
   // Configuración de webpack para builds más rápidos
   webpack: (config, { dev, isServer }) => {
@@ -34,8 +43,21 @@ const nextConfig: NextConfig = {
         },
       };
     }
+    
+    // Resolver conflicto con lightningcss
+    config.resolve = {
+      ...config.resolve,
+      fallback: {
+        ...config.resolve.fallback,
+        fs: false,
+        path: false,
+      },
+    };
+    
     return config;
   },
+  // Configuración específica para Vercel
+  transpilePackages: ['@tailwindcss/postcss'],
 };
 
 export default nextConfig;

@@ -1,6 +1,7 @@
 "use client"
 
-import { useAdminAuth } from "@/hooks/use-admin-auth"
+import React from 'react'
+import { useAdminAuthContext } from "@/lib/context/AdminAuthContext"
 import { usePathname } from "next/navigation"
 import { Loader2 } from "lucide-react"
 
@@ -8,27 +9,22 @@ interface ProtectedRouteProps {
   children: React.ReactNode
 }
 
-export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { loading, isAdmin, user } = useAdminAuth()
+export const ProtectedRoute = React.memo(({ children }: ProtectedRouteProps) => {
+  const { loading, isAdmin, user } = useAdminAuthContext()
   const pathname = usePathname()
   
-  // Debug logs
-  console.log('🔒 ProtectedRoute - Estado actual:', {
-    loading,
-    isAdmin,
-    user: user ? { id: user.id, email: user.email } : null,
-    pathname
-  })
+  // Solo mostrar logs en desarrollo
+  if (process.env.NODE_ENV === 'development') {
+    console.log('🔒 ProtectedRoute - Estado:', { loading, isAdmin, pathname })
+  }
   
   // Si estamos en la página de login, no necesitamos protección
   if (pathname === '/admin/login') {
-    console.log('🔓 Ruta de login, permitiendo acceso')
     return <>{children}</>
   }
 
   // Mostrar loading mientras se verifica la autenticación
   if (loading) {
-    console.log('⏳ Mostrando loading...')
     return (
       <div className="flex min-h-full items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
@@ -41,7 +37,6 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   // Si no hay usuario autenticado, redirigir al login
   if (!user) {
-    console.log('❌ No hay usuario, redirigiendo a login...')
     // Usar window.location para evitar problemas de navegación
     if (typeof window !== 'undefined') {
       window.location.href = '/admin/login'
@@ -51,7 +46,6 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   // Si hay usuario pero no es admin, mostrar acceso denegado
   if (!isAdmin) {
-    console.log('🚫 Usuario no es admin, mostrando acceso denegado')
     return (
       <div className="flex min-h-full items-center justify-center bg-background">
         <div className="text-center">
@@ -67,6 +61,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   }
 
   // Si todo está bien, renderizar el contenido
-  console.log('✅ Usuario autenticado y es admin, permitiendo acceso')
   return <>{children}</>
-}
+})
+
+ProtectedRoute.displayName = 'ProtectedRoute'
