@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/database/supabase'
 import { getAdminPerformanceConfig } from '@/lib/config/admin-performance'
+import { isEmergencyModeActive, EMERGENCY_CONFIG } from '@/lib/config/emergency-mode'
 import type { User } from '@supabase/supabase-js'
 
 interface AdminProfile {
@@ -68,6 +69,60 @@ export function useAdminAuth() {
     const startTime = performance.now()
     
     try {
+      // Verificar si el modo emergencia está activo
+      if (isEmergencyModeActive()) {
+        if (config.ENABLE_PERFORMANCE_LOGS) console.log('🚨 MODO EMERGENCIA: Verificación de permisos desactivada')
+        
+        // Crear un usuario mock para desarrollo
+        const mockUser = {
+          id: EMERGENCY_CONFIG.EMERGENCY_ADMIN.id,
+          email: EMERGENCY_CONFIG.EMERGENCY_ADMIN.email,
+          user_metadata: { full_name: EMERGENCY_CONFIG.EMERGENCY_ADMIN.fullName },
+          app_metadata: { provider: 'emergency' },
+          aud: 'authenticated',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          role: 'admin'
+        } as User
+        
+        if (config.ENABLE_PERFORMANCE_LOGS) console.log('🚨 MODO EMERGENCIA: Usando usuario admin temporal')
+        setUser(mockUser)
+
+        // Crear perfil mock
+        const mockProfile = {
+          id: EMERGENCY_CONFIG.EMERGENCY_ADMIN.id,
+          email: EMERGENCY_CONFIG.EMERGENCY_ADMIN.email,
+          role: EMERGENCY_CONFIG.EMERGENCY_ADMIN.role,
+          created_at: new Date().toISOString()
+        } as AdminProfile
+
+        if (config.ENABLE_PERFORMANCE_LOGS) console.log('✅ Usuario confirmado como admin (modo emergencia)')
+        
+        // Actualizar estado
+        setProfile(mockProfile)
+        setIsAdmin(true)
+        setLoading(false)
+        
+        // Guardar en cache
+        sessionCache.current = {
+          timestamp: now,
+          user: mockUser,
+          profile: mockProfile,
+          isAdmin: true
+        }
+        
+        // Log de rendimiento
+        const duration = performance.now() - startTime
+        if (config.ENABLE_PERFORMANCE_LOGS) {
+          console.log(`⚡ Verificación completada en ${duration.toFixed(2)}ms (modo emergencia)`)
+        }
+        
+        return
+      }
+      
+      // 🔒 VERIFICACIÓN NORMAL (cuando no está en modo emergencia)
+      if (config.ENABLE_PERFORMANCE_LOGS) console.log('🔒 Ejecutando verificación normal de permisos...')
+      
       // Obtener sesión actual
       const { data: { session }, error: sessionError } = await supabase.auth.getSession()
       
