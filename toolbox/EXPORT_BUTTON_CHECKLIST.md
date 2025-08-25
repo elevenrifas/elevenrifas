@@ -134,3 +134,4 @@ const handleExport = () => {
 **Estado**: En progreso
 **Responsable**: Equipo de desarrollo
 
+

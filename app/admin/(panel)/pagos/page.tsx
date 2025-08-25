@@ -1,6 +1,6 @@
 "use client"
 
-import { PagosTable } from "@/app/admin/components/tables"
+import { PagosVerificacionTable } from "@/app/admin/components/tables"
 
 // =====================================================
 // 🎯 PÁGINA ADMIN PAGOS - ELEVEN RIFAS
@@ -93,7 +93,7 @@ export default function AdminPagosPage() {
 
   return (
     <div className="px-4 lg:px-6">
-      <PagosTable
+      <PagosVerificacionTable
         onCreate={handleCreate}
         onEdit={handleEdit}
         onDelete={handleDelete}

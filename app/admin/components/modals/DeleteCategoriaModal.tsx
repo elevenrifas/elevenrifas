@@ -76,8 +76,7 @@ export function DeleteCategoriaModal({
           <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
             <div className="flex items-center gap-3">
               <Badge 
-                style={{ backgroundColor: categoria.color || '#3B82F6' }}
-                className="text-white border-0"
+                className="text-white border-0 bg-blue-500"
               >
                 <Tag className="h-4 w-4 mr-2" />
                 {categoria.nombre}

@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu"
 import { MoreHorizontal, Edit, Trash2, Eye, Tag } from "lucide-react"
+import * as LucideIcons from "lucide-react"
 import type { AdminCategoria } from "@/lib/database/admin_database/categorias"
 import { useAdminCategorias } from "@/hooks/use-admin-categorias"
 
@@ -50,9 +51,10 @@ export function CategoriasRifasTable({
 
   // Cargar categorías al montar el componente
   React.useEffect(() => {
-    console.log('🔄 Cargando categorías...')
+    console.log('🔄 [TABLA] Cargando categorías...')
+    console.log('🔄 [TABLA] Hook disponible:', !!loadCategorias)
     loadCategorias()
-  }, []) // Solo se ejecuta al montar el componente
+  }, [loadCategorias]) // Agregado loadCategorias como dependencia
 
   // Debug: mostrar estado de los datos
   React.useEffect(() => {
@@ -98,11 +100,8 @@ export function CategoriasRifasTable({
       // Crear headers del CSV
       const headers = [
         'ID',
-        'Orden',
         'Nombre',
-        'Descripción',
-        'Rifas Count',
-        'Estado'
+        'Icono'
       ]
       
       // Convertir datos a filas CSV
@@ -110,11 +109,8 @@ export function CategoriasRifasTable({
         headers.join(','), // Primera fila: headers
         ...data.map(categoria => [
           categoria.id,
-          categoria.orden,
           `"${categoria.nombre}"`, // Comillas para evitar problemas con comas
-          `"${categoria.descripcion}"`,
-          categoria.rifas_count,
-          categoria.activa ? 'Activa' : 'Inactiva'
+          categoria.icono
         ].join(','))
       ]
       
@@ -148,72 +144,33 @@ export function CategoriasRifasTable({
   // Columnas de la tabla
   const categoriasColumns: ColumnDef<Categoria>[] = [
     {
-      accessorKey: "orden",
-      header: "Orden",
-      cell: ({ row }) => {
-        const orden = row.getValue("orden") as number || 0
-        return (
-          <div className="flex items-center justify-center">
-            <Badge variant="outline" className="text-xs font-mono">
-              {orden}
-            </Badge>
-          </div>
-        )
-      },
-      size: 80,
-    },
-    {
       accessorKey: "nombre",
       header: "Nombre",
-      cell: ({ row }) => (
-        <div className="flex items-center gap-2">
-          <Tag className="h-4 w-4 text-muted-foreground" />
-          <div className="font-medium">{row.getValue("nombre")}</div>
-        </div>
-      ),
-    },
-    {
-      accessorKey: "descripcion",
-      header: "Descripción",
       cell: ({ row }) => {
-        const descripcion = row.getValue("descripcion") as string
+        const categoria = row.original
+        const iconName = categoria.icono || 'tag'
+        
+        // Convertir el nombre del icono a PascalCase
+        const pascalCaseName = iconName
+          .split('-')
+          .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+          .join('')
+        
+        const IconComponent = (LucideIcons as any)[pascalCaseName] || Tag
+        
         return (
-          <div className="max-w-[200px] truncate text-sm text-muted-foreground">
-            {descripcion || 'Sin descripción'}
+          <div className="flex items-center gap-2">
+            <div className="p-2 rounded-full bg-gray-100">
+              <IconComponent className="h-4 w-4 text-gray-600" />
+            </div>
+            <div className="font-medium">{categoria.nombre}</div>
           </div>
         )
       },
     },
-    {
-      accessorKey: "rifas_count",
-      header: "Rifas",
-      cell: ({ row }) => {
-        const count = row.getValue("rifas_count") as number || 0
-        return (
-          <div className="text-center">
-            <Badge variant="secondary" className="text-xs">
-              {count}
-            </Badge>
-          </div>
-        )
-      },
-      size: 80,
-    },
-    {
-      accessorKey: "activa",
-      header: "Estado",
-      cell: ({ row }) => {
-        const activa = row.getValue("activa") as boolean
-        return (
-          <div className="flex items-center justify-center">
-            <Badge variant={activa ? "default" : "secondary"}>
-              {activa ? "Activa" : "Inactiva"}
-            </Badge>
-          </div>
-        )
-      },
-      size: 100,
-    },
+
+
+
     {
       id: "actions",
       header: "Acciones",

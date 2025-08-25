@@ -19,7 +19,16 @@ function getCategoryIcon(iconName: string) {
     'building': <Building className="w-6 h-6 text-primary" />,
     'dollar-sign': <DollarSign className="w-6 h-6 text-primary" />,
     'zap': <Zap className="w-6 h-6 text-primary" />,
-    'credit-card': <CreditCard className="w-6 h-6 text-primary" />
+    'credit-card': <CreditCard className="w-6 h-6 text-primary" />,
+    'smartphone': <Building className="w-6 h-6 text-primary" />,
+    'home': <Building className="w-6 h-6 text-primary" />,
+    'gamepad2': <Zap className="w-6 h-6 text-primary" />,
+    'shirt': <Building className="w-6 h-6 text-primary" />,
+    'bicycle': <Car className="w-6 h-6 text-primary" />,
+    'coffee': <Building className="w-6 h-6 text-primary" />,
+    'book-open': <Building className="w-6 h-6 text-primary" />,
+    'plane': <Zap className="w-6 h-6 text-primary" />,
+    'heart': <Zap className="w-6 h-6 text-primary" />
   };
   
   return iconMap[iconName] || <Car className="w-6 h-6 text-primary" />;
@@ -28,6 +37,34 @@ function getCategoryIcon(iconName: string) {
 export function RifaCard({ rifa }: Props) {
   const router = useRouter();
   const { setRifaActiva } = useRifas();
+
+  // Función para calcular el progreso de la rifa de manera inteligente
+  const calcularProgresoRifa = () => {
+    // Si hay progreso manual configurado y es mayor a 0, usarlo
+    if (rifa.progreso_manual && rifa.progreso_manual > 0) {
+      return Math.min(rifa.progreso_manual, 100); // Limitar a 100%
+    }
+    
+    // Si no hay progreso manual, calcular automáticamente
+    if (rifa.total_tickets && rifa.total_tickets > 0) {
+      const ticketsVendidos = rifa.total_tickets - (rifa.tickets_disponibles || 0);
+      return Math.round((ticketsVendidos / rifa.total_tickets) * 100);
+    }
+    
+    return 0; // Valor por defecto
+  };
+
+  // Función para formatear precio en USD
+  const formatCurrencyUSD = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2
+    }).format(amount);
+  };
+
+  // Calcular precio en Bs usando tasa fija de 145 Bs/USD (el precio ya viene en USD)
+  const precioBs = rifa.precio_ticket * 145;
 
   const handleComprar = () => {
     console.log('🎯 Seleccionando rifa:', rifa.titulo);
@@ -53,13 +90,13 @@ export function RifaCard({ rifa }: Props) {
             
             {/* Badge de precio */}
             <div className="absolute top-4 right-4 bg-primary text-white px-3 py-1 rounded-full text-sm font-semibold shadow-lg">
-              {formatCurrencyVE(rifa.precio_ticket)}
+              {formatCurrencyUSD(rifa.precio_ticket)}
             </div>
             
             {/* Badge de estado */}
             <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm text-foreground px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1">
               <Zap className="w-3 h-3 text-primary" />
-              {rifa.activa ? 'Activa' : 'Inactiva'}
+              {rifa.estado === 'activa' ? 'Activa' : rifa.estado}
             </div>
           </div>
         )}
@@ -96,19 +133,34 @@ export function RifaCard({ rifa }: Props) {
             <div className="flex justify-between items-center text-base">
               <span className="text-muted-foreground">Progreso de la rifa</span>
               <span className="font-semibold text-yellow-500">
-                {rifa.total_tickets > 0 ? Math.round(((rifa.total_tickets - (rifa.tickets_disponibles || 0)) / rifa.total_tickets) * 100) : 0}%
+                {calcularProgresoRifa()}%
               </span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
               <div 
                 className="bg-gradient-to-r from-primary via-yellow-500 to-red-500 h-3 rounded-full relative" 
                 style={{
-                  width: `${rifa.total_tickets > 0 ? ((rifa.total_tickets - (rifa.tickets_disponibles || 0)) / rifa.total_tickets) * 100 : 0}%`
+                  width: `${calcularProgresoRifa()}%`
                 }}
               >
                 {/* Efecto de movimiento continuo solo sobre la parte llena */}
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-progress-shine" style={{width: '100%'}}></div>
               </div>
+            </div>
+          </div>
+          
+          {/* Información de precios sutil */}
+          <div className="flex items-center justify-between text-sm text-muted-foreground border-t border-gray-100 pt-3">
+            <div className="flex items-center gap-2">
+              <span className="font-medium">{formatCurrencyUSD(rifa.precio_ticket)}</span>
+              <span className="text-xs">USD</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-medium">{formatCurrencyVE(precioBs)}</span>
+              <span className="text-xs">Bs</span>
+            </div>
+            <div className="text-xs text-muted-foreground">
+              Tasa: 145 Bs/USD
             </div>
           </div>
           

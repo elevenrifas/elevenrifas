@@ -154,7 +154,7 @@ export const isUserRoute = (pathname: string): boolean => {
 // Redirecciones comunes
 export const REDIRECTS = {
   // Después del login exitoso
-  AFTER_LOGIN: ADMIN_ROUTES.DASHBOARD,
+  AFTER_LOGIN: ADMIN_ROUTES.RIFAS,
   
   // Después del logout
   AFTER_LOGOUT: ADMIN_ROUTES.LOGIN,

@@ -1,0 +1,15 @@
+create table public.usuario_verificacion (
+  id uuid not null default extensions.uuid_generate_v4 (),
+  usuario character varying(20) not null,
+  pin smallint not null,
+  activo boolean null default true,
+  fecha_creacion timestamp without time zone null default now(),
+  constraint usuario_verificacion_pkey primary key (id),
+  constraint usuario_verificacion_usuario_key unique (usuario),
+  constraint usuario_verificacion_pin_check check (
+    (
+      (pin >= 1000)
+      and (pin <= 9999)
+    )
+  )
+) TABLESPACE pg_default;

@@ -10,6 +10,7 @@ import { formatCurrencyVE } from "@/lib/formatters";
 import { useRifas, useTicketNumbersFromContext } from "@/lib/context/RifasContext";
 import { Rifa, DatosPersona, DatosPago } from "@/types";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { reportarPagoConTickets, DatosPagoCompleto } from '@/lib/database/pagos';
 
 // Componente para el Paso 1: Cantidad de tickets
 function PasoCantidad({ cantidad, setCantidad, precioTicket, rifaId }: {
@@ -1104,74 +1105,60 @@ function ComprarPageContent() {
   const rifa = rifaActiva;
 
   // NUEVA FUNCIÓN: Reportar pago y crear tickets
+
   const reportarPagoYCrearTickets = async () => {
+    console.log('🚀 Iniciando reporte de pago y creación de tickets');
+    
     try {
-      console.log("🚀 Iniciando reporte de pago y creación de tickets");
-      
-      // Preparar datos para el nuevo sistema de pagos
-      const datosPagoCompleto = {
-        // Datos del pago
+      // Preparar datos del pago
+      const datosPagoCompleto: DatosPagoCompleto = {
         tipo_pago: metodoPago as 'pago_movil' | 'binance' | 'zelle' | 'zinli' | 'paypal' | 'efectivo',
-        monto_bs: cantidad * rifa.precio_ticket,
-        monto_usd: (cantidad * rifa.precio_ticket) / 145, // Tasa de cambio
+        monto_usd: rifa.precio_ticket * cantidad,
+        monto_bs: rifa.precio_ticket * cantidad * 145,
         tasa_cambio: 145,
         referencia: `REF-${Date.now()}`,
-        telefono_pago: datosPago.telefonoPago || datosPersona.telefono,
+        telefono_pago: datosPersona.telefono,
         banco_pago: datosPago.bancoPago,
-        cedula_pago: datosPago.cedulaPago || datosPersona.cedula,
-        id_binance: datosPago.idBinance,
-        correo_zelle: datosPago.correoZelle,
-        banco_zelle: datosPago.bancoZelle,
-        usuario_zinli: datosPago.usuarioZinli,
-        correo_paypal: datosPago.correoPaypal,
+        cedula_pago: datosPersona.cedula,
         fecha_visita: datosPago.fechaVisita,
-        notas: `Compra de ${cantidad} tickets para rifa ${rifa.titulo}`,
-        
-        // Datos de los tickets
+        estado: 'pendiente',
         cantidad_tickets: cantidad,
         rifa_id: rifa.id,
         nombre: datosPersona.nombre,
         cedula: datosPersona.cedula,
         telefono: datosPersona.telefono,
-        email: datosPersona.correo
+        correo: datosPersona.correo
       };
 
-      console.log("📊 Datos del pago preparados:", datosPagoCompleto);
-      console.log("🔍 Tipo de cantidad_tickets:", typeof datosPagoCompleto.cantidad_tickets, "Valor:", datosPagoCompleto.cantidad_tickets);
-      console.log("🔍 Tipo de rifa_id:", typeof datosPagoCompleto.rifa_id, "Valor:", datosPagoCompleto.rifa_id);
-      
-      // LOG DETALLADO DE TODOS LOS CAMPOS
-      console.log("🔍 VERIFICACIÓN DETALLADA DE TIPOS:");
+      console.log('📊 Datos del pago preparados:', datosPagoCompleto);
+      console.log('🔍 Tipo de cantidad_tickets:', typeof datosPagoCompleto.cantidad_tickets, 'Valor:', datosPagoCompleto.cantidad_tickets);
+      console.log('🔍 Tipo de rifa_id:', typeof datosPagoCompleto.rifa_id, 'Valor:', datosPagoCompleto.rifa_id);
+      console.log('🔍 Precio ticket original:', rifa.precio_ticket);
+      console.log('🔍 Cantidad:', cantidad);
+      console.log('🔍 Total USD:', rifa.precio_ticket * cantidad);
+      console.log('🔍 Total Bs:', rifa.precio_ticket * cantidad * 145);
+
+      console.log('🔍 VERIFICACIÓN DETALLADA DE TIPOS:');
       Object.entries(datosPagoCompleto).forEach(([key, value]) => {
         console.log(`  ${key}: ${typeof value} = ${value}`);
       });
 
-      // Importar la función dinámicamente para evitar problemas de SSR
-      const { reportarPagoConTickets } = await import('@/lib/database/pagos');
-      
-      // Ejecutar la transacción completa usando el nuevo sistema
+      console.log('📞 Llamando a reportarPagoConTickets...');
       const resultado = await reportarPagoConTickets(datosPagoCompleto);
-      
-      if (resultado.success) {
-        console.log("✅ Pago procesado exitosamente:", resultado);
-        
-        // Mostrar mensaje de éxito
-        toast.success(`¡Pago reportado exitosamente! ${resultado.tickets_creados} tickets creados`);
-        
-        // Informar sobre el bloqueo automático
-        toast.info("Tickets bloqueados hasta verificar el pago");
-        
-        // Continuar al siguiente paso (confirmación)
+      console.log('📞 Resultado recibido:', resultado);
+
+      if (resultado && resultado.success) {
+        console.log('✅ Pago reportado exitosamente');
+        toast.success('Pago reportado exitosamente');
         setPasoActual(5);
-        
       } else {
-        console.error("❌ Error al procesar pago:", resultado.error);
-        toast.error(`Error al procesar el pago: ${resultado.error}`);
+        console.log('❌ Error en el resultado:', resultado);
+        toast.error('Error al reportar el pago');
       }
-      
+
     } catch (error) {
-      console.error("💥 Error inesperado al procesar pago:", error);
-      toast.error("Error inesperado al procesar el pago");
+      console.log('💥 Error en reportarPagoYCrearTickets:', error);
+      toast.error('Error al procesar el pago');
     }
   };
 
@@ -1414,7 +1401,7 @@ function ComprarPageContent() {
                   </div>
 
                   {/* Botón de continuar */}
-                  <div className="ml-6">
+                  <div className="ml-6 space-y-2">
                     <Button 
                       onClick={siguientePaso}
                       disabled={!puedeContinuarConTerminos()}

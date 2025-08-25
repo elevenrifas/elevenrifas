@@ -18,6 +18,7 @@ import {
   Bug
 } from 'lucide-react'
 import { useAdminAuth } from '@/hooks/use-admin-auth'
+import { useLogger } from '@/hooks/use-logger'
 import { supabase } from '@/lib/database'
 
 interface DashboardStats {
@@ -33,6 +34,15 @@ interface DashboardStats {
 }
 
 export default function AdminDashboardPage() {
+  // Usar el nuevo sistema de logging
+  const logger = useLogger({
+    context: 'DASHBOARD',
+    componentName: 'AdminDashboard',
+    enableDebug: true,
+    logUserActions: true,
+    logPerformance: true
+  })
+
   const [stats, setStats] = useState<DashboardStats>({
     totalRifas: 0,
     rifasActivas: 0,
@@ -57,30 +67,30 @@ export default function AdminDashboardPage() {
       setError(null)
       setWarning(null)
       
-      console.log('📊 Cargando datos del dashboard...')
+      logger.logInfo('Iniciando carga de datos del dashboard')
       
       // Verificar qué tablas están disponibles
-      console.log('🔍 Verificando tablas disponibles...')
+      logger.logDebug('Verificando tablas disponibles')
       
       // Cargar rifas
-      console.log('🔍 Cargando rifas...')
+      logger.logDebug('Cargando rifas desde base de datos')
       const { data: rifas, error: rifasError } = await supabase
         .from('rifas')
         .select('id, titulo, estado, fecha_creacion, fecha_cierre')
       
       if (rifasError) {
-        console.error('❌ Error cargando rifas:', rifasError)
+        logger.logError('Error al cargar rifas', rifasError, { rifasError })
         throw new Error(`Error cargando rifas: ${rifasError.message}`)
       }
       
-      console.log('✅ Rifas cargadas:', rifas?.length || 0)
+      logger.logInfo('Rifas cargadas exitosamente', { count: rifas?.length || 0 })
       
       // Intentar cargar tickets (pero no fallar si hay error)
       let tickets = null
       let ticketsError = null
       
       try {
-        console.log('🔍 Cargando tickets...')
+        logger.logDebug('Cargando tickets desde base de datos')
         const ticketsResult = await supabase
           .from('tickets')
           .select('id, estado, precio, rifa_id')
@@ -89,17 +99,24 @@ export default function AdminDashboardPage() {
         ticketsError = ticketsResult.error
         
         if (ticketsError) {
-          console.warn('⚠️ Advertencia cargando tickets:', ticketsError.message)
-          console.warn('⚠️ Continuando solo con rifas...')
+          logger.logWarning('Advertencia al cargar tickets', { 
+            error: ticketsError.message,
+            continuing: 'Solo con rifas'
+          })
         } else {
-          console.log('✅ Tickets cargados:', tickets?.length || 0)
+          logger.logInfo('Tickets cargados exitosamente', { count: tickets?.length || 0 })
         }
-      } catch (ticketError) {
-        console.warn('⚠️ Error inesperado cargando tickets:', ticketError)
-        console.warn('⚠️ Continuando solo con rifas...')
-      }
+              } catch (ticketError) {
+          logger.logWarning('Error inesperado al cargar tickets', { 
+            error: ticketError instanceof Error ? ticketError.message : String(ticketError),
+            continuing: 'Solo con rifas'
+          })
+        }
       
-      console.log('✅ Datos cargados:', { rifas: rifas?.length, tickets: tickets?.length })
+      logger.logInfo('Datos del dashboard cargados', { 
+        rifas: rifas?.length, 
+        tickets: tickets?.length 
+      })
       
       // Calcular estadísticas
       const rifasActivas = rifas?.filter(r => r.estado === 'activa').length || 0
@@ -115,7 +132,7 @@ export default function AdminDashboardPage() {
         ?.filter(t => t.estado === 'pagado' || t.estado === 'verificado')
         .reduce((sum, t) => sum + (t.precio || 0), 0) || 0
 
-      setStats({
+      const newStats = {
         totalRifas: rifas?.length || 0,
         rifasActivas,
         rifasFinalizadas,
@@ -125,34 +142,53 @@ export default function AdminDashboardPage() {
         ticketsVerificados,
         ticketsCancelados,
         ingresosEstimados
-      })
+      }
+
+      setStats(newStats)
+      
+      logger.logInfo('Estadísticas del dashboard calculadas', { stats: newStats })
       
       // Si hay problemas con tickets, mostrar advertencia pero no error
       if (ticketsError) {
-        setWarning(`Dashboard cargado parcialmente. Advertencia: ${ticketsError.message}`)
+        const warningMsg = `Dashboard cargado parcialmente. Advertencia: ${ticketsError.message}`
+        setWarning(warningMsg)
+        logger.logWarning('Dashboard cargado parcialmente', { 
+          warning: warningMsg,
+          ticketsError: ticketsError.message
+        })
       }
       
-    } catch (error) {
-      console.error('❌ Error cargando dashboard:', error)
-      setError(error instanceof Error ? error.message : 'Error desconocido')
-    } finally {
+          } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
+        logger.logError('Error crítico al cargar dashboard', error instanceof Error ? error : undefined, { 
+          error: errorMessage
+        })
+        setError(errorMessage)
+      } finally {
       setIsLoading(false)
+      logger.logInfo('Carga del dashboard completada')
     }
   }
 
   // Cargar datos cuando el componente se monta
   useEffect(() => {
     if (!authLoading && isAdmin) {
+      logger.logDebug('Usuario autenticado y es admin, cargando dashboard')
       loadDashboardData()
+    } else if (authLoading) {
+      logger.logDebug('Verificando autenticación...')
+    } else if (!isAdmin) {
+      logger.logWarning('Usuario no es admin, acceso denegado')
     }
-  }, [authLoading, isAdmin])
+  }, [authLoading, isAdmin, logger])
 
   const handleRefresh = () => {
+    logger.logUserAction('Usuario refrescó dashboard manualmente')
     loadDashboardData()
   }
 
   const handleDebug = () => {
-    console.log('🔍 DEBUG - Estado de autenticación:', {
+    logger.logDebug('Usuario activó modo debug', {
       user: user ? { id: user.id, email: user.email } : null,
       profile,
       authLoading,
@@ -161,7 +197,7 @@ export default function AdminDashboardPage() {
     
     // Verificar sesión actual
     supabase.auth.getSession().then(({ data, error }: any) => {
-      console.log('🔍 DEBUG - Sesión actual:', { data, error })
+      logger.logDebug('Sesión actual verificada', { data, error })
     })
   }
 
@@ -179,6 +215,11 @@ export default function AdminDashboardPage() {
 
   // Mostrar error si no es admin
   if (!isAdmin) {
+    logger.logSecurity('Intento de acceso no autorizado al dashboard', {
+      user: user?.email,
+      userId: user?.id
+    })
+    
     return (
       <div className="flex min-h-[400px] items-center justify-center">
         <div className="text-center">

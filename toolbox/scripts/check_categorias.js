@@ -41,12 +41,7 @@ async function checkCategorias() {
       console.log('\n📋 Categorías existentes:')
       categorias.forEach((cat, index) => {
         console.log(`  ${index + 1}. ${cat.nombre} (ID: ${cat.id})`)
-        console.log(`     - Descripción: ${cat.descripcion || 'Sin descripción'}`)
-        console.log(`     - Color: ${cat.color}`)
         console.log(`     - Icono: ${cat.icono}`)
-        console.log(`     - Activa: ${cat.activa}`)
-        console.log(`     - Orden: ${cat.orden}`)
-        console.log(`     - Fecha: ${cat.fecha_creacion}`)
         console.log('')
       })
     } else {
@@ -57,27 +52,15 @@ async function checkCategorias() {
       const exampleData = [
         {
           nombre: 'Vehículos',
-          icono: 'car',
-          descripcion: 'Rifas de vehículos y automóviles',
-          color: '#3B82F6',
-          activa: true,
-          orden: 1
+          icono: 'car'
         },
         {
           nombre: 'Tecnología',
-          icono: 'smartphone',
-          descripcion: 'Rifas de dispositivos tecnológicos',
-          color: '#10B981',
-          activa: true,
-          orden: 2
+          icono: 'smartphone'
         },
         {
           nombre: 'Hogar',
-          icono: 'home',
-          descripcion: 'Rifas de artículos para el hogar',
-          color: '#F59E0B',
-          activa: false,
-          orden: 3
+          icono: 'home'
         }
       ]
       

@@ -13,6 +13,9 @@ export * from './rifas'
 // ✅ TICKETS - Completamente normalizada  
 export * from './tickets'
 
+// ✅ CLIENTES - Completamente normalizada  
+export * from './clientes'
+
 // ✅ PAGOS - Completamente normalizada
 export * from './pagos'
 
@@ -27,6 +30,9 @@ export * from './profiles'
 
 // ✅ AUTH - Completamente normalizada
 export * from './auth'
+
+// ✅ USUARIOS VERIFICACION - Completamente normalizada
+export * from './usuarios_verificacion'
 
 // =====================================================
 // 🎯 PATRÓN UNIFICADO PARA TODAS LAS FUNCIONES ADMIN

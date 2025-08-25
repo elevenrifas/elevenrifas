@@ -1,0 +1,17 @@
+create table public.tickets (
+  id uuid not null default extensions.uuid_generate_v4 (),
+  rifa_id uuid null,
+  numero_ticket character varying(10) not null,
+  nombre character varying(255) not null,
+  cedula character varying(20) not null,
+  telefono character varying(20) null,
+  correo character varying(255) not null,
+  fecha_compra timestamp without time zone null default now(),
+  pago_id uuid null,
+  constraint tickets_pkey primary key (id),
+  constraint tickets_rifa_id_numero_ticket_key unique (rifa_id, numero_ticket),
+  constraint tickets_pago_id_fkey foreign KEY (pago_id) references pagos (id),
+  constraint tickets_rifa_id_fkey foreign KEY (rifa_id) references rifas (id) on delete CASCADE
+) TABLESPACE pg_default;
+
+create index IF not exists idx_tickets_pago_id on public.tickets using btree (pago_id) TABLESPACE pg_default;

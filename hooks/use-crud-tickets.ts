@@ -73,7 +73,7 @@ export interface UseCrudTicketsReturn {
   updateTicket: (id: string, data: Partial<CrudTicketData>) => Promise<{ success: boolean; error?: string }>
   deleteTicket: (id: string) => Promise<{ success: boolean; error?: string }>
   deleteMultipleTickets: (ids: string[]) => Promise<{ success: boolean; error?: string }>
-  changeTicketState: (id: string, estado: 'reservado' | 'pagado' | 'verificado' | 'cancelado') => Promise<{ success: boolean; error?: string }>
+  changeTicketState: (id: string, estado: 'pendiente' | 'verificado' | 'rechazado') => Promise<{ success: boolean; error?: string }>
   changeTicketVerificationState: (id: string, estado_verificacion: 'pendiente' | 'verificado' | 'rechazado') => Promise<{ success: boolean; error?: string }>
   toggleTicketPaymentBlock: (id: string, bloqueado: boolean, pago_id?: string) => Promise<{ success: boolean; error?: string }>
   
@@ -103,10 +103,7 @@ export interface UseCrudTicketsReturn {
   // Utilidades
   refreshTickets: () => Promise<void>
   getTicketById: (id: string) => AdminTicket | undefined
-  getTicketsByEstado: (estado: string) => AdminTicket[]
   getTicketsByRifa: (rifa_id: string) => AdminTicket[]
-  getTicketsByEstadoVerificacion: (estado_verificacion: string) => AdminTicket[]
-  getTicketsBloqueadosPorPago: () => AdminTicket[]
   
   // Exportación
   exportTickets: (tickets?: AdminTicket[]) => Promise<{ success: boolean; error?: string }>
@@ -137,18 +134,14 @@ export function useCrudTickets(options: {
     refreshTickets,
     createTicket: baseCreateTicket,
     updateTicket: baseUpdateTicket,
-    changeTicketState: baseChangeTicketState,
-    changeTicketVerificationState: baseChangeTicketVerificationState,
-    toggleTicketPaymentBlock: baseToggleTicketPaymentBlock,
+    deleteTicket: baseDeleteTicket, // Agregamos la función de eliminación del hook base
     getTicketById,
-    getTicketsByEstado,
-    getTicketsByRifa,
-    getTicketsByEstadoVerificacion,
-    getTicketsBloqueadosPorPago
+    getTicketsByRifa
   } = useAdminTickets({
     ...initialFilters,
     ordenarPor: initialSort.field,
     orden: initialSort.direction,
+    limite: initialPageSize, // Agregamos el límite de página
     autoRefresh,
     refreshInterval
   })
@@ -221,69 +214,105 @@ export function useCrudTickets(options: {
   const deleteTicket = useCallback(async (id: string) => {
     try {
       setIsDeleting(true)
-      // Aquí implementarías la lógica real de eliminación
-      // Por ahora simulamos la eliminación
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      console.log('🔄 [useCrudTickets] deleteTicket iniciando para ID:', id)
       
-      closeDeleteModal()
-      await refreshTickets()
+      // Usar la función real del hook base
+      const result = await baseDeleteTicket(id)
       
-      return { success: true }
+      if (result.success) {
+        console.log('✅ [useCrudTickets] Ticket eliminado exitosamente')
+        closeDeleteModal()
+        // Llamar directamente a refreshTickets como hace DataTableToolbar
+        console.log('🔄 [useCrudTickets] Llamando a refreshTickets...')
+        refreshTickets()
+        console.log('✅ [useCrudTickets] RefreshTickets llamado')
+      } else {
+        console.error('❌ [useCrudTickets] Error al eliminar ticket:', result.error)
+      }
+      
+      return result
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error inesperado al eliminar ticket'
+      console.error('💥 [useCrudTickets] Error inesperado en deleteTicket:', err)
       return { success: false, error: errorMessage }
     } finally {
       setIsDeleting(false)
     }
-  }, [refreshTickets])
+  }, [baseDeleteTicket, refreshTickets])
 
   const deleteMultipleTickets = useCallback(async (ids: string[]) => {
     try {
       setIsDeleting(true)
-      // Aquí implementarías la lógica real de eliminación múltiple
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      console.log('🔄 [useCrudTickets] deleteMultipleTickets iniciando para IDs:', ids)
       
-      clearSelection()
-      await refreshTickets()
+      // Eliminar tickets uno por uno usando la función real
+      const results = await Promise.all(ids.map(id => baseDeleteTicket(id)))
       
-      return { success: true }
+      // Verificar si todos fueron exitosos
+      const allSuccessful = results.every(result => result.success)
+      
+      if (allSuccessful) {
+        console.log('✅ [useCrudTickets] Todos los tickets eliminados exitosamente')
+        clearSelection()
+        // Llamar directamente a refreshTickets como hace DataTableToolbar
+        console.log('🔄 [useCrudTickets] Llamando a refreshTickets...')
+        refreshTickets()
+        console.log('✅ [useCrudTickets] RefreshTickets llamado')
+        return { success: true }
+      } else {
+        // Si algunos fallaron, retornar error
+        const failedIds = results
+          .map((result, index) => ({ result, id: ids[index] }))
+          .filter(({ result }) => !result.success)
+          .map(({ id }) => id)
+        
+        console.error('❌ [useCrudTickets] Algunos tickets fallaron al eliminar:', failedIds)
+        return { 
+          success: false, 
+          error: `Error al eliminar algunos tickets: ${failedIds.join(', ')}` 
+        }
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error inesperado al eliminar tickets'
+      console.error('💥 [useCrudTickets] Error inesperado en deleteMultipleTickets:', err)
       return { success: false, error: errorMessage }
     } finally {
       setIsDeleting(false)
     }
-  }, [refreshTickets])
+  }, [baseDeleteTicket, refreshTickets])
 
-  const changeTicketState = useCallback(async (id: string, estado: 'reservado' | 'pagado' | 'verificado' | 'cancelado') => {
+  const changeTicketState = useCallback(async (id: string, estado: 'pendiente' | 'verificado' | 'rechazado') => {
     try {
-      const result = await baseChangeTicketState(id, estado)
-      return result
+      // Función no implementada por ahora
+      console.warn('Función changeTicketState no implementada')
+      return { success: false, error: 'Función no implementada' }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error inesperado al cambiar estado'
       return { success: false, error: errorMessage }
     }
-  }, [baseChangeTicketState])
+  }, [])
 
   const changeTicketVerificationState = useCallback(async (id: string, estado_verificacion: 'pendiente' | 'verificado' | 'rechazado') => {
     try {
-      const result = await baseChangeTicketVerificationState(id, estado_verificacion)
-      return result
+      // Función no implementada por ahora
+      console.warn('Función changeTicketVerificationState no implementada')
+      return { success: false, error: 'Función no implementada' }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error inesperado al cambiar estado de verificación'
       return { success: false, error: errorMessage }
     }
-  }, [baseChangeTicketVerificationState])
+  }, [])
 
   const toggleTicketPaymentBlock = useCallback(async (id: string, bloqueado: boolean, pago_id?: string) => {
     try {
-      const result = await baseToggleTicketPaymentBlock(id, bloqueado, pago_id)
-      return result
+      // Función no implementada por ahora
+      console.warn('Función toggleTicketPaymentBlock no implementada')
+      return { success: false, error: 'Función no implementada' }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error inesperado al cambiar bloqueo'
       return { success: false, error: errorMessage }
     }
-  }, [baseToggleTicketPaymentBlock])
+  }, [])
 
   // Operaciones de UI
   const openCreateModal = useCallback(() => setShowCreateModal(true), [])
@@ -461,10 +490,7 @@ export function useCrudTickets(options: {
     // Utilidades
     refreshTickets,
     getTicketById,
-    getTicketsByEstado,
     getTicketsByRifa,
-    getTicketsByEstadoVerificacion,
-    getTicketsBloqueadosPorPago,
     
     // Exportación
     exportTickets

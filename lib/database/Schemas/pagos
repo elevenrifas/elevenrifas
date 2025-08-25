@@ -1,0 +1,36 @@
+create table public.pagos (
+  id uuid not null default extensions.uuid_generate_v4 (),
+  tipo_pago character varying(50) not null,
+  monto_bs numeric(10, 2) not null,
+  monto_usd numeric(10, 2) not null,
+  tasa_cambio numeric(10, 2) not null,
+  referencia character varying(255) null,
+  fecha_pago timestamp without time zone null default now(),
+  fecha_verificacion timestamp without time zone null,
+  telefono_pago character varying(20) null,
+  banco_pago character varying(100) null,
+  cedula_pago character varying(20) null,
+  fecha_visita date null,
+  verificado_por character varying(255) null,
+  estado character varying null,
+  rechazo_logs character varying null,
+  rifa_id uuid null,
+  constraint pagos_pkey primary key (id),
+  constraint tickets_rifa_id_fkey foreign KEY (rifa_id) references rifas (id) on delete CASCADE,
+  constraint pagos_tipo_pago_check check (
+    (
+      (tipo_pago)::text = any (
+        (
+          array[
+            'pago_movil'::character varying,
+            'binance'::character varying,
+            'zelle'::character varying,
+            'zinli'::character varying,
+            'paypal'::character varying,
+            'efectivo'::character varying
+          ]
+        )::text[]
+      )
+    )
+  )
+) TABLESPACE pg_default;

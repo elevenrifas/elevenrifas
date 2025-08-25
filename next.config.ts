@@ -9,6 +9,8 @@ const nextConfig: NextConfig = {
     // Ignorar errores de TypeScript durante el build para builds más rápidos
     ignoreBuildErrors: true,
   },
+  // Deshabilitar prerenderizado para evitar errores de SSR
+  output: 'standalone',
   // Optimizaciones para builds más rápidos
   experimental: {
     // Optimizar el bundle

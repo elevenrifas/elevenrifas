@@ -12,7 +12,8 @@ import {
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { Tag, Palette, Image, Calendar, Eye, Edit, Trash2 } from "lucide-react"
+import { Tag, Calendar, Eye, Edit, Trash2 } from "lucide-react"
+import * as LucideIcons from "lucide-react"
 import type { AdminCategoria } from "@/lib/database/admin_database/categorias"
 
 // =====================================================
@@ -97,14 +98,8 @@ export function CategoriaViewModal({
           {/* Header con badge de estado */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Badge 
-                style={{ backgroundColor: categoria.color || '#3B82F6' }}
-                className="text-white border-0 px-3 py-1 text-base"
-              >
+              <Badge className="px-3 py-1 text-base">
                 {categoria.nombre}
-              </Badge>
-              <Badge variant={categoria.activa ? "default" : "secondary"}>
-                {categoria.activa ? "Activa" : "Inactiva"}
               </Badge>
             </div>
             
@@ -152,28 +147,15 @@ export function CategoriaViewModal({
 
               {/* Descripción */}
               <div className="space-y-2">
-                <h4 className="text-sm font-medium text-muted-foreground">
+                <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                  <Tag className="h-4 w-4" />
                   Descripción
                 </h4>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm">
                   {categoria.descripcion || 'Sin descripción'}
                 </p>
               </div>
 
-              {/* Color */}
-              <div className="space-y-2">
-                <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                  <Palette className="h-4 w-4" />
-                  Color
-                </h4>
-                <div className="flex items-center gap-3">
-                  <div 
-                    className="w-6 h-6 rounded border"
-                    style={{ backgroundColor: categoria.color || '#3B82F6' }}
-                  />
-                  <span className="text-sm font-mono">{categoria.color || '#3B82F6'}</span>
-                </div>
-              </div>
             </div>
 
             {/* Columna derecha */}
@@ -181,98 +163,43 @@ export function CategoriaViewModal({
               {/* Icono */}
               <div className="space-y-2">
                 <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                  <Image className="h-4 w-4" />
+                  <Tag className="h-4 w-4" />
                   Icono
                 </h4>
-                <p className="text-sm font-mono">
-                  {categoria.icono || 'tag'}
-                </p>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center bg-gray-100">
+                    {(() => {
+                      const iconName = categoria.icono || 'tag'
+                      const pascalCaseName = iconName
+                        .split('-')
+                        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                        .join('')
+                      const IconComponent = (LucideIcons as any)[pascalCaseName] || Tag
+                      return <IconComponent className="h-4 w-4 text-gray-600" />
+                    })()}
+                  </div>
+                  <span className="text-sm font-mono">
+                    {categoria.icono || 'tag'}
+                  </span>
+                </div>
               </div>
 
-              {/* Orden */}
-              <div className="space-y-2">
-                <h4 className="text-sm font-medium text-muted-foreground">
-                  Orden de Visualización
-                </h4>
-                <Badge variant="outline" className="text-sm">
-                  {categoria.orden || 0}
-                </Badge>
-                <p className="text-xs text-muted-foreground">
-                  Posición en la lista de categorías
-                </p>
-              </div>
 
-              {/* Estado */}
-              <div className="space-y-2">
-                <h4 className="text-sm font-medium text-muted-foreground">
-                  Estado
-                </h4>
-                <Badge variant={categoria.activa ? "default" : "secondary"}>
-                  {categoria.activa ? "Activa" : "Inactiva"}
-                </Badge>
-                <p className="text-xs text-muted-foreground">
-                  {categoria.activa 
-                    ? 'Esta categoría se muestra en el frontend'
-                    : 'Esta categoría está oculta del frontend'
-                  }
-                </p>
-              </div>
 
-              {/* Fecha de creación */}
+              {/* Fecha de creación - No disponible en esquema actual */}
               <div className="space-y-2">
                 <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                   <Calendar className="h-4 w-4" />
                   Fecha de Creación
                 </h4>
-                <p className="text-sm">
-                  {formatDate(categoria.fecha_creacion)}
+                <p className="text-sm text-muted-foreground">
+                  No disponible
                 </p>
               </div>
             </div>
           </div>
 
-          {/* Información adicional */}
-          {categoria.rifas_count !== undefined && (
-            <>
-              <Separator />
-              <div className="space-y-2">
-                <h4 className="text-sm font-medium text-muted-foreground">
-                  Estadísticas
-                </h4>
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="text-sm">
-                      {categoria.rifas_count} rifa{categoria.rifas_count !== 1 ? 's' : ''}
-                    </Badge>
-                    <span className="text-xs text-muted-foreground">
-                      en esta categoría
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
 
-          {/* Vista previa */}
-          <Separator />
-          <div className="space-y-2">
-            <h4 className="text-sm font-medium text-muted-foreground">
-              Vista Previa
-            </h4>
-            <div className="p-4 bg-muted rounded-lg">
-              <div className="flex items-center gap-3">
-                <Badge 
-                  style={{ backgroundColor: categoria.color || '#3B82F6' }}
-                  className="text-white border-0"
-                >
-                  {categoria.nombre}
-                </Badge>
-                <span className="text-sm text-muted-foreground">
-                  Como se verá en el frontend
-                </span>
-              </div>
-            </div>
-          </div>
         </div>
 
         <DialogFooter>

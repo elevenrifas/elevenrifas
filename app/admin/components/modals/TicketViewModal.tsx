@@ -59,17 +59,15 @@ export function TicketViewModal({
 
   const getEstadoBadge = (estado: string) => {
     const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-      'reservado': 'outline',
-      'pagado': 'default',
-      'verificado': 'secondary',
-      'cancelado': 'destructive'
+      'pendiente': 'outline',
+      'verificado': 'default',
+      'rechazado': 'destructive'
     }
     
     const colors: Record<string, string> = {
-      'reservado': 'bg-yellow-100 text-yellow-800 border-yellow-200',
-      'pagado': 'bg-green-100 text-green-800 border-green-200',
-      'verificado': 'bg-blue-100 text-blue-800 border-blue-200',
-      'cancelado': 'bg-red-100 text-red-800 border-red-200'
+      'pendiente': 'bg-yellow-100 text-yellow-800 border-yellow-200',
+      'verificado': 'bg-green-100 text-green-800 border-green-200',
+      'rechazado': 'bg-red-100 text-red-800 border-red-200'
     }
 
     return (
@@ -139,8 +137,8 @@ export function TicketViewModal({
               </div>
               
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-500">Estado</label>
-                <div>{getEstadoBadge(ticket.estado)}</div>
+                <label className="text-sm font-medium text-gray-500">Estado del Pago</label>
+                <div>{getEstadoBadge(ticket.pagos?.estado || 'pendiente')}</div>
               </div>
               
               <div className="space-y-2">
@@ -294,5 +292,9 @@ export function TicketViewModal({
     </Dialog>
   )
 }
+
+
+
+
 
 

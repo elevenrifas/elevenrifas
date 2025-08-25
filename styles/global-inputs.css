@@ -1,0 +1,139 @@
+/* =====================================================
+   🎯 ESTILOS GLOBALES PARA INPUTS - ELEVEN RIFAS
+   =====================================================
+   Estilos consistentes y visibles para todos los inputs
+   de la aplicación, especialmente para búsquedas
+   ===================================================== */
+
+/* Input de búsqueda principal */
+.search-input-global {
+  height: 40px !important;
+  min-width: 200px !important;
+  border: 2px solid #d1d5db !important;
+  border-radius: 8px !important;
+  background-color: white !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+  font-size: 16px !important;
+  font-weight: 500 !important;
+  padding: 8px 16px !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+.search-input-global:hover {
+  border-color: #9ca3af !important;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
+}
+
+.search-input-global:focus {
+  border-color: #dc2626 !important;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1) !important;
+  outline: none !important;
+}
+
+.search-input-global::placeholder {
+  color: #6b7280 !important;
+  font-weight: 400 !important;
+}
+
+/* Inputs de formulario generales */
+.form-input-global {
+  height: 44px !important;
+  border: 2px solid #d1d5db !important;
+  border-radius: 8px !important;
+  background-color: white !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+  font-size: 16px !important;
+  font-weight: 500 !important;
+  padding: 10px 16px !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+.form-input-global:hover {
+  border-color: #9ca3af !important;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
+}
+
+.form-input-global:focus {
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+  outline: none !important;
+}
+
+.form-input-global::placeholder {
+  color: #6b7280 !important;
+  font-weight: 400 !important;
+}
+
+/* Inputs de búsqueda en tablas */
+.table-search-input {
+  height: 32px !important; /* Igual a h-8 de los botones */
+  min-width: 200px !important;
+  border: 2px solid #d1d5db !important;
+  border-radius: 6px !important; /* Ajustado para coincidir con botones */
+  background-color: white !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+  font-size: 14px !important; /* Ajustado para h-8 */
+  font-weight: 500 !important;
+  padding: 6px 12px 6px 40px !important; /* Padding izquierdo para el icono */
+  transition: all 0.2s ease-in-out !important;
+  line-height: 1 !important; /* Asegura centrado vertical */
+  display: flex !important;
+  align-items: center !important;
+}
+
+.table-search-input:hover {
+  border-color: #9ca3af !important;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
+}
+
+.table-search-input:focus {
+  border-color: #dc2626 !important;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1) !important;
+  outline: none !important;
+}
+
+.table-search-input:focus + .search-icon {
+  color: #dc2626 !important; /* Icono rojo cuando el input está en focus */
+}
+
+.table-search-input::placeholder {
+  color: #6b7280 !important;
+  font-weight: 400 !important;
+}
+
+/* Iconos de búsqueda */
+.search-icon-global {
+  color: #dc2626 !important;
+  font-weight: 600 !important;
+}
+
+/* Responsive para móviles */
+@media (max-width: 768px) {
+  .search-input-global,
+  .table-search-input {
+    min-width: 150px !important;
+    font-size: 13px !important; /* Ajustado para h-8 */
+    height: 32px !important; /* Mantener altura consistente */
+  }
+  
+  .form-input-global {
+    height: 40px !important; /* Solo formularios pueden ser más altos */
+    font-size: 14px !important;
+  }
+}
+
+/* Estados de error */
+.search-input-global.error,
+.form-input-global.error,
+.table-search-input.error {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1) !important;
+}
+
+/* Estados de éxito */
+.search-input-global.success,
+.form-input-global.success,
+.table-search-input.success {
+  border-color: #10b981 !important;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1) !important;
+}

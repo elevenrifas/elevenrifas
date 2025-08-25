@@ -164,7 +164,7 @@ export const actionConfigs = {
     onRefresh: () => void
     onDelete?: () => void
   }) => [
-    commonActions.create(handlers.onCreate),
+    // commonActions.create(handlers.onCreate), // Ahora está en el toolbar
     commonActions.refresh(handlers.onRefresh),
     commonActions.export(handlers.onExport, "Exportar"),
     ...(handlers.onDelete ? [commonActions.delete(handlers.onDelete, "Eliminar")] : [])
@@ -186,10 +186,14 @@ export const actionConfigs = {
     onRefresh: () => void
     onDelete: () => void
   }) => [
-    commonActions.create(handlers.onCreate),
+    // commonActions.create(handlers.onCreate), // Ahora está en el toolbar
     commonActions.refresh(handlers.onRefresh),
     commonActions.export(handlers.onExport, "Exportar"),
     commonActions.delete(handlers.onDelete, "Eliminar")
   ]
 }
+
+
+
+
 

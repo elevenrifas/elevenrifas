@@ -1,92 +1,176 @@
 "use client"
 
-import { CategoriasRifasTable } from "@/app/admin/components/tables"
+import { CategoriasRifasTable } from "@/app/admin/components/tables/CategoriasRifasTable"
+import { CategoriaFormModal } from "@/app/admin/components/modals/CategoriaFormModal"
+import { CategoriaViewModal } from "@/app/admin/components/modals/CategoriaViewModal"
+import { DeleteConfirmModal } from "@/app/admin/components/modals/DeleteConfirmModal"
+import { useCrudCategorias } from "@/hooks/use-crud-categorias"
+import { useState } from "react"
+import type { AdminCategoria } from "@/lib/database/admin_database/categorias"
 
 // =====================================================
-// 🎯 PÁGINA ADMIN CATEGORIAS - ELEVEN RIFAS
+// 🎯 PÁGINA CATEGORÍAS - ELEVEN RIFAS
 // =====================================================
-// Página para gestionar categorías de rifas
-// Sigue el patrón establecido para páginas admin
+// Página principal para gestionar categorías de rifas
+// Implementa funcionalidad completa de CRUD
 // =====================================================
 
 export default function CategoriasPage() {
-  const handleCreate = () => {
-    console.log("Crear nueva categoría")
-    // Aquí implementarías la lógica para abrir modal de creación
-  }
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [showViewModal, setShowViewModal] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [selectedCategoria, setSelectedCategoria] = useState<AdminCategoria | null>(null)
 
-  const handleEdit = (categoria: any) => {
-    console.log("Editar categoría:", categoria)
-    // Aquí implementarías la lógica para abrir modal de edición
-  }
+  const {
+    categorias,
+    isLoading,
+    error,
+    isCreating,
+    isUpdating,
+    isDeleting,
+    createCategoria,
+    updateCategoria,
+    deleteCategoria,
+    deleteMultipleCategorias,
+    refreshCategorias
+  } = useCrudCategorias()
 
-  const handleDelete = (categorias: any[]) => {
-    console.log("Eliminar categorías:", categorias)
-    // Aquí implementarías la lógica para confirmar eliminación
-  }
+  // =====================================================
+  // 🔧 FUNCIONES DE MANEJO
+  // =====================================================
 
-  const handleView = (categoria: any) => {
-    console.log("Ver categoría:", categoria)
-    // Aquí implementarías la lógica para ver detalles
-  }
-
-  const handleExport = (categorias: any[]) => {
-    console.log("Exportar categorías:", categorias)
-    
+  const handleCreate = async (data: any) => {
     try {
-      // Crear headers del CSV
-      const headers = [
-        'ID',
-        'Orden',
-        'Nombre',
-        'Descripción',
-        'Rifas Count',
-        'Estado'
-      ]
-      
-      // Convertir datos a filas CSV
-      const csvRows = [
-        headers.join(','), // Primera fila: headers
-        ...categorias.map(categoria => [
-          categoria.id,
-          categoria.orden,
-          `"${categoria.nombre}"`, // Comillas para evitar problemas con comas
-          `"${categoria.descripcion}"`,
-          categoria.rifas_count,
-          categoria.activa ? 'Activa' : 'Inactiva'
-        ].join(','))
-      ]
-      
-      // Crear contenido CSV
-      const csvContent = csvRows.join('\n')
-      
-      // Crear blob y descargar
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-      const link = document.createElement('a')
-      const url = URL.createObjectURL(blob)
-      
-      link.setAttribute('href', url)
-      link.setAttribute('download', `categorias_${new Date().toISOString().split('T')[0]}.csv`)
-      link.style.visibility = 'hidden'
-      
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      
-      console.log('✅ Archivo CSV descargado exitosamente')
+      const result = await createCategoria(data)
+      if (result.success) {
+        setShowCreateModal(false)
+        await refreshCategorias()
+      }
+      return result
     } catch (error) {
-      console.error('Error al exportar a CSV:', error)
+      console.error('Error en handleCreate:', error)
+      return { success: false, error: 'Error inesperado al crear' }
     }
   }
 
+  const handleEdit = async (data: any) => {
+    if (selectedCategoria) {
+      try {
+        const result = await updateCategoria(selectedCategoria.id, data)
+        if (result.success) {
+          setShowEditModal(false)
+          setSelectedCategoria(null)
+          await refreshCategorias()
+        }
+        return result
+      } catch (error) {
+        console.error('Error en handleEdit:', error)
+        return { success: false, error: 'Error inesperado al editar' }
+      }
+    }
+    return { success: false, error: 'No hay categoría seleccionada' }
+  }
+
+  const handleDelete = async () => {
+    if (selectedCategoria) {
+      const result = await deleteCategoria(selectedCategoria.id)
+      if (result.success) {
+        setShowDeleteModal(false)
+        setSelectedCategoria(null)
+        await refreshCategorias()
+      }
+      return result
+    }
+    return { success: false, error: 'No hay categoría seleccionada' }
+  }
+
+  const handleDeleteMultiple = async (categorias: AdminCategoria[]) => {
+    try {
+      const ids = categorias.map(cat => cat.id)
+      const result = await deleteMultipleCategorias(ids)
+      if (result.success) {
+        await refreshCategorias()
+      }
+      return result
+    } catch (error) {
+      console.error('Error en handleDeleteMultiple:', error)
+      return { success: false, error: 'Error inesperado al eliminar' }
+    }
+  }
+
+  // =====================================================
+  // 🎨 RENDERIZADO
+  // =====================================================
+
   return (
     <div className="px-4 lg:px-6">
+      {/* Tabla de categorías */}
       <CategoriasRifasTable
-        onCreate={handleCreate}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-        onView={handleView}
-        onExport={handleExport}
+        onCreate={() => setShowCreateModal(true)}
+        onEdit={(categoria) => {
+          setSelectedCategoria(categoria)
+          setShowEditModal(true)
+        }}
+        onView={(categoria) => {
+          setSelectedCategoria(categoria)
+          setShowViewModal(true)
+        }}
+        onDelete={handleDeleteMultiple}
+      />
+
+      {/* Modal de Crear Categoría */}
+      <CategoriaFormModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSubmit={handleCreate}
+        isLoading={isCreating}
+      />
+
+      {/* Modal de Editar Categoría */}
+      <CategoriaFormModal
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false)
+          setSelectedCategoria(null)
+        }}
+        onSubmit={handleEdit}
+        categoria={selectedCategoria}
+        isLoading={isUpdating}
+      />
+
+      {/* Modal de Ver Categoría */}
+      <CategoriaViewModal
+        isOpen={showViewModal}
+        onClose={() => {
+          setShowViewModal(false)
+          setSelectedCategoria(null)
+        }}
+        categoria={selectedCategoria}
+        onEdit={(categoria) => {
+          setSelectedCategoria(categoria)
+          setShowViewModal(false)
+          setShowEditModal(true)
+        }}
+        onDelete={(categoria) => {
+          setSelectedCategoria(categoria)
+          setShowViewModal(false)
+          setShowDeleteModal(true)
+        }}
+      />
+
+      {/* Modal de Confirmación de Eliminación */}
+      <DeleteConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false)
+          setSelectedCategoria(null)
+        }}
+        onConfirm={handleDelete}
+        title="Eliminar Categoría"
+        description={`¿Estás seguro de que quieres eliminar la categoría "${selectedCategoria?.nombre}"? Esta acción no se puede deshacer.`}
+        entityName="categoría"
+        isDeleting={isDeleting}
       />
     </div>
   )

@@ -25,31 +25,42 @@ import {
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { Calendar, DollarSign, Tag, Car, Star, Settings, Edit, Plus, RefreshCw } from "lucide-react"
+import { Calendar, DollarSign, Edit, Plus } from "lucide-react"
+import * as LucideIcons from "lucide-react"
 import type { AdminRifa } from "@/lib/database/admin_database/rifas"
 import type { CrudRifaData } from "@/hooks/use-crud-rifas"
+import { ImageUpload } from '../ui/image-upload'
+import { useCategorias } from '@/hooks/use-categorias'
 
-// Schema de validación
+// Función simple para obtener iconos de Lucide React (igual que en la tabla)
+const getCategoryIcon = (iconName: string) => {
+  // Convertir el nombre del icono a PascalCase (ej: "dollar-sign" -> "DollarSign")
+  const pascalCaseName = iconName
+    .split('-')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join('');
+  
+  // Buscar el icono en la librería completa de Lucide
+  const IconComponent = (LucideIcons as any)[pascalCaseName];
+  
+  // Si no se encuentra, devolver Tag como fallback
+  return IconComponent || LucideIcons.Tag;
+};
+
+// Schema de validación actualizado según la estructura real de la BD
 const rifaFormSchema = z.object({
   titulo: z.string().min(3, "El título debe tener al menos 3 caracteres").max(255, "El título no puede exceder 255 caracteres"),
   descripcion: z.string().optional(),
   precio_ticket: z.number().min(0.01, "El precio del ticket debe ser mayor a 0"),
   imagen_url: z.string().optional(),
-  estado: z.enum(["activa", "cerrada", "finalizada"]),
+  estado: z.enum(["activa", "cerrada"]),
   total_tickets: z.number().min(1, "Debe haber al menos 1 ticket"),
-  tickets_disponibles: z.number().min(0, "Los tickets disponibles no pueden ser negativos"),
-  premio_principal: z.string().optional(),
-  condiciones: z.string().optional(),
-  activa: z.boolean().default(true),
+  tickets_disponibles: z.number().optional(), // Opcional ya que es un campo calculado
   categoria_id: z.string().optional(),
-  cantidad_tickets: z.number().optional(),
   numero_tickets_comprar: z.array(z.number()).optional(),
-  tipo_rifa: z.string().optional(),
-  categoria: z.string().min(1, "Debe seleccionar una categoría"),
-  destacada: z.boolean().default(false),
+  progreso_manual: z.number().min(0).max(100).optional().nullable(),
+  fecha_cierre: z.string().optional().nullable(), // Se establece automáticamente según el estado
 })
 
 type RifaFormValues = z.infer<typeof rifaFormSchema>
@@ -62,6 +73,116 @@ interface RifaFormModalProps {
   isSubmitting?: boolean
 }
 
+// Componente personalizado para los 9 inputs de opciones de compra
+const TicketOptionsInput = ({ value, onChange }: { value: number[] | undefined, onChange: (value: number[]) => void }) => {
+  const handleInputChange = (index: number, newValue: number) => {
+    const currentArray = [...(value || [1, 2, 3, 5, 10, 15, 20, 25, 50])];
+    
+    // Validar que el valor no esté duplicado en otras posiciones
+    if (newValue > 0) {
+      // Verificar si el valor ya existe en otra posición
+      const isDuplicate = currentArray.some((val, i) => i !== index && val === newValue);
+      
+      if (isDuplicate) {
+        // Si es duplicado, limpiar la posición actual
+        currentArray[index] = 0;
+      } else {
+        // Si no es duplicado, asignar el valor
+        currentArray[index] = newValue;
+      }
+    } else {
+      currentArray[index] = 0;
+    }
+    
+    // NO ordenar automáticamente - solo filtrar duplicados y valores 0
+    const filteredArray = [...new Set(currentArray)]
+      .filter(val => val > 0);
+    
+    onChange(filteredArray);
+  };
+
+  const handleInputBlur = () => {
+    // Al perder el foco, NO ordenar - solo limpiar duplicados y valores 0
+    const currentArray = value || [1, 2, 3, 5, 10, 15, 20, 25, 50];
+    const cleanArray = [...new Set(currentArray)]
+      .filter(val => val > 0);
+    
+    if (JSON.stringify(cleanArray) !== JSON.stringify(currentArray)) {
+      onChange(cleanArray);
+    }
+  };
+
+  const resetToDefaults = () => {
+    onChange([1, 2, 3, 5, 10, 15, 20, 25, 50]);
+  };
+
+  // Obtener el valor actual para cada input
+  const getCurrentValue = (index: number) => {
+    const currentArray = value || [1, 2, 3, 5, 10, 15, 20, 25, 50];
+    return currentArray[index] || '';
+  };
+
+  // Verificar si un valor está duplicado
+  const isValueDuplicate = (index: number, inputValue: number) => {
+    if (inputValue === 0) return false;
+    const currentArray = (value || [1, 2, 3, 5, 10, 15, 20, 25, 50]) as number[];
+    return currentArray.some((val: number, i: number) => i !== index && val === inputValue);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-3 gap-4">
+        {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((index) => {
+          const currentValue = getCurrentValue(index);
+          const isDuplicate = isValueDuplicate(index, currentValue as number);
+          
+          return (
+            <div key={index} className="space-y-2">
+              <label className="text-sm font-medium text-gray-700 text-center block">
+                Opción {index + 1}
+              </label>
+              <Input
+                type="number"
+                min="1"
+                placeholder="0"
+                className={`text-center h-11 border-2 transition-all duration-200 ${
+                  isDuplicate 
+                    ? 'border-red-500 bg-red-50 focus:border-red-500 focus:ring-2 focus:ring-red-200' 
+                    : 'border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200'
+                }`}
+                value={currentValue}
+                onChange={(e) => handleInputChange(index, parseInt(e.target.value) || 0)}
+                onBlur={handleInputBlur}
+              />
+              {isDuplicate && (
+                <p className="text-xs text-red-500 text-center">
+                  Número duplicado
+                </p>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      
+      {/* Indicador y controles */}
+      <div className="flex items-center justify-between">
+        <div className="text-sm text-gray-600">
+          {value?.length || 0} opciones configuradas
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={resetToDefaults}
+          className="text-xs hover:scale-105 transition-all duration-200"
+        >
+          Restaurar valores por defecto
+        </Button>
+      </div>
+    </div>
+  );
+};
+
 export function RifaFormModal({
   isOpen,
   onClose,
@@ -70,6 +191,7 @@ export function RifaFormModal({
   isSubmitting = false
 }: RifaFormModalProps) {
   const isEditing = !!rifa
+  const { categorias, loading: categoriasLoading } = useCategorias()
 
   // Formulario con react-hook-form
   const form = useForm<RifaFormValues>({
@@ -79,18 +201,13 @@ export function RifaFormModal({
       descripcion: rifa?.descripcion || "",
       precio_ticket: rifa?.precio_ticket || 0,
       imagen_url: rifa?.imagen_url || "",
-      estado: (rifa?.estado as "activa" | "cerrada" | "finalizada") || "activa",
+      estado: (rifa?.estado as "activa" | "cerrada") || "activa",
       total_tickets: rifa?.total_tickets || 100,
       tickets_disponibles: rifa?.tickets_disponibles || 100,
-      premio_principal: rifa?.premio_principal || "",
-      condiciones: rifa?.condiciones || "",
-      activa: rifa?.activa ?? true,
-      categoria_id: rifa?.categoria_id || "",
-      cantidad_tickets: rifa?.cantidad_tickets || 100,
-      numero_tickets_comprar: rifa?.numero_tickets_comprar || [1, 2, 3, 5, 10],
-      tipo_rifa: rifa?.tipo_rifa || "vehiculo",
-      categoria: rifa?.categoria || "automovil",
-      destacada: rifa?.destacada || false,
+      categoria_id: rifa?.categoria_id || "none",
+      numero_tickets_comprar: rifa?.numero_tickets_comprar || [1, 2, 3, 5, 10, 15, 20, 25, 50],
+      progreso_manual: rifa?.progreso_manual || null,
+      fecha_cierre: rifa?.fecha_cierre || "",
     },
   })
 
@@ -98,22 +215,17 @@ export function RifaFormModal({
   React.useEffect(() => {
     if (rifa) {
       form.reset({
-        titulo: rifa.titulo || "",
-        descripcion: rifa.descripcion || "",
-        precio_ticket: rifa.precio_ticket || 0,
-        imagen_url: rifa.imagen_url || "",
-        estado: (rifa.estado as "activa" | "cerrada" | "finalizada") || "activa",
-        total_tickets: rifa.total_tickets || 100,
-        tickets_disponibles: rifa.tickets_disponibles || 100,
-        premio_principal: rifa.premio_principal || "",
-        condiciones: rifa.condiciones || "",
-        activa: rifa.activa ?? true,
-        categoria_id: rifa.categoria_id || "",
-        cantidad_tickets: rifa.cantidad_tickets || 100,
-        numero_tickets_comprar: rifa.numero_tickets_comprar || [1, 2, 3, 5, 10],
-        tipo_rifa: rifa.tipo_rifa || "vehiculo",
-        categoria: rifa.categoria || "automovil",
-        destacada: rifa.destacada || false,
+        titulo: rifa?.titulo || "",
+        descripcion: rifa?.descripcion || "",
+        precio_ticket: rifa?.precio_ticket || 0,
+        imagen_url: rifa?.imagen_url || "",
+        estado: (rifa?.estado as "activa" | "cerrada") || "activa",
+        total_tickets: rifa?.total_tickets || 100,
+        tickets_disponibles: rifa?.tickets_disponibles || 100,
+        categoria_id: rifa?.categoria_id || "none",
+        numero_tickets_comprar: rifa?.numero_tickets_comprar || [1, 2, 3, 5, 10, 15, 20, 25, 50],
+        progreso_manual: rifa?.progreso_manual || null,
+        fecha_cierre: rifa?.fecha_cierre || "",
       })
     } else {
       form.reset({
@@ -124,36 +236,46 @@ export function RifaFormModal({
         estado: "activa",
         total_tickets: 100,
         tickets_disponibles: 100,
-        premio_principal: "",
-        condiciones: "",
-        activa: true,
-        categoria_id: "",
-        cantidad_tickets: 100,
-        numero_tickets_comprar: [1, 2, 3, 5, 10],
-        tipo_rifa: "vehiculo",
-        categoria: "automovil",
-        destacada: false,
+        categoria_id: "none",
+        numero_tickets_comprar: [1, 2, 3, 5, 10, 15, 20, 25, 50],
+        progreso_manual: null,
+        fecha_cierre: "",
       })
     }
   }, [rifa, form])
 
-  // Manejar envío del formulario
   const handleSubmit = async (data: RifaFormValues) => {
     try {
-      const result = await onSubmit(data)
-      if (result.success) {
-        form.reset()
-        onClose()
-      } else {
-        // Aquí podrías mostrar el error en el formulario
-        console.error("Error al guardar:", result.error)
+      // Ordenar opciones de compra solo antes de enviar
+      let numeroTicketsComprar = data.numero_tickets_comprar;
+      if (numeroTicketsComprar && Array.isArray(numeroTicketsComprar)) {
+        numeroTicketsComprar = [...new Set(numeroTicketsComprar)]
+          .filter(val => val > 0)
+          .sort((a, b) => a - b);
       }
+      
+      // Limpiar datos antes de enviar
+      const datosLimpios = {
+        ...data,
+        numero_tickets_comprar: numeroTicketsComprar,
+        categoria_id: data.categoria_id === "none" ? null : data.categoria_id,
+        fecha_cierre: data.fecha_cierre === "" ? null : data.fecha_cierre
+      };
+      
+      console.log('🔍 Datos del formulario a enviar:', data)
+      console.log('🔍 Datos limpios a enviar:', datosLimpios)
+      
+      const result = await onSubmit(datosLimpios)
+      if (result.success) {
+        onClose()
+        form.reset()
+      }
+      return result
     } catch (error) {
-      console.error("Error inesperado:", error)
+      console.error('Error en handleSubmit:', error)
+      return { success: false, error: 'Error inesperado al procesar el formulario' }
     }
   }
-
-
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -182,24 +304,20 @@ export function RifaFormModal({
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-            {/* Información Básica */}
+            {/* Información Básica - Título y Descripción */}
             <div className="space-y-4">
-              <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                <Tag className="h-4 w-4" />
-                Información Básica
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 <FormField
                   control={form.control}
                   name="titulo"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Título *</FormLabel>
+                      <FormLabel className="text-base font-semibold text-gray-900">Título *</FormLabel>
                       <FormControl>
-                        <Input 
-                          placeholder="Ej: Toyota 4Runner TRD Pro 2024" 
-                          {...field} 
+                        <Input
+                          placeholder="Ej: Toyota 4Runner TRD Pro 2024"
+                          className="h-11 border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 text-base"
+                          {...field}
                         />
                       </FormControl>
                       <FormMessage />
@@ -209,23 +327,57 @@ export function RifaFormModal({
 
                 <FormField
                   control={form.control}
-                  name="categoria"
+                  name="descripcion"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Categoría *</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormLabel className="text-base font-semibold text-gray-900">Descripción</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Descripción detallada de la rifa..."
+                          className="min-h-[100px] border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 text-base"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Estado y Categoría - Sin división, al mismo nivel */}
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <FormField
+                  control={form.control}
+                  name="estado"
+                  render={({ field }) => (
+                    <FormItem className="space-y-3">
+                      <FormLabel className="text-base font-semibold text-gray-900">Estado *</FormLabel>
+                      <Select onValueChange={(value) => {
+                        // Establecer fecha de cierre automáticamente
+                        if (value === "cerrada") {
+                          form.setValue("fecha_cierre", new Date().toISOString());
+                        } else {
+                          form.setValue("fecha_cierre", null);
+                        }
+                        field.onChange(value);
+                      }} defaultValue={field.value}>
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleccionar categoría" />
+                          <SelectTrigger className="h-11 border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200">
+                            <SelectValue placeholder="Seleccionar estado" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="automovil">Automóvil</SelectItem>
-                          <SelectItem value="electronico">Electrónico</SelectItem>
-                          <SelectItem value="inmueble">Inmueble</SelectItem>
-                          <SelectItem value="otro">Otro</SelectItem>
+                          <SelectItem value="activa">Activa</SelectItem>
+                          <SelectItem value="cerrada">Cerrada</SelectItem>
                         </SelectContent>
                       </Select>
+                      <FormDescription className="text-sm text-gray-600">
+                        Al cambiar a "Cerrada" se establecerá automáticamente la fecha de cierre
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -233,18 +385,97 @@ export function RifaFormModal({
 
                 <FormField
                   control={form.control}
+                  name="categoria_id"
+                  render={({ field }) => (
+                    <FormItem className="space-y-3">
+                      <FormLabel className="text-base font-semibold text-gray-900">Categoría</FormLabel>
+                      <Select onValueChange={(value) => {
+                        // Convertir "none" a null para la base de datos
+                        const categoriaValue = value === "none" ? null : value;
+                        console.log('🔍 Categoría seleccionada:', { value, categoriaValue });
+                        field.onChange(categoriaValue);
+                      }} defaultValue={field.value || "none"}>
+                        <FormControl>
+                          <SelectTrigger className="h-11 border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200">
+                            <SelectValue placeholder="Seleccionar categoría" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="none">Sin categoría</SelectItem>
+                          {categoriasLoading ? (
+                            <SelectItem value="loading" disabled>
+                              Cargando categorías...
+                            </SelectItem>
+                          ) : (
+                            categorias.map((categoria) => {
+                              const IconComponent = getCategoryIcon(categoria.icono);
+                              return (
+                                <SelectItem key={categoria.id} value={categoria.id}>
+                                  <div className="flex items-center gap-2">
+                                    <IconComponent className="h-4 w-4 text-red-600" />
+                                    <span>{categoria.nombre}</span>
+                                  </div>
+                                </SelectItem>
+                              );
+                            })
+                          )}
+                        </SelectContent>
+                      </Select>
+                      
+                      <FormDescription className="text-sm text-gray-600">
+                        Si necesitas una nueva categoría, puedes crearla en la sección de Categorías
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Imagen de la Rifa */}
+            <div className="space-y-4">
+              <FormField
+                control={form.control}
+                name="imagen_url"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-base font-semibold text-gray-900">Imagen</FormLabel>
+                    <FormControl>
+                      <ImageUpload
+                        value={field.value}
+                        onChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <Separator />
+
+            {/* Configuración de Tickets */}
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <FormField
+                  control={form.control}
                   name="precio_ticket"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Precio del Ticket *</FormLabel>
+                      <FormLabel className="text-base font-semibold text-gray-900">Precio por Ticket *</FormLabel>
                       <FormControl>
                         <div className="relative">
-                          <DollarSign className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                          <Input 
-                            type="number" 
-                            step="0.01" 
-                            placeholder="0.00" 
-                            className="pl-10"
+                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 font-medium">
+                            $
+                          </span>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0.01"
+                            placeholder="0.00"
+                            className="h-11 border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 text-base pl-8"
                             {...field}
                             onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                           />
@@ -260,95 +491,55 @@ export function RifaFormModal({
                   name="total_tickets"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Total de Tickets *</FormLabel>
+                      <FormLabel className="text-base font-semibold text-gray-900">Total de Tickets *</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="number" 
-                          placeholder="100" 
+                        <Input
+                          type="number"
+                          min="1"
+                          placeholder="100"
+                          className="h-11 border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 text-base"
                           {...field}
                           onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
                         />
                       </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="tickets_disponibles"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tickets Disponibles *</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          placeholder="100" 
-                          {...field}
-                          onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="estado"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Estado *</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleccionar estado" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="activa">Activa</SelectItem>
-                          <SelectItem value="cerrada">Cerrada</SelectItem>
-                          <SelectItem value="finalizada">Finalizada</SelectItem>
-                        </SelectContent>
-                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
 
+              {/* Progreso Manual */}
               <FormField
                 control={form.control}
-                name="descripcion"
+                name="progreso_manual"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Descripción</FormLabel>
+                    <FormLabel className="text-base font-semibold text-gray-900">Progreso Manual</FormLabel>
                     <FormControl>
-                      <Textarea 
-                        placeholder="Describe los detalles de la rifa..." 
-                        className="min-h-[100px]"
-                        {...field} 
-                      />
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-600">0%</span>
+                          <span className="text-sm font-medium text-gray-900">
+                            {field.value || 0}%
+                          </span>
+                          <span className="text-sm text-gray-600">100%</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0"
+                          max="100"
+                          step="1"
+                          value={field.value || 0}
+                          onChange={(e) => field.onChange(parseInt(e.target.value))}
+                          className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+                        />
+                      </div>
                     </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="imagen_url"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>URL de Imagen</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="https://ejemplo.com/imagen.jpg" 
-                        {...field} 
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Enlace a la imagen de la rifa
+                    <FormDescription className="text-sm text-gray-600">
+                      {field.value === 0 || field.value === null 
+                        ? "En 0% significa que no se utilizará progreso manual. El progreso se calculará automáticamente."
+                        : "Ajusta el progreso manual de la rifa. 0% = automático, 100% = completado."
+                      }
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -358,164 +549,53 @@ export function RifaFormModal({
 
             <Separator />
 
-            {/* Configuración de Tickets */}
+            {/* Configuración Adicional */}
             <div className="space-y-4">
-              <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                <Tag className="h-4 w-4" />
-                Configuración de Tickets
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="cantidad_tickets"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Cantidad de Tickets</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          placeholder="100" 
-                          {...field}
-                          onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        Cantidad total de tickets disponibles
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="tipo_rifa"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tipo de Rifa</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleccionar tipo" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="vehiculo">Vehículo</SelectItem>
-                          <SelectItem value="electronico">Electrónico</SelectItem>
-                          <SelectItem value="inmueble">Inmueble</SelectItem>
-                          <SelectItem value="otro">Otro</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* Configuración Avanzada */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                <Settings className="h-4 w-4" />
-                Configuración Avanzada
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="premio_principal"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Premio Principal</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="Descripción del premio principal" 
-                          {...field} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="destacada"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel>Rifa Destacada</FormLabel>
-                        <FormDescription>
-                          Mostrar en posiciones destacadas
-                        </FormDescription>
-                      </div>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="activa"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel>Rifa Activa</FormLabel>
-                        <FormDescription>
-                          La rifa estará disponible para compra
-                        </FormDescription>
-                      </div>
-                    </FormItem>
-                  )}
-                />
-              </div>
-
               <FormField
                 control={form.control}
-                name="condiciones"
+                name="numero_tickets_comprar"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Condiciones</FormLabel>
+                    <FormLabel className="text-base font-semibold text-gray-900">Cantidades de Tickets Disponibles</FormLabel>
                     <FormControl>
-                      <Textarea 
-                        placeholder="Condiciones para participar en la rifa..." 
-                        className="min-h-[80px]"
-                        {...field} 
+                      <TicketOptionsInput
+                        value={field.value || [1, 2, 3, 5, 10, 15, 20, 25, 50]}
+                        onChange={field.onChange}
                       />
                     </FormControl>
+                    <FormDescription className="text-sm text-gray-600">
+                      Configura las cantidades de tickets que los usuarios pueden comprar. Los números se ordenarán automáticamente al guardar.
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
 
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={onClose}>
+            <DialogFooter className="gap-3 pt-4">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={onClose}
+                disabled={isSubmitting}
+                className="h-11 px-6 hover:scale-105 transition-all duration-200"
+              >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
+              <Button 
+                type="submit" 
+                disabled={isSubmitting}
+                className="gap-2 h-11 px-6 bg-red-600 hover:bg-red-700 hover:scale-105 transition-all duration-200"
+              >
                 {isSubmitting ? (
                   <>
-                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                    Guardando...
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                    {isEditing ? 'Actualizando...' : 'Creando...'}
                   </>
                 ) : (
                   <>
-                    {isEditing ? "Actualizar" : "Crear"} Rifa
+                    {isEditing ? <Edit className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                    {isEditing ? 'Actualizar Rifa' : 'Crear Rifa'}
                   </>
                 )}
               </Button>
@@ -523,6 +603,70 @@ export function RifaFormModal({
           </form>
         </Form>
       </DialogContent>
+      
+      {/* Estilos personalizados para el slider */}
+      <style jsx>{`
+        .slider::-webkit-slider-thumb {
+          appearance: none;
+          height: 20px;
+          width: 20px;
+          border-radius: 50%;
+          background: #3b82f6;
+          cursor: pointer;
+          border: 2px solid #ffffff;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+          transition: all 0.2s ease;
+        }
+        
+        .slider::-webkit-slider-thumb:hover {
+          background: #2563eb;
+          transform: scale(1.1);
+        }
+        
+        .slider::-moz-range-thumb {
+          height: 20px;
+          width: 20px;
+          border-radius: 50%;
+          background: #3b82f6;
+          cursor: pointer;
+          border: 2px solid #ffffff;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+          transition: all 0.2s ease;
+        }
+        
+        .slider::-moz-range-thumb:hover {
+          background: #2563eb;
+          transform: scale(1.1);
+        }
+        
+        .slider::-ms-thumb {
+          height: 20px;
+          width: 20px;
+          border-radius: 50%;
+          background: #3b82f6;
+          cursor: pointer;
+          border: 2px solid #ffffff;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .slider::-webkit-slider-track {
+          background: #e5e7eb;
+          border-radius: 8px;
+          height: 8px;
+        }
+        
+        .slider::-moz-range-track {
+          background: #e5e7eb;
+          border-radius: 8px;
+          height: 8px;
+        }
+        
+        .slider::-ms-track {
+          background: #e5e7eb;
+          border-radius: 8px;
+          height: 8px;
+        }
+      `}</style>
     </Dialog>
   )
 }

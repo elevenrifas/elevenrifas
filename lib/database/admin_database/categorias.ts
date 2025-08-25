@@ -12,13 +12,17 @@ import {
   applyOrdering,
   applyPagination
 } from '@/lib/database'
-import type { Database } from '@/types/supabase'
 
-type CategoriaRifa = Database['public']['Tables']['categorias_rifas']['Row']
-type CategoriaInsert = Database['public']['Tables']['categorias_rifas']['Insert']
-type CategoriaUpdate = Database['public']['Tables']['categorias_rifas']['Update']
+// Definir tipos basados en el esquema actual (4 campos)
+export interface AdminCategoria {
+  id: string
+  nombre: string
+  icono: string
+  descripcion?: string
+}
 
-export type AdminCategoria = CategoriaRifa
+export type CategoriaInsert = Omit<AdminCategoria, 'id'>
+export type CategoriaUpdate = Partial<CategoriaInsert>
 
 // =====================================================
 // 📋 FUNCIONES ADMIN CATEGORIAS
@@ -32,7 +36,7 @@ export async function adminListCategorias(params?: {
   offset?: number
 }): Promise<{ success: boolean; data?: AdminCategoria[]; error?: string; total?: number }> {
   const {
-    ordenarPor = 'orden',
+    ordenarPor = 'nombre', // Cambiado de 'orden' a 'nombre' que sí existe
     orden = 'asc',
     limite = 1000,
     offset = 0
@@ -40,15 +44,23 @@ export async function adminListCategorias(params?: {
 
   return safeAdminQuery(
     async () => {
+      console.log('🔍 [DEBUG] Iniciando consulta de categorías...')
+      console.log('🔍 [DEBUG] Parámetros:', { ordenarPor, orden, limite, offset })
+      
       let query = createAdminQuery('categorias_rifas').select('*')
+      console.log('🔍 [DEBUG] Query base creada')
       
       // Aplicar ordenamiento usando helper
       query = applyOrdering(query, ordenarPor, orden)
+      console.log('🔍 [DEBUG] Ordenamiento aplicado')
       
       // Aplicar paginación usando helper
       query = applyPagination(query, limite, offset)
+      console.log('🔍 [DEBUG] Paginación aplicada')
 
+      console.log('🔍 [DEBUG] Ejecutando query...')
       const result = await query
+      console.log('🔍 [DEBUG] Resultado obtenido:', result)
       
       return { 
         success: true,

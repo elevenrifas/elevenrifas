@@ -28,7 +28,7 @@ interface UseAdminRifasReturn {
   refreshRifas: () => Promise<void>
   createRifa: (datos: any) => Promise<{ success: boolean; id?: string; error?: string }>
   updateRifa: (id: string, datos: any) => Promise<{ success: boolean; error?: string }>
-  changeRifaState: (id: string, estado: 'activa' | 'cerrada' | 'finalizada') => Promise<{ success: boolean; error?: string }>
+  changeRifaState: (id: string, estado: 'activa' | 'cerrada') => Promise<{ success: boolean; error?: string }>
   
   // Utilidades
   getRifaById: (id: string) => AdminRifa | undefined
@@ -67,8 +67,8 @@ export function useAdminRifas(options: UseAdminRifasOptions = {}): UseAdminRifas
       })
 
       if (result.success) {
-        setRifas(result.data)
-        setTotalRifas(result.total || result.data.length)
+        setRifas(result.data || [])
+        setTotalRifas(result.data?.length || 0)
       } else {
         setError(result.error || 'Error al cargar las rifas')
         setRifas([])
@@ -101,8 +101,8 @@ export function useAdminRifas(options: UseAdminRifasOptions = {}): UseAdminRifas
       })
 
       if (result.success) {
-        setRifas(result.data)
-        setTotalRifas(result.total || result.data.length)
+        setRifas(result.data || [])
+        setTotalRifas(result.data?.length || 0)
       } else {
         setError(result.error || 'Error al refrescar las rifas')
       }
@@ -112,26 +112,59 @@ export function useAdminRifas(options: UseAdminRifasOptions = {}): UseAdminRifas
     } finally {
       setIsRefreshing(false)
     }
-  }, [incluirCerradas, incluirInactivas, limit, ordenarPor, orden, isRefreshing])
+  }, [incluirCerradas, incluirInactivas, limit, ordenarPor, orden])
 
   // Función para crear rifa
   const createRifa = useCallback(async (datos: any) => {
     try {
       setError(null)
-      const result = await adminCreateRifa(datos)
+      
+      // Validar datos requeridos
+      if (!datos.titulo || !datos.precio_ticket) {
+        return { success: false, error: 'Título y precio del ticket son requeridos' }
+      }
+
+      // Validar precio del ticket
+      if (datos.precio_ticket <= 0) {
+        return { success: false, error: 'El precio del ticket debe ser mayor a 0' }
+      }
+
+      // Validar numero_tickets_comprar
+      if (datos.numero_tickets_comprar && !Array.isArray(datos.numero_tickets_comprar)) {
+        return { success: false, error: 'numero_tickets_comprar debe ser un array' }
+      }
+
+      // Validar progreso_manual
+      if (datos.progreso_manual !== undefined && (datos.progreso_manual < 0 || datos.progreso_manual > 100)) {
+        return { success: false, error: 'progreso_manual debe estar entre 0 y 100' }
+      }
+
+      // Establecer valores por defecto
+      const datosConValoresPorDefecto = {
+        ...datos,
+        estado: datos.estado || 'activa',
+        fecha_creacion: datos.fecha_creacion || new Date().toISOString(),
+        total_tickets: datos.total_tickets || 0,
+        tickets_disponibles: datos.tickets_disponibles || datos.total_tickets || 0,
+        numero_tickets_comprar: datos.numero_tickets_comprar || [1, 2, 3, 5, 10],
+        progreso_manual: datos.progreso_manual !== undefined ? datos.progreso_manual : null
+      }
+
+      const result = await adminCreateRifa(datosConValoresPorDefecto)
       
       if (result.success) {
-        // Refrescar la lista después de crear
-        await refreshRifas()
+        // Recargar rifas después de crear
+        await loadRifas()
+        return { success: true, id: result.data?.id }
+      } else {
+        return { success: false, error: result.error || 'Error al crear la rifa' }
       }
-      
-      return result
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error inesperado al crear rifa'
       setError(errorMessage)
       return { success: false, error: errorMessage }
     }
-  }, [refreshRifas])
+  }, [loadRifas])
 
   // Función para actualizar rifa
   const updateRifa = useCallback(async (id: string, datos: any) => {
@@ -153,7 +186,7 @@ export function useAdminRifas(options: UseAdminRifasOptions = {}): UseAdminRifas
   }, [refreshRifas])
 
   // Función para cambiar estado de rifa
-  const changeRifaState = useCallback(async (id: string, estado: 'activa' | 'cerrada' | 'finalizada') => {
+  const changeRifaState = useCallback(async (id: string, estado: 'activa' | 'cerrada') => {
     try {
       setError(null)
       const result = await adminChangeRifaState(id, estado)
@@ -180,8 +213,9 @@ export function useAdminRifas(options: UseAdminRifasOptions = {}): UseAdminRifas
     return rifas.filter(rifa => rifa.estado === estado)
   }, [rifas])
 
-  const getRifasByCategoria = useCallback((categoria: string) => {
-    return rifas.filter(rifa => rifa.categoria === categoria)
+  // Función para obtener rifas por categoría
+  const getRifasByCategoria = useCallback((categoriaId: string) => {
+    return rifas.filter(rifa => rifa.categoria_id === categoriaId)
   }, [rifas])
 
   // Cargar rifas al montar el componente

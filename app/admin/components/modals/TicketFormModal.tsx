@@ -39,7 +39,7 @@ const TicketFormSchema = z.object({
   cedula: z.string().min(1, 'La cédula es requerida').max(20, 'Máximo 20 caracteres'),
   telefono: z.string().optional(),
   correo: z.string().email('Email inválido').max(255, 'Máximo 255 caracteres'),
-  estado: z.enum(['reservado', 'pagado', 'verificado', 'cancelado']).default('reservado'),
+  estado: z.enum(['pendiente', 'verificado', 'rechazado']).default('pendiente'),
   email: z.string().email('Email inválido').max(100, 'Máximo 100 caracteres').optional(),
 })
 
@@ -214,7 +214,7 @@ export function TicketFormModal({
                   name="estado"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Estado *</FormLabel>
+                      <FormLabel>Estado del Pago *</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
@@ -222,10 +222,9 @@ export function TicketFormModal({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="reservado">Reservado</SelectItem>
-                          <SelectItem value="pagado">Pagado</SelectItem>
+                          <SelectItem value="pendiente">Pendiente</SelectItem>
                           <SelectItem value="verificado">Verificado</SelectItem>
-                          <SelectItem value="cancelado">Cancelado</SelectItem>
+                          <SelectItem value="rechazado">Rechazado</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />

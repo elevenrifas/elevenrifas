@@ -11,7 +11,7 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu"
-import { MoreHorizontal, Edit, Trash2, Eye, DollarSign, CheckCircle, Clock, XCircle, CreditCard, Smartphone, Globe } from "lucide-react"
+import { MoreHorizontal, Edit, Trash2, Eye, DollarSign, CheckCircle, Clock, XCircle, CreditCard, Smartphone, Globe, AlertTriangle } from "lucide-react"
 import type { AdminPago } from "@/lib/database/admin_database/pagos"
 import { useAdminPagos } from "@/hooks/use-admin-pagos"
 
@@ -42,6 +42,199 @@ export function PagosTable({
   // Hook para obtener pagos de la base de datos
   const { pagos, loading, error, loadPagos } = useAdminPagos()
   const [selectedRows, setSelectedRows] = React.useState<AdminPago[]>([])
+
+  // Definir las columnas de la tabla
+  const pagosColumns: ColumnDef<AdminPago>[] = [
+    {
+      accessorKey: "tickets.nombre",
+      header: "Cliente",
+      cell: ({ row }) => {
+        const ticket = row.original.tickets
+        return (
+          <div className="text-sm font-medium">
+            {ticket?.nombre || 'N/A'}
+          </div>
+        )
+      },
+      size: 150,
+    },
+    {
+      accessorKey: "tickets.rifas.titulo",
+      header: "Rifa",
+      cell: ({ row }) => {
+        const rifa = row.original.tickets?.rifas
+        return (
+          <div className="text-sm text-muted-foreground">
+            {rifa?.titulo || 'N/A'}
+          </div>
+        )
+      },
+      size: 150,
+    },
+    {
+      accessorKey: "monto_bs",
+      header: "Monto Bs",
+      cell: ({ row }) => {
+        const monto = row.original.monto_bs
+        return (
+          <div className="text-sm font-medium text-center">
+            {monto ? `Bs. ${monto.toFixed(2)}` : 'N/A'}
+          </div>
+        )
+      },
+      size: 120,
+    },
+    {
+      accessorKey: "monto_usd",
+      header: "Monto USD",
+      cell: ({ row }) => {
+        const monto = row.original.monto_usd
+        return (
+          <div className="text-sm font-medium text-center">
+            {monto ? `$${monto.toFixed(2)}` : 'N/A'}
+          </div>
+        )
+      },
+      size: 120,
+    },
+    {
+      accessorKey: "estado",
+      header: "Estado",
+      cell: ({ row }) => {
+        const estado = row.original.estado
+        const getEstadoConfig = (estado: string) => {
+          switch (estado) {
+            case 'pendiente':
+              return { label: 'Pendiente', variant: 'secondary', icon: Clock }
+            case 'aprobado':
+              return { label: 'Aprobado', variant: 'default', icon: CheckCircle }
+            case 'rechazado':
+              return { label: 'Rechazado', variant: 'destructive', icon: XCircle }
+            default:
+              return { label: estado, variant: 'outline', icon: AlertTriangle }
+          }
+        }
+        
+        const config = getEstadoConfig(estado)
+        const IconComponent = config.icon
+        
+        return (
+          <div className="flex items-center justify-center">
+            <Badge variant={config.variant as any} className="text-xs">
+              <IconComponent className="mr-1 h-3 w-3" />
+              {config.label}
+            </Badge>
+          </div>
+        )
+      },
+      size: 120,
+    },
+    {
+      accessorKey: "tipo_pago",
+      header: "Tipo Pago",
+      cell: ({ row }) => {
+        const tipo = row.original.tipo_pago
+        const getTipoConfig = (tipo: string) => {
+          switch (tipo) {
+            case 'efectivo':
+              return { label: 'Efectivo', icon: DollarSign, color: 'text-green-600' }
+            case 'tarjeta':
+              return { label: 'Tarjeta', icon: CreditCard, color: 'text-blue-600' }
+            case 'transferencia':
+              return { label: 'Transferencia', icon: Smartphone, color: 'text-purple-600' }
+            case 'otro':
+              return { label: 'Otro', icon: Globe, color: 'text-gray-600' }
+            default:
+              return { label: tipo, icon: AlertTriangle, color: 'text-gray-600' }
+          }
+        }
+        
+        const config = getTipoConfig(tipo)
+        const IconComponent = config.icon
+        
+        return (
+          <div className="flex items-center justify-center gap-2">
+            <IconComponent className={`h-4 w-4 ${config.color}`} />
+            <span className="text-sm">{config.label}</span>
+          </div>
+        )
+      },
+      size: 150,
+    },
+    {
+      accessorKey: "fecha_pago",
+      header: "Fecha Pago",
+      cell: ({ row }) => {
+        const fecha = row.original.fecha_pago
+        return (
+          <div className="text-center text-sm text-muted-foreground">
+            {fecha ? new Date(fecha).toLocaleDateString() : 'N/A'}
+          </div>
+        )
+      },
+      size: 120,
+    },
+    {
+      accessorKey: "fecha_verificacion",
+      header: "Verificación",
+      cell: ({ row }) => {
+        const fecha = row.original.fecha_verificacion
+        return (
+          <div className="text-center text-sm text-muted-foreground">
+            {fecha ? new Date(fecha).toLocaleDateString() : 'N/A'}
+          </div>
+        )
+      },
+      size: 120,
+    },
+    {
+      id: "actions",
+      header: "Acciones",
+      cell: ({ row }) => {
+        const pago = row.original
+
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-8 w-8 p-0">
+                <span className="sr-only">Abrir menú</span>
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => onView?.(pago)}>
+                <Eye className="mr-2 h-4 w-4" />
+                Ver
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onEdit?.(pago)}>
+                <Edit className="mr-2 h-4 w-4" />
+                Editar
+              </DropdownMenuItem>
+              {pago.estado === 'pendiente' && (
+                <DropdownMenuItem onClick={() => console.log("Aprobar pago:", pago.id)}>
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  Aprobar
+                </DropdownMenuItem>
+              )}
+              {pago.estado === 'pendiente' && (
+                <DropdownMenuItem onClick={() => console.log("Rechazar pago:", pago.id)}>
+                  <XCircle className="mr-2 h-4 w-4" />
+                  Rechazar
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem 
+                onClick={() => onDelete?.([pago])}
+                className="text-red-600"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Eliminar
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )
+      },
+    },
+  ]
 
   // Cargar pagos al montar el componente
   React.useEffect(() => {
@@ -184,175 +377,6 @@ export function PagosTable({
       default: return <Clock className="h-3 w-3" />
     }
   }
-
-  // Columnas de la tabla
-  const pagosColumns: ColumnDef<AdminPago>[] = [
-    {
-      accessorKey: "tickets.nombre",
-      header: "Cliente",
-      cell: ({ row }) => {
-        const nombre = row.original.tickets?.nombre || 'N/A'
-        const correo = row.original.tickets?.correo || 'N/A'
-        return (
-          <div className="space-y-1">
-            <div className="font-medium">{nombre}</div>
-            <div className="text-sm text-muted-foreground">{correo}</div>
-          </div>
-        )
-      },
-      size: 200,
-    },
-    {
-      accessorKey: "tipo_pago",
-      header: "Tipo Pago",
-      cell: ({ row }) => {
-        const tipo = row.getValue("tipo_pago") as string
-        return (
-          <div className="flex items-center gap-2">
-            {getTipoPagoIcon(tipo)}
-            <Badge variant="outline" className="text-xs">
-              {tipo.replace('_', ' ').toUpperCase()}
-            </Badge>
-          </div>
-        )
-      },
-      size: 150,
-    },
-    {
-      accessorKey: "monto_usd",
-      header: "Monto USD",
-      cell: ({ row }) => {
-        const monto = row.getValue("monto_usd") as number
-        return (
-          <div className="text-center">
-            <Badge variant="outline" className="text-xs font-mono">
-              ${monto.toFixed(2)}
-            </Badge>
-          </div>
-        )
-      },
-      size: 120,
-    },
-    {
-      accessorKey: "monto_bs",
-      header: "Monto Bs",
-      cell: ({ row }) => {
-        const monto = row.getValue("monto_bs") as number
-        return (
-          <div className="text-center">
-            <Badge variant="outline" className="text-xs font-mono">
-              Bs. {monto.toFixed(2)}
-            </Badge>
-          </div>
-        )
-      },
-      size: 120,
-    },
-    {
-      accessorKey: "estado",
-      header: "Estado",
-      cell: ({ row }) => {
-        const estado = row.getValue("estado") as string
-        return (
-          <div className="flex items-center justify-center">
-            <Badge variant={getEstadoVariant(estado)} className="text-xs">
-              <div className="flex items-center gap-1">
-                {getEstadoIcon(estado)}
-                {estado}
-              </div>
-            </Badge>
-          </div>
-        )
-      },
-      size: 120,
-    },
-    {
-      accessorKey: "referencia",
-      header: "Referencia",
-      cell: ({ row }) => {
-        const referencia = row.original.referencia
-        return (
-          <div className="max-w-[150px] truncate text-sm text-muted-foreground font-mono">
-            {referencia || 'N/A'}
-          </div>
-        )
-      },
-      size: 150,
-    },
-    {
-      accessorKey: "fecha_pago",
-      header: "Fecha Pago",
-      cell: ({ row }) => {
-        const fecha = row.original.fecha_pago
-        return (
-          <div className="text-center text-sm text-muted-foreground">
-            {fecha ? new Date(fecha).toLocaleDateString() : 'N/A'}
-          </div>
-        )
-      },
-      size: 120,
-    },
-    {
-      accessorKey: "fecha_verificacion",
-      header: "Verificación",
-      cell: ({ row }) => {
-        const fecha = row.original.fecha_verificacion
-        return (
-          <div className="text-center text-sm text-muted-foreground">
-            {fecha ? new Date(fecha).toLocaleDateString() : 'N/A'}
-          </div>
-        )
-      },
-      size: 120,
-    },
-    {
-      id: "actions",
-      header: "Acciones",
-      cell: ({ row }) => {
-        const pago = row.original
-
-        return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">Abrir menú</span>
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onView?.(pago)}>
-                <Eye className="mr-2 h-4 w-4" />
-                Ver
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onEdit?.(pago)}>
-                <Edit className="mr-2 h-4 w-4" />
-                Editar
-              </DropdownMenuItem>
-              {pago.estado === 'pendiente' && (
-                <DropdownMenuItem onClick={() => console.log("Aprobar pago:", pago.id)}>
-                  <CheckCircle className="mr-2 h-4 w-4" />
-                  Aprobar
-                </DropdownMenuItem>
-              )}
-              {pago.estado === 'pendiente' && (
-                <DropdownMenuItem onClick={() => console.log("Rechazar pago:", pago.id)}>
-                  <XCircle className="mr-2 h-4 w-4" />
-                  Rechazar
-                </DropdownMenuItem>
-              )}
-              <DropdownMenuItem 
-                onClick={() => onDelete?.([pago])}
-                className="text-red-600"
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Eliminar
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )
-      },
-    },
-  ]
 
   return (
     <div className="space-y-4">

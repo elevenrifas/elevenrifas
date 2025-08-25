@@ -11,55 +11,75 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu"
-import { MoreHorizontal, Edit, Trash2, Eye, Ticket, User, CreditCard, CheckCircle, XCircle, Clock, Lock, Unlock } from "lucide-react"
+import { MoreHorizontal, Trash2, Receipt, Ticket, User, CreditCard } from "lucide-react"
 import type { AdminTicket } from "@/types"
 import { useCrudTickets } from "@/hooks/use-crud-tickets"
+import { PagoDetallesModal } from "../modals/PagoDetallesModal"
 
 // =====================================================
 // 🎯 TABLA TICKETS - ELEVEN RIFAS
 // =====================================================
 // Tabla estandarizada para gestionar tickets
-// Usa el nuevo sistema DataTableEnhanced
+// Solo con opciones de eliminar y ver detalles del pago
 // =====================================================
 
 // Props del componente
 interface TicketsTableProps {
-  onCreate?: () => void
-  onEdit?: (ticket: AdminTicket) => void
   onDelete?: (tickets: AdminTicket[]) => void
-  onView?: (ticket: AdminTicket) => void
   onExport?: (tickets: AdminTicket[]) => void
+  sharedHook?: {
+    tickets: AdminTicket[]
+    isLoading: boolean
+    error: string | null
+    refreshTickets: () => Promise<void>
+  }
 }
 
 // Componente principal
 export function TicketsTable({
-  onCreate,
-  onEdit,
   onDelete,
-  onView,
   onExport,
+  sharedHook
 }: TicketsTableProps) {
-  // Hook para obtener tickets de la base de datos
+  // Hook para obtener tickets de la base de datos (solo si no hay hook compartido)
   const { 
-    tickets, 
-    isLoading, 
-    error, 
-    refreshTickets,
+    tickets: localTickets, 
+    isLoading: localIsLoading, 
+    error: localError, 
+    refreshTickets: localRefreshTickets,
     selectedTickets,
     selectTicket,
     selectMultipleTickets,
-    clearSelection
-  } = useCrudTickets({
-    initialFilters: {},
-    initialSort: { field: 'fecha_compra', direction: 'desc' },
-    initialPageSize: 10
-  })
+    clearSelection,
+    isRefreshing: localIsRefreshing
+  } = useCrudTickets(
+    sharedHook ? {} : {
+      initialFilters: {},
+      initialSort: { field: 'fecha_compra', direction: 'desc' },
+      initialPageSize: 1000
+    }
+  )
 
-  // Cargar tickets al montar el componente
+  // Usar el hook compartido si está disponible, sino usar el local
+  const tickets = sharedHook?.tickets || localTickets
+  const isLoading = sharedHook?.isLoading ?? localIsLoading
+  const error = sharedHook?.error ?? localError
+  const refreshTickets = sharedHook?.refreshTickets || localRefreshTickets
+  const isRefreshing = sharedHook ? false : localIsRefreshing // Solo el local puede estar refrescando
+
+  // Estado para el modal de detalles del pago
+  const [showPagoModal, setShowPagoModal] = React.useState(false)
+  const [selectedPago, setSelectedPago] = React.useState<any>(null)
+
+  // Cargar tickets al montar el componente (solo si no hay hook compartido)
   React.useEffect(() => {
-    console.log('🔄 Cargando tickets...')
-    refreshTickets()
-  }, []) // Solo se ejecuta al montar el componente
+    if (!sharedHook) {
+      console.log('🔄 Cargando tickets (hook local)...')
+      localRefreshTickets()
+    } else {
+      console.log('🔄 Usando hook compartido, no se carga localmente')
+    }
+  }, [sharedHook, localRefreshTickets]) // Solo se ejecuta al montar el componente o cambiar el hook
 
   // Debug: mostrar estado de los datos
   React.useEffect(() => {
@@ -77,6 +97,12 @@ export function TicketsTable({
   const handleRowSelectionChange = React.useCallback((rows: AdminTicket[]) => {
     selectMultipleTickets(rows)
   }, [selectMultipleTickets])
+
+  // Función para manejar el refresh manual
+  const handleRefresh = () => {
+    console.log('🔄 Refresh manual solicitado por usuario')
+    refreshTickets()
+  }
 
   // Función para manejar la exportación
   const handleExport = () => {
@@ -111,11 +137,8 @@ export function TicketsTable({
         'Teléfono',
         'Correo',
         'Rifa',
-        'Precio',
-        'Estado',
-        'Estado Verificación',
         'Fecha Compra',
-        'Bloqueado por Pago'
+        'Estado Pago'
       ]
       
       // Convertir datos a filas CSV
@@ -129,11 +152,8 @@ export function TicketsTable({
           `"${ticket.telefono || ''}"`,
           `"${ticket.correo}"`,
           `"${ticket.rifas?.titulo || ''}"`,
-          ticket.precio,
-          ticket.estado,
-          ticket.estado_verificacion || 'pendiente',
           ticket.fecha_compra || '',
-          ticket.bloqueado_por_pago ? 'Sí' : 'No'
+          ticket.pago_id ? 'Pagado' : 'Sin Pago'
         ].join(','))
       ]
       
@@ -159,9 +179,23 @@ export function TicketsTable({
     }
   }
 
-  // Función para manejar el refresh
-  const handleRefresh = () => {
-    refreshTickets()
+  // Función para mostrar detalles del pago
+  const handleShowPagoDetails = (ticket: AdminTicket) => {
+    console.log('🔍 Mostrando detalles del pago para ticket:', ticket)
+    
+    if (ticket.pagos) {
+      setSelectedPago(ticket.pagos)
+      setShowPagoModal(true)
+    } else {
+      console.warn('⚠️ Este ticket no tiene información de pago asociada')
+      // Aquí podrías mostrar una notificación al usuario
+    }
+  }
+
+  // Función para cerrar el modal de pago
+  const handleClosePagoModal = () => {
+    setShowPagoModal(false)
+    setSelectedPago(null)
   }
 
   // Columnas de la tabla
@@ -201,6 +235,32 @@ export function TicketsTable({
       size: 200,
     },
     {
+      accessorKey: "telefono",
+      header: "Teléfono",
+      cell: ({ row }) => {
+        const telefono = row.getValue("telefono") as string
+        return (
+          <div className="text-sm text-muted-foreground">
+            {telefono || 'N/A'}
+          </div>
+        )
+      },
+      size: 120,
+    },
+    {
+      accessorKey: "correo",
+      header: "Correo",
+      cell: ({ row }) => {
+        const correo = row.getValue("correo") as string
+        return (
+          <div className="text-sm text-muted-foreground max-w-[200px] truncate">
+            {correo}
+          </div>
+        )
+      },
+      size: 200,
+    },
+    {
       accessorKey: "rifas.titulo",
       header: "Rifa",
       cell: ({ row }) => {
@@ -212,98 +272,6 @@ export function TicketsTable({
         )
       },
       size: 180,
-    },
-    {
-      accessorKey: "precio",
-      header: "Precio",
-      cell: ({ row }) => {
-        const precio = row.getValue("precio") as number
-        return (
-          <div className="text-center">
-            <Badge variant="outline" className="text-xs font-mono">
-              ${precio.toFixed(2)}
-            </Badge>
-          </div>
-        )
-      },
-      size: 100,
-    },
-    {
-      accessorKey: "estado",
-      header: "Estado",
-      cell: ({ row }) => {
-        const estado = row.getValue("estado") as string
-        const getVariant = (estado: string) => {
-          switch (estado) {
-            case 'pagado': return 'default'
-            case 'verificado': return 'default'
-            case 'reservado': return 'secondary'
-            case 'cancelado': return 'destructive'
-            default: return 'secondary'
-          }
-        }
-        const getIcon = (estado: string) => {
-          switch (estado) {
-            case 'pagado': return <CreditCard className="h-3 w-3" />
-            case 'verificado': return <CheckCircle className="h-3 w-3" />
-            case 'reservado': return <Clock className="h-3 w-3" />
-            case 'cancelado': return <XCircle className="h-3 w-3" />
-            default: return <Clock className="h-3 w-3" />
-          }
-        }
-        return (
-          <div className="flex items-center justify-center">
-            <Badge variant={getVariant(estado)} className="text-xs">
-              <div className="flex items-center gap-1">
-                {getIcon(estado)}
-                {estado}
-              </div>
-            </Badge>
-          </div>
-        )
-      },
-      size: 120,
-    },
-    {
-      accessorKey: "estado_verificacion",
-      header: "Verificación",
-      cell: ({ row }) => {
-        const estado = row.original.estado_verificacion || 'pendiente'
-        const getVariant = (estado: string) => {
-          switch (estado) {
-            case 'verificado': return 'default'
-            case 'rechazado': return 'destructive'
-            case 'pendiente': return 'secondary'
-            default: return 'secondary'
-          }
-        }
-        return (
-          <div className="flex items-center justify-center">
-            <Badge variant={getVariant(estado)} className="text-xs">
-              {estado}
-            </Badge>
-          </div>
-        )
-      },
-      size: 120,
-    },
-    {
-      accessorKey: "bloqueado_por_pago",
-      header: "Bloqueo",
-      cell: ({ row }) => {
-        const bloqueado = row.original.bloqueado_por_pago || false
-        return (
-          <div className="flex items-center justify-center">
-            <Badge variant={bloqueado ? "destructive" : "secondary"} className="text-xs">
-              <div className="flex items-center gap-1">
-                {bloqueado ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
-                {bloqueado ? 'Bloqueado' : 'Libre'}
-              </div>
-            </Badge>
-          </div>
-        )
-      },
-      size: 120,
     },
     {
       accessorKey: "fecha_compra",
@@ -319,10 +287,53 @@ export function TicketsTable({
       size: 100,
     },
     {
+      id: "pago_status",
+      header: "Estado Pago",
+      cell: ({ row }) => {
+        const ticket = row.original
+        const tienePago = ticket.pago_id && ticket.pagos
+        const estadoPago = ticket.pagos?.estado || 'pendiente'
+        
+        const getEstadoBadge = (estado: string) => {
+          const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+            'pendiente': 'outline',
+            'verificado': 'default',
+            'rechazado': 'destructive'
+          }
+          
+          const colors: Record<string, string> = {
+            'pendiente': 'bg-yellow-100 text-yellow-800 border-yellow-200',
+            'verificado': 'bg-green-100 text-green-800 border-green-200',
+            'rechazado': 'bg-red-100 text-red-800 border-red-200'
+          }
+
+          return (
+            <Badge variant={variants[estado] || 'outline'} className={colors[estado]}>
+              {estado.charAt(0).toUpperCase() + estado.slice(1)}
+            </Badge>
+          )
+        }
+        
+        return (
+          <div className="text-center">
+            {tienePago ? (
+              getEstadoBadge(estadoPago)
+            ) : (
+              <Badge variant="secondary" className="text-xs">
+                Sin Pago
+              </Badge>
+            )}
+          </div>
+        )
+      },
+      size: 120,
+    },
+    {
       id: "actions",
       header: "Acciones",
       cell: ({ row }) => {
         const ticket = row.original
+        const tienePago = ticket.pago_id && ticket.pagos
 
         return (
           <DropdownMenu>
@@ -333,14 +344,12 @@ export function TicketsTable({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onView?.(ticket)}>
-                <Eye className="mr-2 h-4 w-4" />
-                Ver
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onEdit?.(ticket)}>
-                <Edit className="mr-2 h-4 w-4" />
-                Editar
-              </DropdownMenuItem>
+              {tienePago && (
+                <DropdownMenuItem onClick={() => handleShowPagoDetails(ticket)}>
+                  <Receipt className="mr-2 h-4 w-4" />
+                  Ver Detalles del Pago
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem 
                 onClick={() => onDelete?.([ticket])}
                 className="text-red-600"
@@ -364,14 +373,21 @@ export function TicketsTable({
         title: "Tickets",
         description: "Gestiona todos los tickets del sistema de rifas",
         searchKey: "nombre",
-        searchPlaceholder: "Buscar tickets...",
-        loading: isLoading,
+        searchPlaceholder: "Buscar por nombre de cliente...",
+        loading: isLoading || isRefreshing,
         error: error,
         onRowSelectionChange: handleRowSelectionChange,
         onRefresh: handleRefresh,
-        onExport: handleExport,
-        onCreate: onCreate || (() => {})
+        onExport: handleExport
+        // Removemos onCreate completamente para no mostrar el botón de crear
       })}
+
+      {/* Modal de detalles del pago */}
+      <PagoDetallesModal
+        isOpen={showPagoModal}
+        onClose={handleClosePagoModal}
+        pago={selectedPago}
+      />
     </div>
   )
 }

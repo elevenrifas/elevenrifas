@@ -1,10 +1,18 @@
 // =====================================================
-// 🎛️ TABLES COMPONENTS - EXPORTS
+// 🎯 EXPORTACIONES DE TABLAS - ELEVEN RIFAS
+// =====================================================
+// Todas las tablas del sistema admin centralizadas
 // =====================================================
 
-export { RifasTable } from "./RifasTable"
-export { CategoriasRifasTable } from "./CategoriasRifasTable"
-export { PagosTable, pagosColumns } from "./PagosTable"
-export { ProfilesTable, profilesColumns } from "./ProfilesTable"
-export { TicketsTable } from "./TicketsTable"
-export { UsuariosTable, usuariosColumns } from "./UsuariosTable"
+// Tablas principales
+export { RifasTable } from './RifasTable'
+export { TicketsTable } from './TicketsTable'
+export { PagosTable } from './PagosTable'
+export { PagosVerificacionTable } from './PagosVerificacionTable'
+export { UsuariosTable } from './UsuariosTable'
+export { UsuariosVerificacionTable } from './UsuariosVerificacionTable'
+export { ProfilesTable } from './ProfilesTable'
+export { CategoriasRifasTable } from './CategoriasRifasTable'
+
+// Nueva tabla de clientes
+export { ClientesTable } from './ClientesTable'

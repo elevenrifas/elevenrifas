@@ -14,11 +14,9 @@ import type { AdminTicket, CreateTicketData, UpdateTicketData } from '@/types'
 
 interface UseAdminTicketsOptions {
   rifa_id?: string
-  estado?: string
-  estado_verificacion?: string
-  bloqueado_por_pago?: boolean
   ordenarPor?: string
   orden?: 'asc' | 'desc'
+  limite?: number
   autoRefresh?: boolean
   refreshInterval?: number
 }
@@ -26,11 +24,9 @@ interface UseAdminTicketsOptions {
 export function useAdminTickets(options: UseAdminTicketsOptions = {}) {
   const {
     rifa_id,
-    estado,
-    estado_verificacion,
-    bloqueado_por_pago,
     ordenarPor = 'fecha_compra',
     orden = 'desc',
+    limite,
     autoRefresh = false,
     refreshInterval = 30000
   } = options
@@ -50,11 +46,9 @@ export function useAdminTickets(options: UseAdminTicketsOptions = {}) {
       
       const result = await adminListTickets({
         rifa_id,
-        estado,
-        estado_verificacion,
-        bloqueado_por_pago,
         ordenarPor,
-        orden
+        orden,
+        limite
       })
       
       console.log('🔍 [useAdminTickets] Resultado de adminListTickets:', result)
@@ -79,13 +73,15 @@ export function useAdminTickets(options: UseAdminTicketsOptions = {}) {
       console.log('🔍 [useAdminTickets] loadTickets finalizado, isLoading = false')
       setIsLoading(false)
     }
-  }, [rifa_id, estado, estado_verificacion, bloqueado_por_pago, ordenarPor, orden])
+  }, [rifa_id, ordenarPor, orden, limite])
 
   // Función para refrescar tickets
   const refreshTickets = useCallback(async () => {
     try {
+      console.log('🔄 [useAdminTickets] refreshTickets iniciando...')
       setIsRefreshing(true)
       await loadTickets()
+      console.log('✅ [useAdminTickets] refreshTickets completado')
     } finally {
       setIsRefreshing(false)
     }
@@ -126,90 +122,33 @@ export function useAdminTickets(options: UseAdminTicketsOptions = {}) {
   // Función para eliminar ticket
   const deleteTicket = useCallback(async (id: string) => {
     try {
+      console.log('🔄 [useAdminTickets] deleteTicket iniciando para ID:', id)
       const result = await adminDeleteTicket(id)
       
       if (result.success) {
-        await refreshTickets()
+        console.log('✅ [useAdminTickets] Ticket eliminado exitosamente')
+        // NO hacer refresh automático aquí, se hará manualmente en el hook CRUD
+        console.log('✅ [useAdminTickets] Refresh será manejado por hook CRUD')
+      } else {
+        console.error('❌ [useAdminTickets] Error al eliminar ticket:', result.error)
       }
       
       return result
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error inesperado al eliminar ticket'
+      console.error('💥 [useAdminTickets] Error inesperado en deleteTicket:', err)
       return { success: false, error: errorMessage }
     }
-  }, [refreshTickets])
-
-  // Función para cambiar estado del ticket
-  const changeTicketState = useCallback(async (id: string, estado: 'reservado' | 'pagado' | 'verificado' | 'cancelado') => {
-    try {
-      const result = await adminChangeTicketState(id, estado)
-      
-      if (result.success) {
-        await refreshTickets()
-      }
-      
-      return result
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Error inesperado al cambiar estado del ticket'
-      return { success: false, error: errorMessage }
-    }
-  }, [refreshTickets])
-
-  // Función para cambiar estado de verificación
-  const changeTicketVerificationState = useCallback(async (id: string, estado_verificacion: 'pendiente' | 'verificado' | 'rechazado') => {
-    try {
-      const result = await adminChangeTicketVerificationState(id, estado_verificacion)
-      
-      if (result.success) {
-        await refreshTickets()
-      }
-      
-      return result
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Error inesperado al cambiar estado de verificación del ticket'
-      return { success: false, error: errorMessage }
-    }
-  }, [refreshTickets])
-
-  // Función para bloquear/desbloquear ticket por pago
-  const toggleTicketPaymentBlock = useCallback(async (id: string, bloqueado: boolean, pago_id?: string) => {
-    try {
-      const result = await adminToggleTicketPaymentBlock(id, bloqueado, pago_id)
-      
-      if (result.success) {
-        await refreshTickets()
-      }
-      
-      return result
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Error inesperado al cambiar bloqueo del ticket'
-      return { success: false, error: errorMessage }
-    }
-  }, [refreshTickets])
+  }, []) // Removemos refreshTickets de las dependencias
 
   // Función para obtener ticket por ID
   const getTicketById = useCallback((id: string) => {
     return tickets.find(ticket => ticket.id === id)
   }, [tickets])
 
-  // Función para obtener tickets por estado
-  const getTicketsByEstado = useCallback((estado: string) => {
-    return tickets.filter(ticket => ticket.estado === estado)
-  }, [tickets])
-
   // Función para obtener tickets por rifa
   const getTicketsByRifa = useCallback((rifa_id: string) => {
     return tickets.filter(ticket => ticket.rifa_id === rifa_id)
-  }, [tickets])
-
-  // Función para obtener tickets por estado de verificación
-  const getTicketsByEstadoVerificacion = useCallback((estado_verificacion: string) => {
-    return tickets.filter(ticket => ticket.estado_verificacion === estado_verificacion)
-  }, [tickets])
-
-  // Función para obtener tickets bloqueados por pago
-  const getTicketsBloqueadosPorPago = useCallback(() => {
-    return tickets.filter(ticket => ticket.bloqueado_por_pago === true)
   }, [tickets])
 
   // Cargar tickets al montar el componente
@@ -241,16 +180,10 @@ export function useAdminTickets(options: UseAdminTicketsOptions = {}) {
     createTicket,
     updateTicket,
     deleteTicket,
-    changeTicketState,
-    changeTicketVerificationState,
-    toggleTicketPaymentBlock,
     
     // Utilidades
     refreshTickets,
     getTicketById,
-    getTicketsByEstado,
-    getTicketsByRifa,
-    getTicketsByEstadoVerificacion,
-    getTicketsBloqueadosPorPago
+    getTicketsByRifa
   }
 }

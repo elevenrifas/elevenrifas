@@ -18,7 +18,8 @@ import {
   Filter, 
   X,
   Download,
-  RefreshCw
+  RefreshCw,
+  Plus
 } from "lucide-react"
 import { DataTableFacetedFilter } from "./DataTableFacetedFilter"
 
@@ -38,6 +39,7 @@ export interface DataTableToolbarProps<TData> {
   showFacetedFilters?: boolean
   showRefresh?: boolean
   showExport?: boolean
+  showCreate?: boolean
   globalFilter?: string
   onGlobalFilterChange?: (value: string) => void
   facetedFilters?: {
@@ -47,6 +49,7 @@ export interface DataTableToolbarProps<TData> {
   }[]
   onRefresh?: () => void
   onExport?: () => void
+  onCreate?: () => void
   exportDisabled?: boolean
   loading?: boolean
   className?: string
@@ -61,11 +64,13 @@ export function DataTableToolbar<TData>({
   showFacetedFilters = false,
   showRefresh = true,
   showExport = true,
+  showCreate = false,
   globalFilter = "",
   onGlobalFilterChange,
   facetedFilters = [],
   onRefresh,
   onExport,
+  onCreate,
   exportDisabled = false,
   loading = false,
   className = ""
@@ -134,13 +139,13 @@ export function DataTableToolbar<TData>({
       <div className="flex flex-1 items-center space-x-2">
         {/* Búsqueda */}
         {showSearch && (
-          <div className="flex items-center space-x-2">
-            <Search className="h-4 w-4 text-muted-foreground" />
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
             <Input
               placeholder={searchPlaceholder}
               value={searchValue}
               onChange={(event) => setSearchValue(event.target.value)}
-              className="h-8 w-[150px] lg:w-[250px]"
+              className="table-search-input pl-10"
             />
           </div>
         )}
@@ -165,7 +170,7 @@ export function DataTableToolbar<TData>({
           <Button
             variant="ghost"
             onClick={handleClearFilters}
-            className="h-8 px-2 lg:px-3"
+            className="h-8 px-2 lg:px-3 hover:scale-105 transition-all duration-200"
           >
             Limpiar
             <X className="ml-2 h-4 w-4" />
@@ -175,6 +180,19 @@ export function DataTableToolbar<TData>({
 
       {/* Lado derecho: Acciones y configuraciones */}
       <div className="flex items-center space-x-2">
+        {/* Botón de crear */}
+        {showCreate && onCreate && (
+          <Button
+            size="sm"
+            onClick={onCreate}
+            disabled={loading}
+            className="h-8 bg-red-600 hover:bg-red-700 text-white border-0 shadow-sm hover:shadow-md hover:scale-105 transition-all duration-200 font-medium"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Crear
+          </Button>
+        )}
+
         {/* Botón de refrescar */}
         {showRefresh && onRefresh && (
           <Button
@@ -182,7 +200,7 @@ export function DataTableToolbar<TData>({
             size="sm"
             onClick={handleRefresh}
             disabled={loading || isRefreshing}
-            className="h-8"
+            className="h-8 hover:scale-105 transition-all duration-200"
           >
             <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
             {isRefreshing ? 'Refrescando...' : 'Refrescar'}
@@ -196,7 +214,7 @@ export function DataTableToolbar<TData>({
             size="sm"
             onClick={handleExport}
             disabled={exportDisabled || loading || isExporting}
-            className="h-8"
+            className="h-8 hover:scale-105 transition-all duration-200"
           >
             <Download className={`mr-2 h-4 w-4 ${isExporting ? 'animate-spin' : ''}`} />
             {isExporting ? 'Exportando...' : 'Exportar'}
@@ -207,7 +225,7 @@ export function DataTableToolbar<TData>({
         {showColumnToggle && (
           <DropdownMenu onOpenChange={setIsColumnToggleOpen}>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="ml-auto h-8">
+              <Button variant="outline" size="sm" className="ml-auto h-8 hover:scale-105 transition-all duration-200">
                 <Settings2 className={`mr-2 h-4 w-4 ${isColumnToggleOpen ? 'animate-pulse' : ''}`} />
                 {isColumnToggleOpen ? 'Columnas...' : 'Columnas'}
               </Button>

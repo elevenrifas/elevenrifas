@@ -10,6 +10,7 @@
  */
 
 import { supabase } from '@/lib/database';
+import { reportarPagoConTicketsTS as reportarPagoConTicketsNuevo } from './pagos-reportar';
 
 // Tipos no utilizados removidos para evitar warnings de ESLint
 
@@ -23,17 +24,12 @@ export interface DatosPagoCompleto {
   monto_bs: number;
   monto_usd: number;
   tasa_cambio: number;
-  referencia: string;
+  referencia?: string;
   telefono_pago?: string;
   banco_pago?: string;
   cedula_pago?: string;
-  id_binance?: string;
-  correo_zelle?: string;
-  banco_zelle?: string;
-  usuario_zinli?: string;
-  correo_paypal?: string;
   fecha_visita?: string;
-  notas?: string;
+  estado?: string;
   
   // Datos de los tickets
   cantidad_tickets: number;
@@ -41,7 +37,7 @@ export interface DatosPagoCompleto {
   nombre: string;
   cedula: string;
   telefono: string;
-  email: string;
+  correo: string;
 }
 
 export interface ResultadoPagoCompleto {
@@ -65,7 +61,7 @@ export interface ResultadoPagoCompleto {
  */
 export async function reportarPagoConTickets(datos: DatosPagoCompleto): Promise<ResultadoPagoCompleto> {
   try {
-    // Ejecutar la transacción completa usando SQL directo
+    // Intentar usar la función SQL primero
     const { data, error } = await supabase.rpc('reportar_pago_con_tickets', {
       // Parámetros del pago
       p_tipo_pago: datos.tipo_pago,
@@ -76,13 +72,8 @@ export async function reportarPagoConTickets(datos: DatosPagoCompleto): Promise<
       p_telefono_pago: datos.telefono_pago,
       p_banco_pago: datos.banco_pago,
       p_cedula_pago: datos.cedula_pago,
-      p_id_binance: datos.id_binance,
-      p_correo_zelle: datos.correo_zelle,
-      p_banco_zelle: datos.banco_zelle,
-      p_usuario_zinli: datos.usuario_zinli,
-      p_correo_paypal: datos.correo_paypal,
       p_fecha_visita: datos.fecha_visita,
-      p_notas: datos.notas,
+      p_estado: datos.estado || 'pendiente',
       
       // Parámetros de los tickets
       p_cantidad_tickets: datos.cantidad_tickets,
@@ -90,14 +81,13 @@ export async function reportarPagoConTickets(datos: DatosPagoCompleto): Promise<
       p_nombre: datos.nombre,
       p_cedula: datos.cedula,
       p_telefono: datos.telefono,
-      p_email: datos.email
+      p_correo: datos.correo
     });
 
     if (error) {
-      return {
-        success: false,
-        error: `Error en transacción: ${error.message}`
-      };
+      console.log('⚠️ Función SQL falló, usando implementación TypeScript:', error.message);
+      // Fallback a implementación TypeScript
+      return await reportarPagoConTicketsNuevo(datos);
     }
 
     return {
@@ -111,10 +101,9 @@ export async function reportarPagoConTickets(datos: DatosPagoCompleto): Promise<
     };
 
   } catch (error) {
-    return {
-      success: false,
-      error: `Error inesperado: ${error instanceof Error ? error.message : 'Error desconocido'}`
-    };
+    console.log('⚠️ Error en función SQL, usando implementación TypeScript:', error);
+    // Fallback a implementación TypeScript
+    return await reportarPagoConTicketsTS(datos);
   }
 }
 
@@ -133,7 +122,7 @@ export async function reportarPagoConTicketsTS(datos: DatosPagoCompleto): Promis
       .from('pagos')
       .insert({
         tipo_pago: datos.tipo_pago,
-        estado: 'pendiente',
+        estado: datos.estado || 'pendiente',
         monto_bs: datos.monto_bs,
         monto_usd: datos.monto_usd,
         tasa_cambio: datos.tasa_cambio,
@@ -142,13 +131,7 @@ export async function reportarPagoConTicketsTS(datos: DatosPagoCompleto): Promis
         telefono_pago: datos.telefono_pago,
         banco_pago: datos.banco_pago,
         cedula_pago: datos.cedula_pago,
-        id_binance: datos.id_binance,
-        correo_zelle: datos.correo_zelle,
-        banco_zelle: datos.banco_zelle,
-        usuario_zinli: datos.usuario_zinli,
-        correo_paypal: datos.correo_paypal,
-        fecha_visita: datos.fecha_visita,
-        notas: datos.notas
+        fecha_visita: datos.fecha_visita
       })
       .select()
       .single();
@@ -188,13 +171,8 @@ export async function reportarPagoConTicketsTS(datos: DatosPagoCompleto): Promis
           nombre: datos.nombre,
           cedula: datos.cedula,
           telefono: datos.telefono,
-          email: datos.email,
-          estado: 'reservado',
-          fecha_compra: new Date().toISOString(),
-          bloqueado_por_pago: true,  // Se bloquea automáticamente
-          pago_bloqueador_id: pago_id,  // El mismo pago lo bloquea
-          fecha_bloqueo: new Date().toISOString(),
-          estado_verificacion: 'pendiente'
+          correo: datos.correo,
+          fecha_compra: new Date().toISOString()
         })
         .select()
         .single();
@@ -476,5 +454,11 @@ export async function obtenerEstadisticasPagos() {
     throw new Error(`Error al obtener estadísticas: ${error instanceof Error ? error.message : 'Error desconocido'}`);
   }
 }
+
+// =====================================================
+// FUNCIÓN TEST SIMPLE - VERIFICAR RPC
+// =====================================================
+
+
 
 

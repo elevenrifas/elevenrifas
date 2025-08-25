@@ -16,9 +16,6 @@ import type { AdminTicket, CreateTicketData, UpdateTicketData } from '@/types'
 // Función para listar tickets con información relacionada
 export async function adminListTickets(options: {
   rifa_id?: string
-  estado?: string
-  estado_verificacion?: string
-  bloqueado_por_pago?: boolean
   ordenarPor?: string
   orden?: 'asc' | 'desc'
   limite?: number
@@ -41,18 +38,28 @@ export async function adminListTickets(options: {
             id,
             titulo,
             descripcion,
-            precio_ticket,
-            estado
+            estado,
+            precio_ticket
           ),
           pagos!pago_id (
             id,
+            tipo_pago,
             monto_bs,
             monto_usd,
-            estado,
-            tipo_pago
+            tasa_cambio,
+            referencia,
+            fecha_pago,
+            fecha_verificacion,
+            telefono_pago,
+            banco_pago,
+            cedula_pago,
+            fecha_visita,
+            verificado_por,
+            estado
           )
         `)
-        .limit(5)
+        // Removemos el límite hardcodeado de 5
+        // .limit(5)
       
       console.log('🔍 [adminListTickets] 2. ✅ Query base construida')
       console.log('🔍 [adminListTickets] 2. 🔍 Query object:', query)
@@ -61,21 +68,6 @@ export async function adminListTickets(options: {
       if (options.rifa_id) {
         console.log('🔍 [adminListTickets] 3a. Aplicando filtro rifa_id:', options.rifa_id)
         query = query.eq('rifa_id', options.rifa_id)
-      }
-      
-      if (options.estado) {
-        console.log('🔍 [adminListTickets] 3b. Aplicando filtro estado:', options.estado)
-        query = query.eq('estado', options.estado)
-      }
-      
-      if (options.estado_verificacion) {
-        console.log('🔍 [adminListTickets] 3c. Aplicando filtro estado_verificacion:', options.estado_verificacion)
-        query = query.eq('estado_verificacion', options.estado_verificacion)
-      }
-      
-      if (options.bloqueado_por_pago !== undefined) {
-        console.log('🔍 [adminListTickets] 3d. Aplicando filtro bloqueado_por_pago:', options.bloqueado_por_pago)
-        query = query.eq('bloqueado_por_pago', options.bloqueado_por_pago)
       }
       
       // Ordenamiento usando helper
@@ -106,100 +98,19 @@ export async function adminListTickets(options: {
       console.log('🔍 [adminListTickets] - Count:', queryResult.count)
       console.log('🔍 [adminListTickets] - Tickets length:', queryResult.data?.length)
       console.log('🔍 [adminListTickets] - Primer ticket:', queryResult.data?.[0])
+      
+      // DEBUG EXTRA: Verificar cada ticket individualmente
+      if (queryResult.data && queryResult.data.length > 0) {
+        console.log('🔍 [adminListTickets] ===== DEBUG TICKETS INDIVIDUALES =====')
+        console.log(`🔍 [adminListTickets] Total de tickets cargados: ${queryResult.data.length}`)
+        console.log('🔍 [adminListTickets] ===== FIN DEBUG TICKETS =====')
+      }
+      
       console.log('🔍 [adminListTickets] ===== FIN DEBUG =====')
       
       return queryResult
     },
     'Error al listar tickets'
-  )
-}
-
-// Función para obtener un ticket por ID
-export async function adminGetTicket(id: string): Promise<{ success: boolean; ticket?: AdminTicket; error?: string }> {
-  return safeAdminQuery(
-    async () => {
-      return createAdminQuery('tickets')
-        .select('*')
-        .eq('id', id)
-        .single()
-    },
-    'Error al obtener ticket'
-  )
-}
-
-// Función para crear un ticket
-export async function adminCreateTicket(data: CreateTicketData): Promise<{ success: boolean; id?: string; error?: string }> {
-  return safeAdminQuery(
-    async () => {
-      // Verificar que el número de ticket no exista para la rifa
-      const { data: existingTicket, error: checkError } = await createAdminQuery('tickets')
-        .select('id')
-        .eq('rifa_id', data.rifa_id)
-        .eq('numero_ticket', data.numero_ticket)
-        .single()
-      
-      if (existingTicket && !checkError) {
-        throw new Error('El número de ticket ya existe para esta rifa')
-      }
-      
-      const { data: ticket, error } = await createAdminQuery('tickets')
-        .insert({
-          rifa_id: data.rifa_id,
-          numero_ticket: data.numero_ticket,
-          precio: data.precio,
-          nombre: data.nombre,
-          cedula: data.cedula,
-          telefono: data.telefono,
-          correo: data.correo,
-          estado: data.estado || 'reservado',
-          email: data.email,
-          fecha_compra: new Date().toISOString()
-        })
-        .select('id')
-        .single()
-      
-      if (error) throw error
-      
-      return { data: ticket, error: null }
-    },
-    'Error al crear ticket'
-  )
-}
-
-// Función para actualizar un ticket
-export async function adminUpdateTicket(id: string, data: UpdateTicketData): Promise<{ success: boolean; error?: string }> {
-  return safeAdminQuery(
-    async () => {
-      // Si se está cambiando el número de ticket, verificar que no exista
-      if (data.numero_ticket) {
-        const { data: existingTicket, error: checkError } = await createAdminQuery('tickets')
-          .select('id')
-          .eq('rifa_id', data.rifa_id)
-          .eq('numero_ticket', data.numero_ticket)
-          .neq('id', id)
-          .single()
-        
-        if (existingTicket && !checkError) {
-          throw new Error('El número de ticket ya existe para esta rifa')
-        }
-      }
-      
-      const updateData: any = { ...data }
-      
-      // Si se está verificando, agregar fecha de verificación
-      if (data.estado_verificacion === 'verificado' && !data.fecha_verificacion) {
-        updateData.fecha_verificacion = new Date().toISOString()
-      }
-      
-      const { error } = await createAdminQuery('tickets')
-        .update(updateData)
-        .eq('id', id)
-      
-      if (error) throw error
-      
-      return { data: null, error: null }
-    },
-    'Error al actualizar ticket'
   )
 }
 
@@ -219,65 +130,258 @@ export async function adminDeleteTicket(id: string): Promise<{ success: boolean;
   )
 }
 
-// Función para cambiar el estado de un ticket
-export async function adminChangeTicketState(id: string, estado: 'reservado' | 'pagado' | 'verificado' | 'cancelado'): Promise<{ success: boolean; error?: string }> {
+// Función para obtener estadísticas de tickets
+export async function adminGetTicketStats(): Promise<{ success: boolean; data?: any; error?: string }> {
   return safeAdminQuery(
     async () => {
-      const { error } = await createAdminQuery('tickets')
-        .update({ estado })
-        .eq('id', id)
+      const { data, error } = await createAdminQuery('tickets')
+        .select('rifa_id, rifas!rifa_id(titulo)')
+        .limit(1000)
       
       if (error) throw error
       
-      return { data: null, error: null }
+      // Agrupar por rifa
+      const stats = (data || []).reduce((acc: any, ticket: any) => {
+        const rifaId = ticket.rifa_id
+        if (!acc[rifaId]) {
+          acc[rifaId] = {
+            rifa_id: rifaId,
+            titulo: ticket.rifas?.titulo || 'Sin título',
+            total_tickets: 0
+          }
+        }
+        acc[rifaId].total_tickets++
+        return acc
+      }, {})
+      
+      return { 
+        data: Object.values(stats), 
+        error: null 
+      }
     },
-    'Error al cambiar estado del ticket'
+    'Error al obtener estadísticas de tickets'
   )
 }
 
-// Función para cambiar el estado de verificación
-export async function adminChangeTicketVerificationState(id: string, estado_verificacion: 'pendiente' | 'verificado' | 'rechazado'): Promise<{ success: boolean; error?: string }> {
+// Función de debug para verificar tickets en la base de datos
+export async function adminDebugTickets(): Promise<{ success: boolean; data?: any; error?: string }> {
   return safeAdminQuery(
     async () => {
-      const updateData: any = { estado_verificacion }
+      console.log('🔍 [adminDebugTickets] ===== INICIO DEBUG TOTAL =====')
       
-      if (estado_verificacion === 'verificado') {
-        updateData.fecha_verificacion = new Date().toISOString()
+      // 1. Contar total de tickets
+      const { count: totalTickets, error: countError } = await createAdminQuery('tickets')
+        .select('*', { count: 'exact', head: true })
+      
+      if (countError) {
+        console.error('❌ [adminDebugTickets] Error contando tickets:', countError)
+        throw countError
       }
       
-      const { error } = await createAdminQuery('tickets')
-        .update(updateData)
-        .eq('id', id)
+      console.log('🔍 [adminDebugTickets] Total de tickets en BD:', totalTickets)
       
+      // 2. Contar tickets con pago
+      const { count: ticketsConPago, error: pagoError } = await createAdminQuery('tickets')
+        .select('*', { count: 'exact', head: true })
+        .not('pago_id', 'is', null)
+      
+      if (pagoError) {
+        console.error('❌ [adminDebugTickets] Error contando tickets con pago:', pagoError)
+        throw pagoError
+      }
+      
+      console.log('🔍 [adminDebugTickets] Tickets con pago:', ticketsConPago)
+      
+      // 3. Contar tickets sin pago
+      const { count: ticketsSinPago, error: sinPagoError } = await createAdminQuery('tickets')
+        .select('*', { count: 'exact', head: true })
+        .is('pago_id', null)
+      
+      if (sinPagoError) {
+        console.error('❌ [adminDebugTickets] Error contando tickets sin pago:', sinPagoError)
+        throw sinPagoError
+      }
+      
+      console.log('🔍 [adminDebugTickets] Tickets sin pago:', ticketsSinPago)
+      
+      // 4. Verificar que la suma sea correcta
+      const suma = (ticketsConPago || 0) + (ticketsSinPago || 0)
+      console.log('🔍 [adminDebugTickets] Suma tickets con + sin pago:', suma)
+      console.log('🔍 [adminDebugTickets] ¿Coincide con total?', suma === totalTickets)
+      
+      // 5. Obtener algunos ejemplos
+      const { data: ejemplos, error: ejemplosError } = await createAdminQuery('tickets')
+        .select('id, numero_ticket, nombre, pago_id')
+        .limit(5)
+      
+      if (ejemplosError) {
+        console.error('❌ [adminDebugTickets] Error obteniendo ejemplos:', ejemplosError)
+        throw ejemplosError
+      }
+      
+      console.log('🔍 [adminDebugTickets] Ejemplos de tickets:', ejemplos)
+      console.log('🔍 [adminDebugTickets] ===== FIN DEBUG TOTAL =====')
+      
+      return { 
+        data: {
+          total: totalTickets,
+          con_pago: ticketsConPago,
+          sin_pago: ticketsSinPago,
+          suma_coincide: suma === totalTickets,
+          ejemplos
+        }, 
+        error: null 
+      }
+    },
+    'Error al debuggear tickets'
+  )
+}
+
+// Función para crear un ticket
+export async function adminCreateTicket(data: CreateTicketData): Promise<{ success: boolean; data?: AdminTicket; error?: string }> {
+  return safeAdminQuery(
+    async () => {
+      const { data: ticket, error } = await adminSupabase
+        .from('tickets')
+        .insert(data)
+        .select()
+        .single()
+
       if (error) throw error
-      
-      return { data: null, error: null }
+      return { data: ticket, error: null }
+    },
+    'Error al crear ticket'
+  )
+}
+
+// Función para actualizar un ticket
+export async function adminUpdateTicket(id: string, data: UpdateTicketData): Promise<{ success: boolean; data?: AdminTicket; error?: string }> {
+  return safeAdminQuery(
+    async () => {
+      const { data: ticket, error } = await adminSupabase
+        .from('tickets')
+        .update(data)
+        .eq('id', id)
+        .select()
+        .single()
+
+      if (error) throw error
+      return { data: ticket, error: null }
+    },
+    'Error al actualizar ticket'
+  )
+}
+
+// Función para cambiar el estado de un ticket (ahora es el estado del pago)
+export async function adminChangeTicketState(id: string, estado: 'pendiente' | 'verificado' | 'rechazado'): Promise<{ success: boolean; data?: AdminTicket; error?: string }> {
+  return safeAdminQuery(
+    async () => {
+      // Primero obtener el ticket para encontrar el pago_id
+      const { data: ticket, error: fetchError } = await adminSupabase
+        .from('tickets')
+        .select('pago_id')
+        .eq('id', id)
+        .single()
+
+      if (fetchError) throw fetchError
+
+      if (!ticket.pago_id) {
+        throw new Error('Este ticket no tiene un pago asociado')
+      }
+
+      // Actualizar el estado del pago en lugar del ticket
+      const { data: pago, error: pagoError } = await adminSupabase
+        .from('pagos')
+        .update({ estado })
+        .eq('id', ticket.pago_id)
+        .select()
+        .single()
+
+      if (pagoError) throw pagoError
+
+      // Retornar el ticket actualizado (el estado se refleja a través de la relación)
+      const { data: updatedTicket, error: ticketError } = await adminSupabase
+        .from('tickets')
+        .select(`
+          *,
+          rifas!rifa_id (
+            id,
+            titulo,
+            descripcion,
+            estado,
+            precio_ticket
+          ),
+          pagos!pago_id (
+            id,
+            tipo_pago,
+            monto_bs,
+            monto_usd,
+            tasa_cambio,
+            referencia,
+            fecha_pago,
+            fecha_verificacion,
+            telefono_pago,
+            banco_pago,
+            cedula_pago,
+            fecha_visita,
+            verificado_por,
+            estado
+          )
+        `)
+        .eq('id', id)
+        .single()
+
+      if (ticketError) throw ticketError
+      return { data: updatedTicket, error: null }
+    },
+    'Error al cambiar estado del pago del ticket'
+  )
+}
+
+// Función para cambiar el estado de verificación de un ticket
+export async function adminChangeTicketVerificationState(id: string, verificado: boolean): Promise<{ success: boolean; data?: AdminTicket; error?: string }> {
+  return safeAdminQuery(
+    async () => {
+      const { data: ticket, error } = await adminSupabase
+        .from('tickets')
+        .update({ verificado })
+        .eq('id', id)
+        .select()
+        .single()
+
+      if (error) throw error
+      return { data: ticket, error: null }
     },
     'Error al cambiar estado de verificación del ticket'
   )
 }
 
-// Función para bloquear/desbloquear ticket por pago
-export async function adminToggleTicketPaymentBlock(id: string, bloqueado: boolean, pago_id?: string): Promise<{ success: boolean; error?: string }> {
+// Función para alternar el bloqueo de pago de un ticket
+export async function adminToggleTicketPaymentBlock(id: string): Promise<{ success: boolean; data?: AdminTicket; error?: string }> {
   return safeAdminQuery(
     async () => {
-      const updateData: any = { 
-        bloqueado_por_pago: bloqueado,
-        fecha_bloqueo: bloqueado ? new Date().toISOString() : null
-      }
-      
-      if (pago_id) {
-        updateData.pago_bloqueante_id = bloqueado ? pago_id : null
-      }
-      
-      const { error } = await createAdminQuery('tickets')
-        .update(updateData)
+      // Primero obtener el estado actual
+      const { data: currentTicket, error: fetchError } = await adminSupabase
+        .from('tickets')
+        .select('pago_bloqueado')
         .eq('id', id)
+        .single()
+
+      if (fetchError) throw fetchError
+
+      // Alternar el estado
+      const newBlockedState = !currentTicket.pago_bloqueado
       
+      const { data: ticket, error } = await adminSupabase
+        .from('tickets')
+        .update({ pago_bloqueado: newBlockedState })
+        .eq('id', id)
+        .select()
+        .single()
+
       if (error) throw error
-      
-      return { data: null, error: null }
+      return { data: ticket, error: null }
     },
-    'Error al cambiar bloqueo del ticket'
+    'Error al alternar bloqueo de pago del ticket'
   )
 }

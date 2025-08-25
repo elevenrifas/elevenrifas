@@ -25,9 +25,8 @@
   "author": "Eleven Rifas Team",
   "license": "MIT",
   "dependencies": {
-    "@supabase/supabase-js": "^2.39.0"
+    "@supabase/supabase-js": "^2.56.0"
   },
-  "devDependencies": {},
   "engines": {
     "node": ">=16.0.0"
   },

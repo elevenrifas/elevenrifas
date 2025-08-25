@@ -1,8 +1,8 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/database'
+import { supabase } from '@/lib/database/supabase'
 import type { User } from '@supabase/supabase-js'
 
 interface AdminProfile {
@@ -34,17 +34,22 @@ export function useAdminAuth() {
           console.error('❌ Error obteniendo sesión:', sessionError)
           if (mounted) {
             setLoading(false)
+            setUser(null)
+            setProfile(null)
+            setIsAdmin(false)
           }
           return
         }
 
         if (!session?.user) {
-          console.log('❌ No hay sesión activa')
+          console.log('❌ No hay sesión activa - redirigiendo a login')
           if (mounted) {
             setUser(null)
             setProfile(null)
             setIsAdmin(false)
             setLoading(false)
+            // Redirigir al login si no hay sesión
+            router.push('/admin/login')
           }
           return
         }
@@ -87,6 +92,8 @@ export function useAdminAuth() {
             setProfile(null)
             setIsAdmin(false)
             setLoading(false)
+            // Redirigir al login si no es admin
+            router.push('/admin/login')
           }
           return
         }
@@ -105,6 +112,8 @@ export function useAdminAuth() {
           setProfile(null)
           setIsAdmin(false)
           setLoading(false)
+          // Redirigir al login en caso de error
+          router.push('/admin/login')
         }
       }
     }
@@ -132,6 +141,7 @@ export function useAdminAuth() {
             setProfile(null)
             setIsAdmin(false)
             setLoading(false)
+            router.push('/admin/login')
           }
         } else if (event === 'TOKEN_REFRESHED' && session?.user) {
           console.log('🔄 Token refrescado, verificando sesión...')
@@ -148,7 +158,7 @@ export function useAdminAuth() {
       mounted = false
       subscription.unsubscribe()
     }
-  }, [])
+  }, [router])
 
   const signOut = async () => {
     try {
@@ -157,9 +167,49 @@ export function useAdminAuth() {
       setUser(null)
       setProfile(null)
       setIsAdmin(false)
+      setLoading(false)
       router.push('/admin/login')
     } catch (error) {
       console.error('❌ Error al cerrar sesión:', error)
+    }
+  }
+
+  const signIn = async (email: string, password: string) => {
+    try {
+      console.log('🔑 Iniciando sesión...')
+      setLoading(true)
+      
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
+
+      if (error) {
+        console.error('❌ Error de login:', error.message)
+        setLoading(false)
+        return { success: false, error: error.message }
+      }
+
+      if (!data.user) {
+        console.error('❌ No se pudo obtener usuario del login')
+        setLoading(false)
+        return { success: false, error: 'Error de autenticación' }
+      }
+
+      console.log('✅ Login exitoso:', data.user.email)
+      
+      // El hook se encargará de verificar el rol de admin
+      // No necesitamos hacer nada más aquí
+      
+      return { success: true, user: data.user }
+
+    } catch (error) {
+      console.error('❌ Error inesperado en login:', error)
+      setLoading(false)
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Error inesperado' 
+      }
     }
   }
 
@@ -168,6 +218,7 @@ export function useAdminAuth() {
     profile,
     loading,
     isAdmin,
-    signOut
+    signIn,
+    signOut,
   }
 }

@@ -1,5 +1,4 @@
-import { LoginForm } from "../components/login-form"
-import Image from "next/image"
+import { LoginForm } from '../components/login-form'
 
 export default function AdminLoginPage() {
   return (
@@ -8,13 +7,10 @@ export default function AdminLoginPage() {
         {/* Header con logo y título */}
         <div className="mb-8 text-center">
           <div className="flex justify-center mb-6">
-            <Image
+            <img
               src="/E_LOGO.png"
               alt="ElevenRifas Logo"
-              width={120}
-              height={120}
               className="h-20 w-auto sm:h-24 drop-shadow-lg"
-              priority
             />
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
@@ -25,7 +21,7 @@ export default function AdminLoginPage() {
           </p>
         </div>
         
-        {/* Formulario de login */}
+        {/* Formulario de login funcional */}
         <LoginForm />
         
         {/* Footer informativo */}

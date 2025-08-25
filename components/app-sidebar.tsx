@@ -3,13 +3,9 @@
 import * as React from "react"
 import { usePathname } from "next/navigation"
 import {
-  BarChart3,
   LayoutDashboard,
-  Database,
   FileText,
-  Home,
   ListTodo,
-  Settings,
   Users,
   CreditCard,
   Tags,
@@ -18,7 +14,6 @@ import {
 
 import { NavDocuments } from "@/components/nav-documents"
 import { NavMain } from "@/components/nav-main"
-import { NavSecondary } from "@/components/nav-secondary"
 import { NavUser } from "@/components/nav-user"
 import {
   Sidebar,
@@ -38,58 +33,40 @@ const data = {
   },
   navMain: [
     {
-      title: "Dashboard",
-      url: "/admin/dashboard",
-      icon: LayoutDashboard,
-    },
-    {
       title: "Rifas",
       url: "/admin/rifas",
       icon: FileText,
-    },
-    {
-      title: "Tickets",
-      url: "/admin/tickets",
-      icon: ListTodo,
-    },
-    {
-      title: "Categorías",
-      url: "/admin/categorias",
-      icon: Tags,
-    },
-    {
-      title: "Usuarios",
-      url: "/admin/usuarios",
-      icon: Users,
-    },
-    {
-      title: "Perfiles",
-      url: "/admin/perfiles",
-      icon: UserCheck,
     },
     {
       title: "Pagos",
       url: "/admin/pagos",
       icon: CreditCard,
     },
-  ],
-  navSecondary: [
     {
-      title: "Configuración",
-      url: "/admin/settings",
-      icon: Settings,
+      title: "Tickets",
+      url: "/admin/tickets",
+      icon: ListTodo,
     },
-  ],
-  documents: [
+
     {
-      name: "Reportes",
-      url: "/admin/reportes",
-      icon: BarChart3,
+      title: "Clientes",
+      url: "/admin/clientes",
+      icon: Users,
+    },
+
+
+  ],
+
+  administration: [
+    {
+      name: "Usuario Verificación",
+      url: "/admin/usuarios-verificacion",
+      icon: UserCheck,
     },
     {
-      name: "Base de Datos",
-      url: "/admin/database",
-      icon: Database,
+      name: "Categorías",
+      url: "/admin/categorias",
+      icon: Tags,
     },
   ],
 }
@@ -104,12 +81,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem>
             <SidebarMenuButton
               asChild
-              className="data-[slot=sidebar-menu-button]:!p-1.5"
+              className="data-[slot=sidebar-menu-button]:!p-4 !h-20 !min-h-20"
               isActive={pathname === "/admin/dashboard"}
             >
-              <a href="/admin/dashboard">
-                <Home className="!size-5" />
-                <span className="text-base font-semibold">ElevenRifas</span>
+              <a href="/admin/dashboard" className="flex items-center justify-center h-full">
+                <img 
+                  src="/E_LOGOb.png" 
+                  alt="ElevenRifas Logo" 
+                  className="h-16 w-auto object-contain"
+                />
               </a>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -117,8 +97,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
-        <NavDocuments items={data.documents} />
-        <NavSecondary items={data.navSecondary} className="mt-auto" />
+        <NavDocuments items={data.administration} title="Administración" />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={data.user} />

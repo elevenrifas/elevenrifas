@@ -1,0 +1,145 @@
+
+CREATE OR REPLACE FUNCTION reportar_pago_con_tickets(
+    p_tipo_pago VARCHAR(50),
+    p_monto_bs DECIMAL(10,2),
+    p_monto_usd DECIMAL(10,2),
+    p_tasa_cambio DECIMAL(10,2),
+    p_referencia VARCHAR(255),
+    p_telefono_pago VARCHAR(20),
+    p_banco_pago VARCHAR(100),
+    p_cedula_pago VARCHAR(20),
+    p_fecha_visita DATE,
+    p_estado VARCHAR(50),
+    p_cantidad_tickets INTEGER,
+    p_rifa_id UUID,
+    p_nombre VARCHAR(255),
+    p_cedula VARCHAR(20),
+    p_telefono VARCHAR(20),
+    p_correo VARCHAR(255)
+) RETURNS JSON AS $$
+DECLARE
+    pago_id UUID;
+    ticket_record RECORD;
+    tickets_array JSON[] := '{}';
+    i INTEGER;
+    precio_ticket_rifa DECIMAL(10,2);
+    numero_ticket_actual VARCHAR(10);
+    intentos_maximos INTEGER := 100; -- Límite de intentos para evitar bucle infinito
+    intentos_actuales INTEGER;
+    numero_base INTEGER;
+BEGIN
+    -- Iniciar transacción
+    BEGIN
+        -- PASO 1: Obtener el precio del ticket de la rifa
+        SELECT precio_ticket INTO precio_ticket_rifa
+        FROM rifas 
+        WHERE id = p_rifa_id;
+        
+        IF precio_ticket_rifa IS NULL THEN
+            RAISE EXCEPTION 'No se pudo obtener el precio del ticket para la rifa %', p_rifa_id;
+        END IF;
+        
+        -- PASO 2: Crear el pago con SOLO los campos que existen en el schema
+        INSERT INTO pagos (
+            tipo_pago,
+            estado,
+            monto_bs,
+            monto_usd,
+            tasa_cambio,
+            referencia,
+            fecha_pago,
+            telefono_pago,
+            banco_pago,
+            cedula_pago,
+            fecha_visita,
+            rifa_id
+        ) VALUES (
+            p_tipo_pago,
+            COALESCE(p_estado, 'pendiente'),
+            p_monto_bs,
+            p_monto_usd,
+            p_tasa_cambio,
+            p_referencia,
+            NOW(),
+            p_telefono_pago,
+            p_banco_pago,
+            p_cedula_pago,
+            p_fecha_visita,
+            p_rifa_id
+        ) RETURNING id INTO pago_id;
+
+        -- PASO 3: Crear múltiples tickets asociados al pago
+        FOR i IN 1..p_cantidad_tickets LOOP
+            -- Generar número de ticket único con límite de intentos
+            intentos_actuales := 0;
+            numero_base := 100000 + (i * 1000) + floor(random() * 100); -- Estrategia más inteligente
+            
+            LOOP
+                intentos_actuales := intentos_actuales + 1;
+                
+                -- Si se exceden los intentos, usar timestamp como fallback
+                IF intentos_actuales > intentos_maximos THEN
+                    numero_ticket_actual := (100000 + extract(epoch from now())::INTEGER % 900000)::VARCHAR;
+                    EXIT;
+                END IF;
+                
+                -- Generar número con base incremental + random
+                numero_ticket_actual := (numero_base + floor(random() * 999))::VARCHAR;
+                
+                -- Verificar que el número no exista
+                EXIT WHEN NOT EXISTS (
+                    SELECT 1 FROM tickets 
+                    WHERE rifa_id = p_rifa_id 
+                    AND numero_ticket = numero_ticket_actual
+                );
+            END LOOP;
+            
+            -- Insertar ticket con SOLO los campos que existen en el schema
+            INSERT INTO tickets (
+                rifa_id,
+                pago_id,
+                numero_ticket,
+                nombre,
+                cedula,
+                telefono,
+                correo,
+                fecha_compra
+            ) VALUES (
+                p_rifa_id,
+                pago_id,
+                numero_ticket_actual,
+                p_nombre,
+                p_cedula,
+                p_telefono,
+                p_correo,
+                NOW()
+            ) RETURNING * INTO ticket_record;
+
+            tickets_array := array_append(tickets_array, to_json(ticket_record));
+        END LOOP;
+
+        -- Retornar resultado en formato JSON
+        RETURN json_build_object(
+            'success', true,
+            'pago_id', pago_id,
+            'pago', json_build_object(
+                'id', pago_id,
+                'tipo_pago', p_tipo_pago,
+                'estado', COALESCE(p_estado, 'pendiente'),
+                'monto_usd', p_monto_usd,
+                'monto_bs', p_monto_bs,
+                'referencia', p_referencia,
+                'fecha_pago', NOW()
+            ),
+            'tickets', tickets_array,
+            'cantidad_tickets', p_cantidad_tickets,
+            'precio_ticket', precio_ticket_rifa
+        );
+
+    EXCEPTION
+        WHEN OTHERS THEN
+            -- En caso de error, hacer rollback automático
+            RAISE EXCEPTION 'Error en transacción: %', SQLERRM;
+    END;
+END;
+$$ LANGUAGE plpgsql;

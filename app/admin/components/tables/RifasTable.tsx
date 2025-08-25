@@ -12,13 +12,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu"
-import { MoreHorizontal, Edit, Trash2, Eye, Copy, Play, Square, CheckCircle, Tag, DollarSign, Calendar } from "lucide-react"
+import { MoreHorizontal, Edit, Trash2, Copy, Play, Square, CheckCircle, Tag, DollarSign, Calendar } from "lucide-react"
+import * as LucideIcons from "lucide-react"
 import { formatCurrency } from "@/lib/formatters"
 import { useCrudRifas } from "@/hooks/use-crud-rifas"
 import type { AdminRifa } from "@/lib/database/admin_database/rifas"
 import { RifaFormModal } from "../modals/RifaFormModal"
 import { DeleteConfirmModal } from "../modals/DeleteConfirmModal"
-import { RifaViewModal } from "../modals/RifaViewModal"
 import { DuplicateRifaModal } from "../modals/DuplicateRifaModal"
 
 // =====================================================
@@ -27,6 +27,21 @@ import { DuplicateRifaModal } from "../modals/DuplicateRifaModal"
 // Tabla estandarizada para gestionar rifas
 // Usa el nuevo sistema DataTableEnhanced
 // =====================================================
+
+// Función simple para obtener iconos de Lucide React
+const getCategoryIcon = (iconName: string) => {
+  // Convertir el nombre del icono a PascalCase (ej: "dollar-sign" -> "DollarSign")
+  const pascalCaseName = iconName
+    .split('-')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join('');
+  
+  // Buscar el icono en la librería completa de Lucide
+  const IconComponent = (LucideIcons as any)[pascalCaseName];
+  
+  // Si no se encuentra, devolver Tag como fallback
+  return IconComponent || Tag;
+};
 
 // Props del componente
 interface RifasTableProps {
@@ -123,9 +138,8 @@ export function RifasTable({
         fecha_cierre: rifa.fecha_cierre || '',
         total_tickets: rifa.total_tickets || 0,
         tickets_disponibles: rifa.tickets_disponibles || 0,
-        condiciones: rifa.condiciones || '',
         categoria_id: rifa.categoria_id || '',
-        numero_tickets_comprar: rifa.numero_tickets_comprar || [1, 2, 3, 5, 10]
+        numero_tickets_comprar: rifa.numero_tickets_comprar || [1, 2, 3, 5, 10, 15, 20, 25, 50]
       }))
       
       if (onExport) {
@@ -204,16 +218,39 @@ export function RifasTable({
   }
 
   // Funciones wrapper para las acciones de las columnas
-  const handleViewRifa = (rifa: AdminRifa) => {
-    openViewModal(rifa)
-  }
-
   const handleEditRifa = (rifa: AdminRifa) => {
     openEditModal(rifa)
   }
 
-  const handleDuplicateRifa = (rifa: AdminRifa) => {
-    openDuplicateModal(rifa)
+  const handleDuplicateRifa = async (rifa: AdminRifa) => {
+    try {
+      // Crear una copia exacta de la rifa
+      const rifaDuplicada: any = {
+        titulo: `${rifa.titulo} (Copia)`,
+        descripcion: rifa.descripcion || '',
+        precio_ticket: rifa.precio_ticket,
+        imagen_url: rifa.imagen_url || '',
+        estado: 'cerrada', // Siempre cerrada por defecto
+        total_tickets: rifa.total_tickets || 100,
+        tickets_disponibles: rifa.total_tickets || 100, // Mismo que total al duplicar
+        categoria_id: rifa.categoria_id || null,
+        numero_tickets_comprar: rifa.numero_tickets_comprar || [1, 2, 3, 5, 10, 15, 20, 25, 50],
+        progreso_manual: rifa.progreso_manual || null,
+        fecha_cierre: new Date().toISOString(), // Fecha actual ya que está cerrada
+      }
+      
+      const result = await createRifa(rifaDuplicada)
+      if (result.success) {
+        // Refrescar la lista después de duplicar
+        await refreshRifas()
+        // Cerrar el modal de duplicación
+        closeDuplicateModal()
+      }
+      return result
+    } catch (error) {
+      console.error('Error en handleDuplicateRifa:', error)
+      return { success: false, error: 'Error inesperado al duplicar' }
+    }
   }
 
   const handleDeleteRifa = (rifa: AdminRifa) => {
@@ -223,7 +260,20 @@ export function RifasTable({
   // Función para manejar la creación
   const handleCreate = async (data: any) => {
     try {
-      const result = await createRifa(data)
+      const nuevaRifa = {
+        titulo: data.titulo,
+        descripcion: data.descripcion,
+        precio_ticket: data.precio_ticket,
+        imagen_url: data.imagen_url,
+        estado: data.estado,
+        total_tickets: data.total_tickets,
+        tickets_disponibles: data.total_tickets, // Inicialmente igual al total
+        categoria_id: data.categoria_id,
+        numero_tickets_comprar: data.numero_tickets_comprar || [1, 2, 3, 5, 10, 15, 20, 25, 50],
+        progreso_manual: data.progreso_manual,
+        fecha_cierre: data.fecha_cierre,
+      }
+      const result = await createRifa(nuevaRifa)
       if (result.success) {
         // Refrescar la lista después de crear
         await refreshRifas()
@@ -239,7 +289,21 @@ export function RifasTable({
   const handleEdit = async (data: any) => {
     if (selectedRifa) {
       try {
-        const result = await updateRifa(selectedRifa.id, data)
+        console.log('🔍 Datos a enviar en handleEdit:', data)
+        const datosActualizados = {
+          titulo: data.titulo,
+          descripcion: data.descripcion,
+          precio_ticket: data.precio_ticket,
+          imagen_url: data.imagen_url,
+          estado: data.estado,
+          total_tickets: data.total_tickets,
+          tickets_disponibles: data.tickets_disponibles,
+          categoria_id: data.categoria_id,
+          numero_tickets_comprar: data.numero_tickets_comprar || [1, 2, 3, 5, 10, 15, 20, 25, 50],
+          progreso_manual: data.progreso_manual,
+          fecha_cierre: data.fecha_cierre,
+        }
+        const result = await updateRifa(selectedRifa.id, datosActualizados)
         if (result.success) {
           // Cerrar el modal de edición
           closeEditModal()
@@ -259,10 +323,10 @@ export function RifasTable({
   const handleDelete = async () => {
     if (selectedRifa) {
       const result = await deleteRifa(selectedRifa.id)
-      if (!result.success) {
-        console.error('Error al eliminar:', result.error)
-      }
+      // El resultado se maneja en el modal, no necesitamos hacer nada aquí
+      return result
     }
+    return { success: false, error: 'No hay rifa seleccionada' }
   }
 
   // Función para manejar la eliminación múltiple
@@ -270,10 +334,10 @@ export function RifasTable({
     if (selectedRifas.length > 0) {
       const ids = selectedRifas.map(rifa => rifa.id)
       const result = await deleteMultipleRifas(ids)
-      if (!result.success) {
-        console.error('Error al eliminar múltiples:', result.error)
-      }
+      // El resultado se maneja en el modal, no necesitamos hacer nada aquí
+      return result
     }
+    return { success: false, error: 'No hay rifas seleccionadas' }
   }
 
   // Definir las columnas dentro del componente para tener acceso a las funciones
@@ -281,9 +345,35 @@ export function RifasTable({
     {
       accessorKey: "titulo",
       header: "Título",
-      cell: ({ row }) => (
-        <div className="font-medium">{row.getValue("titulo")}</div>
-      ),
+      cell: ({ row }) => {
+        const rifa = row.original
+        const totalTickets = rifa.total_tickets || 0
+        const ticketsDisponibles = rifa.tickets_disponibles || 0
+        const ticketsVendidos = totalTickets - ticketsDisponibles
+        const porcentajeVenta = totalTickets > 0 ? Math.round((ticketsVendidos / totalTickets) * 100) : 0
+        
+        return (
+          <div className="space-y-2">
+            <div className="font-medium">{row.getValue("titulo")}</div>
+            
+            {/* Barra de progreso de venta */}
+            <div className="space-y-1">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>Tickets vendidos: {ticketsVendidos}/{totalTickets}</span>
+                <span className="font-medium text-red-600">{porcentajeVenta}%</span>
+              </div>
+              
+              {/* Barra de progreso visual */}
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div 
+                  className="bg-gradient-to-r from-red-500 to-red-600 h-2 rounded-full transition-all duration-300 ease-in-out"
+                  style={{ width: `${porcentajeVenta}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        )
+      },
     },
     {
       accessorKey: "descripcion",
@@ -304,7 +394,7 @@ export function RifasTable({
         const precio = parseFloat(row.getValue("precio_ticket"))
         return (
           <div className="font-medium text-green-600">
-            {formatCurrency(precio)}
+            ${precio.toFixed(2)}
           </div>
         )
       },
@@ -402,11 +492,26 @@ export function RifasTable({
       accessorKey: "categoria_id",
       header: "Categoría",
       cell: ({ row }) => {
-        const categoriaId = row.getValue("categoria_id") as string
+        const rifa = row.original
+        const categoria = rifa.categorias_rifas
+        
+        if (!categoria) {
+          return (
+            <div className="flex items-center gap-2">
+              <Tag className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">Sin categoría</span>
+            </div>
+          )
+        }
+
+        const IconComponent = getCategoryIcon(categoria.icono)
+        
         return (
           <div className="flex items-center gap-2">
-            <Tag className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm">{categoriaId ? `ID: ${categoriaId.slice(0, 8)}...` : 'Sin categoría'}</span>
+            <div className="text-red-600">
+              <IconComponent className="h-4 w-4" />
+            </div>
+            <span className="text-sm font-medium">{categoria.nombre}</span>
           </div>
         )
       },
@@ -417,9 +522,20 @@ export function RifasTable({
       header: "Fecha Cierre",
       cell: ({ row }) => {
         const fecha = row.getValue("fecha_cierre") as string
+        if (!fecha) {
+          return (
+            <div className="text-sm text-muted-foreground">
+              Sin fecha de cierre
+            </div>
+          )
+        }
         return (
           <div className="text-sm text-muted-foreground">
-            {fecha ? new Date(fecha).toLocaleDateString('es-ES') : 'Sin fecha de cierre'}
+            {new Date(fecha).toLocaleDateString('es-ES', {
+              day: '2-digit',
+              month: '2-digit',
+              year: '2-digit'
+            })}
           </div>
         )
       },
@@ -430,14 +546,12 @@ export function RifasTable({
       cell: ({ row }) => {
         const fecha = new Date(row.getValue("fecha_creacion"))
         return (
-          <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm">
-              {fecha.toLocaleDateString('es-ES', {
-                year: 'numeric',
-                day: 'numeric'
-              })}
-            </span>
+          <div className="text-sm text-muted-foreground">
+            {fecha.toLocaleDateString('es-ES', {
+              day: '2-digit',
+              month: '2-digit',
+              year: '2-digit'
+            })}
           </div>
         )
       },
@@ -457,10 +571,6 @@ export function RifasTable({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => handleViewRifa(rifa)}>
-                <Eye className="mr-2 h-4 w-4" />
-                Ver
-              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleEditRifa(rifa)}>
                 <Edit className="mr-2 h-4 w-4" />
                 Editar
@@ -544,7 +654,7 @@ export function RifasTable({
       <DuplicateRifaModal
         isOpen={showDuplicateModal}
         onClose={closeDuplicateModal}
-        onSubmit={handleCreate}
+        onConfirm={() => selectedRifa ? handleDuplicateRifa(selectedRifa) : Promise.resolve({ success: false, error: 'No hay rifa seleccionada' })}
         rifa={selectedRifa}
         isSubmitting={isCreating}
       />
@@ -562,15 +672,6 @@ export function RifasTable({
         }
         entityName="rifa"
         isDeleting={isDeleting}
-      />
-
-      {/* Modal de Vista de Detalles */}
-      <RifaViewModal
-        isOpen={showViewModal}
-        onClose={closeViewModal}
-        rifa={selectedRifa}
-        onEdit={() => selectedRifa && openEditModal(selectedRifa)}
-        onDelete={() => selectedRifa && openDeleteModal(selectedRifa)}
       />
     </div>
   )

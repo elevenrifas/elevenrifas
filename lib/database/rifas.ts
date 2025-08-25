@@ -9,8 +9,39 @@ import { supabase } from './supabase'
 import type { Database } from '@/types/supabase'
 import type { Rifa } from '@/types'
 
-type RifasInsert = Database['public']['Tables']['rifas']['Insert']
-type RifasUpdate = Database['public']['Tables']['rifas']['Update']
+// Tipos personalizados que incluyen progreso_manual
+interface RifasInsertCustom {
+  titulo: string;
+  descripcion?: string;
+  precio_ticket: number;
+  imagen_url?: string;
+  estado?: 'activa' | 'cerrada' | 'finalizada';
+  fecha_creacion?: string;
+  fecha_cierre?: string;
+  total_tickets?: number;
+  tickets_disponibles?: number;
+  condiciones?: string;
+  categoria_id?: string;
+  numero_tickets_comprar?: number[];
+  progreso_manual?: number;
+  activa?: boolean;
+}
+
+interface RifasUpdateCustom {
+  titulo?: string;
+  descripcion?: string;
+  precio_ticket?: number;
+  imagen_url?: string;
+  estado?: 'activa' | 'cerrada' | 'finalizada';
+  fecha_cierre?: string;
+  total_tickets?: number;
+  tickets_disponibles?: number;
+  condiciones?: string;
+  categoria_id?: string;
+  numero_tickets_comprar?: number[];
+  progreso_manual?: number;
+  activa?: boolean;
+}
 
 // =====================================================
 // CONSULTAS PRINCIPALES
@@ -30,10 +61,9 @@ export async function obtenerRifasActivas(): Promise<Rifa[]> {
           id,
           nombre,
           icono,
-          color
+          descripcion
         )
       `)
-      .eq('activa', true)
       .eq('estado', 'activa')
       .order('fecha_creacion', { ascending: false })
 
@@ -42,23 +72,24 @@ export async function obtenerRifasActivas(): Promise<Rifa[]> {
       return []
     }
 
-    // Transformar y validar datos
-    const rifasTransformadas = (data || []).map((rifa) => ({
-      ...rifa,
-      tipo_rifa: rifa.tipo_rifa || 'vehiculo',
-      categoria: rifa.categoria || 'general',
-      destacada: rifa.destacada || false,
-      orden: rifa.orden || 0,
-      slug: rifa.slug || (rifa.titulo ? rifa.titulo.toLowerCase().replace(/\s+/g, '-') : 'rifa-sin-titulo'),
-      fecha_culminacion: rifa.fecha_culminacion || null,
-      premio_principal: rifa.premio_principal || rifa.titulo,
-      condiciones: rifa.condiciones || 'Ganador debe ser mayor de 18 años.',
-      marca: rifa.marca || null,
-      modelo: rifa.modelo || null,
-      ano: rifa.ano || null,
-      color: rifa.color || null,
-      valor_estimado_usd: rifa.valor_estimado_usd || null
-    }))
+          // Transformar y validar datos
+      const rifasTransformadas = (data || []).map((rifa) => ({
+        ...rifa,
+        tipo_rifa: rifa.tipo_rifa || 'vehiculo',
+        categoria: rifa.categoria || 'general',
+        destacada: rifa.destacada || false,
+        orden: rifa.orden || 0,
+        slug: rifa.slug || (rifa.titulo ? rifa.titulo.toLowerCase().replace(/\s+/g, '-') : 'rifa-sin-titulo'),
+        fecha_culminacion: rifa.fecha_culminacion || null,
+        premio_principal: rifa.premio_principal || rifa.titulo,
+        condiciones: rifa.condiciones || 'Ganador debe ser mayor de 18 años.',
+        marca: rifa.marca || null,
+        modelo: rifa.modelo || null,
+        ano: rifa.ano || null,
+        color: rifa.color || null,
+        valor_estimado_usd: rifa.valor_estimado_usd || null,
+        progreso_manual: rifa.progreso_manual || null
+      }))
 
     // console.debug(`✅ Rifas obtenidas: ${rifasTransformadas.length}`)
     return rifasTransformadas
@@ -82,11 +113,11 @@ export async function obtenerRifaPorId(id: string): Promise<Rifa | null> {
           id,
           nombre,
           icono,
-          color
+          descripcion
         )
       `)
       .eq('id', id)
-      .eq('activa', true)
+      .eq('estado', 'activa')
       .single()
 
     if (error) {
@@ -115,11 +146,10 @@ export async function obtenerRifasPorCategoria(categoriaId: string): Promise<Rif
           id,
           nombre,
           icono,
-          color
+          descripcion
         )
       `)
       .eq('categoria_id', categoriaId)
-      .eq('activa', true)
       .eq('estado', 'activa')
       .order('fecha_creacion', { ascending: false })
 
@@ -143,15 +173,48 @@ export async function obtenerRifasPorCategoria(categoriaId: string): Promise<Rif
 /**
  * Crear nueva rifa
  */
-export async function crearRifa(datos: RifasInsert): Promise<{ success: boolean; id?: string; error?: string }> {
+export async function crearRifa(datos: RifasInsertCustom): Promise<{ success: boolean; id?: string; error?: string }> {
   try {
+    // Validar datos requeridos
+    if (!datos.titulo || !datos.precio_ticket) {
+      return { success: false, error: 'Título y precio del ticket son requeridos' }
+    }
+
+    // Validar precio del ticket
+    if (datos.precio_ticket <= 0) {
+      return { success: false, error: 'El precio del ticket debe ser mayor a 0' }
+    }
+
+    // Validar numero_tickets_comprar
+    if (datos.numero_tickets_comprar && !Array.isArray(datos.numero_tickets_comprar)) {
+      return { success: false, error: 'numero_tickets_comprar debe ser un array' }
+    }
+
+    // Validar progreso_manual
+    if (datos.progreso_manual !== undefined && (datos.progreso_manual < 0 || datos.progreso_manual > 100)) {
+      return { success: false, error: 'progreso_manual debe estar entre 0 y 100' }
+    }
+
+    // Establecer valores por defecto
+    const datosConValoresPorDefecto = {
+      ...datos,
+      estado: datos.estado || 'activa',
+      fecha_creacion: datos.fecha_creacion || new Date().toISOString(),
+      total_tickets: datos.total_tickets || 0,
+      tickets_disponibles: datos.tickets_disponibles || datos.total_tickets || 0,
+      numero_tickets_comprar: datos.numero_tickets_comprar || [1, 2, 3, 5, 10],
+      progreso_manual: datos.progreso_manual !== undefined ? datos.progreso_manual : null,
+      // Campo activa no existe en el schema real, usar estado en su lugar
+    }
+
     const { data, error } = await supabase
       .from('rifas')
-      .insert(datos)
-      .select()
+      .insert(datosConValoresPorDefecto)
+      .select('id')
       .single()
 
     if (error) {
+      console.error('❌ Error al crear rifa:', error.message)
       return { success: false, error: error.message }
     }
 
@@ -168,7 +231,7 @@ export async function crearRifa(datos: RifasInsert): Promise<{ success: boolean;
 /**
  * Actualizar rifa existente
  */
-export async function actualizarRifa(id: string, datos: RifasUpdate): Promise<{ success: boolean; error?: string }> {
+export async function actualizarRifa(id: string, datos: RifasUpdateCustom): Promise<{ success: boolean; error?: string }> {
   try {
     const { error } = await supabase
       .from('rifas')
@@ -227,8 +290,8 @@ export async function obtenerEstadisticasRifas() {
   try {
     const { data, error } = await supabase
       .from('rifas')
-      .select('estado, activa')
-      .eq('activa', true)
+      .select('estado')
+      .eq('estado', 'activa')
 
     if (error) {
       throw error

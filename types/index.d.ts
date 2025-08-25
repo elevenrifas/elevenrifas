@@ -14,7 +14,7 @@ export interface Rifa {
   tickets_disponibles: number;
   premio_principal?: string;
   condiciones?: string;
-  activa: boolean;
+  // Campo activa no existe en el schema real, usar estado en su lugar
   tipo_rifa: string;
   categoria: string;
   marca?: string;
@@ -25,12 +25,14 @@ export interface Rifa {
   destacada: boolean;
   orden: number;
   slug: string;
-  numero_tickets_comprar?: number[];
+  numero_tickets_comprar: number[];
+  categoria_id?: string;
+  progreso_manual?: number;
   categorias_rifas?: {
     id: string;
     nombre: string;
     icono: string;
-    color: string;
+    descripcion?: string;
   };
 }
 
@@ -91,7 +93,7 @@ export interface TicketConRifa {
     titulo: string;
     imagen_url: string;
     estado: string;
-    activa: boolean;
+    // Campo activa no existe en el schema real, usar estado en su lugar
   };
 }
 
@@ -100,7 +102,7 @@ export interface RifaConTickets {
   titulo: string;
   imagen_url: string;
   estado: string;
-  activa: boolean;
+  // Campo activa no existe en el schema real, usar estado en su lugar
   tickets: TicketConRifa[];
   total_tickets: number;
   precio_promedio: number;
@@ -142,21 +144,12 @@ export interface Ticket {
   id: string
   rifa_id: string | null
   numero_ticket: string
-  precio: number
   nombre: string
   cedula: string
   telefono: string | null
   correo: string
-  estado: 'reservado' | 'pagado' | 'verificado' | 'cancelado'
   fecha_compra: string | null
-  fecha_verificacion: string | null
-  bloqueado_por_pago: boolean | null
-  pago_bloqueante_id: string | null
-  fecha_bloqueo: string | null
-  estado_verificacion: 'pendiente' | 'verificado' | 'rechazado' | null
-  pago_bloqueador_id: string | null
   pago_id: string | null
-  email: string | null
 }
 
 export interface AdminTicket extends Ticket {
@@ -168,27 +161,123 @@ export interface AdminTicket extends Ticket {
     id: string
     monto_bs: number
     monto_usd: number
-    estado: string
+    estado: 'pendiente' | 'verificado' | 'rechazado'
     tipo_pago: string
   }
+  // El estado del ticket ahora es el estado del pago
+  estado?: 'pendiente' | 'verificado' | 'rechazado'
 }
 
 export interface CreateTicketData {
   rifa_id: string
   numero_ticket: string
-  precio: number
   nombre: string
   cedula: string
   telefono?: string
   correo: string
-  estado?: 'reservado' | 'pagado' | 'verificado' | 'cancelado'
-  email?: string
 }
 
 export interface UpdateTicketData extends Partial<CreateTicketData> {
-  estado_verificacion?: 'pendiente' | 'verificado' | 'rechazado'
-  bloqueado_por_pago?: boolean
-  fecha_verificacion?: string
+  pago_id?: string
+}
+
+// Tipos para Pagos
+export interface Pago {
+  id: string;
+  tipo_pago: 'pago_movil' | 'binance' | 'zelle' | 'zinli' | 'paypal' | 'efectivo';
+  monto_bs: number;
+  monto_usd: number;
+  tasa_cambio: number;
+  referencia?: string;
+  fecha_pago: string;
+  fecha_verificacion?: string;
+  telefono_pago?: string;
+  banco_pago?: string;
+  cedula_pago?: string;
+  fecha_visita?: string;
+  verificado_por?: string;
+  estado?: string;
+}
+
+export interface CreatePagoData {
+  tipo_pago: 'pago_movil' | 'binance' | 'zelle' | 'zinli' | 'paypal' | 'efectivo';
+  monto_bs: number;
+  monto_usd: number;
+  tasa_cambio: number;
+  referencia?: string;
+  telefono_pago?: string;
+  banco_pago?: string;
+  cedula_pago?: string;
+  fecha_visita?: string;
+  estado?: string;
+}
+
+export interface UpdatePagoData extends Partial<CreatePagoData> {
+  fecha_verificacion?: string;
+  verificado_por?: string;
+}
+
+// Tipos para Clientes (extraídos de tickets)
+export interface Cliente {
+  id: string // Usaremos la cédula como ID único
+  nombre: string
+  cedula: string
+  telefono: string | null
+  correo: string
+  total_tickets: number
+  total_rifas: number
+  primer_compra: string | null
+  ultima_compra: string | null
+  rifas_compradas: string[]
+}
+
+export interface AdminCliente extends Cliente {
+  // Información adicional para admin
+  tickets?: {
+    id: string
+    numero_ticket: string
+    rifa_id: string
+    fecha_compra: string | null
+    pago_id: string | null
+  }[]
+  rifas_detalle?: {
+    id: string
+    titulo: string
+    imagen_url: string
+    estado: string
+  }[]
+}
+
+export interface CreateClienteData {
+  nombre: string
+  cedula: string
+  telefono?: string
+  correo: string
+}
+
+export interface UpdateClienteData extends Partial<CreateClienteData> {}
+
+// Tipos para Usuario Verificación
+export interface UsuarioVerificacion {
+  id: string
+  usuario: string
+  pin: number
+  activo: boolean
+  fecha_creacion: string
+  ultimo_acceso?: string | null
+}
+
+export interface CreateUsuarioVerificacionData {
+  usuario: string
+  pin: number
+  activo?: boolean
+}
+
+export interface UpdateUsuarioVerificacionData {
+  usuario?: string
+  pin?: number
+  activo?: boolean
+  ultimo_acceso?: string | null
 }
 
 

@@ -40,22 +40,31 @@ export function useAdminCategorias() {
     offset?: number
   }) => {
     try {
+      console.log('🔄 [HOOK] Iniciando carga de categorías...')
+      console.log('🔄 [HOOK] Parámetros recibidos:', params)
+      
       setLoading(true)
       setError(null)
       
+      console.log('🔄 [HOOK] Llamando a adminListCategorias...')
       const result = await adminListCategorias(params)
+      console.log('🔄 [HOOK] Resultado de adminListCategorias:', result)
       
       if (result.success) {
+        console.log('🔄 [HOOK] Éxito, estableciendo categorías:', result.data)
         setCategorias(result.data || [])
       } else {
+        console.log('🔄 [HOOK] Error en resultado:', result.error)
         setError(result.error || 'Error al cargar categorías')
         setCategorias([])
       }
     } catch (err) {
+      console.error('🔄 [HOOK] Error inesperado:', err)
       setError('Error inesperado al cargar categorías')
       setCategorias([])
     } finally {
       setLoading(false)
+      console.log('🔄 [HOOK] Carga completada, loading: false')
     }
   }, [])
 
@@ -199,9 +208,9 @@ export function useAdminCategorias() {
     return categorias.find(cat => cat.id === id)
   }, [categorias])
 
-  // Filtrar categorías activas
+  // Filtrar categorías activas (no aplicable con esquema actual)
   const getCategoriasActivas = useCallback(() => {
-    return categorias.filter(cat => cat.activa)
+    return categorias // Todas las categorías están activas por defecto
   }, [categorias])
 
   // =====================================================
@@ -209,8 +218,8 @@ export function useAdminCategorias() {
   // =====================================================
 
   const totalCategorias = categorias.length
-  const categoriasActivas = categorias.filter(cat => cat.activa).length
-  const categoriasInactivas = categorias.filter(cat => !cat.activa).length
+  const categoriasActivas = categorias.length // Todas están activas
+  const categoriasInactivas = 0 // No hay categorías inactivas
 
   return {
     // Estados
@@ -221,13 +230,14 @@ export function useAdminCategorias() {
     updating,
     deleting,
     
-    // Funciones principales
-    loadCategorias,
-    getCategoria,
-    createCategoria,
-    updateCategoria,
-    deleteCategoria,
-    deleteMultipleCategorias,
+      // Funciones principales
+  loadCategorias,
+  getCategoria,
+  createCategoria,
+  updateCategoria,
+  deleteCategoria,
+  deleteMultipleCategorias,
+  refreshCategorias: loadCategorias,
     
     // Funciones utilitarias
     clearError,

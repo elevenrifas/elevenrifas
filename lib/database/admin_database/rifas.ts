@@ -1,129 +1,409 @@
 // =====================================================
-// 🛠️ ADMIN DB - RIFAS
+// 🎯 ADMIN DB - RIFAS - ELEVEN RIFAS
 // =====================================================
 // Lógica de base de datos exclusiva para el panel de administración
-// Mantiene separadas las operaciones admin del frontend público
+// Sigue el patrón establecido del template
 // =====================================================
 
 import { 
   adminSupabase, 
   createAdminQuery, 
   safeAdminQuery, 
-  applyPagination, 
-  applyOrdering 
+  applyOrdering,
+  applyPagination
 } from '@/lib/database'
-import type { Database } from '@/types/supabase'
 
-type RifasRow = Database['public']['Tables']['rifas']['Row']
-type RifasInsert = Database['public']['Tables']['rifas']['Insert']
-type RifasUpdate = Database['public']['Tables']['rifas']['Update']
+// =====================================================
+// 📋 TIPOS Y INTERFACES
+// =====================================================
 
-export type AdminRifa = RifasRow
+// Tipo para la relación con categorías
+interface CategoriaRifa {
+  id: string;
+  nombre: string;
+  icono: string;
+}
 
-export async function adminListRifas(params?: { 
-  incluirCerradas?: boolean
-  incluirInactivas?: boolean
-  limit?: number
-  offset?: number
-  ordenarPor?: 'fecha_creacion' | 'titulo' | 'estado' | 'precio_ticket'
-  orden?: 'asc' | 'desc'
-}) {
-  const { 
-    incluirCerradas = true, 
+// Tipo base para inserción de rifas
+interface RifasInsertCustom {
+  titulo: string;
+  descripcion?: string;
+  precio_ticket: number;
+  imagen_url?: string;
+  estado?: 'activa' | 'cerrada' | 'finalizada';
+  fecha_creacion?: string;
+  fecha_cierre?: string;
+  total_tickets?: number;
+  tickets_disponibles?: number;
+  condiciones?: string;
+  categoria_id?: string;
+  numero_tickets_comprar?: number[];
+  progreso_manual?: number;
+  activa?: boolean;
+}
+
+// Tipo para actualización de rifas
+interface RifasUpdateCustom {
+  titulo?: string;
+  descripcion?: string;
+  precio_ticket?: number;
+  imagen_url?: string;
+  estado?: 'activa' | 'cerrada' | 'finalizada';
+  fecha_cierre?: string;
+  total_tickets?: number;
+  tickets_disponibles?: number;
+  condiciones?: string;
+  categoria_id?: string;
+  numero_tickets_comprar?: number[];
+  progreso_manual?: number;
+  activa?: boolean;
+}
+
+// Tipo principal para rifas en el admin
+export type AdminRifa = RifasInsertCustom & { 
+  id: string;
+  categorias_rifas?: CategoriaRifa;
+}
+
+// =====================================================
+// 📋 FUNCIONES ADMIN RIFAS
+// =====================================================
+
+// 1. LISTAR RIFAS
+export async function adminListRifas(options: {
+  incluirCerradas?: boolean;
+  incluirInactivas?: boolean;
+  ordenarPor?: 'fecha_creacion' | 'titulo' | 'estado' | 'precio_ticket';
+  orden?: 'asc' | 'desc';
+  limite?: number;
+  offset?: number;
+} = {}): Promise<{ success: boolean; data?: AdminRifa[]; error?: string; total?: number }> {
+  const {
+    incluirCerradas = true,
     incluirInactivas = true,
-    limit = 1000,
-    offset = 0,
     ordenarPor = 'fecha_creacion',
-    orden = 'desc'
-  } = params || {}
+    orden = 'desc',
+    limite = 1000,
+    offset = 0
+  } = options
 
   return safeAdminQuery(
     async () => {
+      console.log('🔍 [adminListRifas] Iniciando consulta de rifas...')
+      console.log('🔍 [adminListRifas] Parámetros:', { incluirCerradas, incluirInactivas, ordenarPor, orden, limite, offset })
+      
       let query = createAdminQuery('rifas')
         .select(`
           *,
           categorias_rifas (
             id,
             nombre,
-            icono,
-            color
+            icono
           )
         `)
       
-      // Aplicar ordenamiento usando helper
-      query = applyOrdering(query, ordenarPor, orden)
+      console.log('🔍 [adminListRifas] Query base creada')
       
-      // Aplicar paginación usando helper
-      query = applyPagination(query, limit, offset)
-
-      // Filtros de estado
+      // Aplicar filtros de estado
       if (!incluirCerradas) {
         query = query.neq('estado', 'cerrada')
       }
       
-      // Nota: 'activa' ya no existe en el nuevo schema
-      // El estado se maneja a través del campo 'estado'
+      // Aplicar filtros de activación
+      if (!incluirInactivas) {
+        query = query.eq('estado', 'activa')
+      }
+      
+      // Aplicar ordenamiento usando helper
+      query = applyOrdering(query, ordenarPor, orden)
+      console.log('🔍 [adminListRifas] Ordenamiento aplicado')
+      
+      // Aplicar paginación usando helper
+      query = applyPagination(query, limite, offset)
+      console.log('🔍 [adminListRifas] Paginación aplicada')
 
+      console.log('🔍 [adminListRifas] Ejecutando query...')
       const result = await query
-
-      // Transformar y validar datos según el nuevo schema
-      const rifasTransformadas = (result.data || []).map((rifa: any) => ({
-        ...rifa,
-        // Valores por defecto para campos opcionales según el nuevo schema
-        titulo: rifa.titulo || '',
-        descripcion: rifa.descripcion || '',
-        precio_ticket: rifa.precio_ticket || 0,
-        imagen_url: rifa.imagen_url || '',
-        estado: rifa.estado || 'activa',
-        fecha_creacion: rifa.fecha_creacion || new Date().toISOString(),
-        fecha_cierre: rifa.fecha_cierre || null,
-        total_tickets: rifa.total_tickets || 0,
-        tickets_disponibles: rifa.tickets_disponibles || 0,
-
-        condiciones: rifa.condiciones || '',
-        categoria_id: rifa.categoria_id || null,
-        numero_tickets_comprar: rifa.numero_tickets_comprar || [1, 2, 3, 5, 10]
-      }))
-
+      console.log('🔍 [adminListRifas] Resultado obtenido:', result)
+      
       return { 
-        data: rifasTransformadas as AdminRifa[],
-        error: null,
-        total: rifasTransformadas.length
+        data: result.data || [],
+        error: result.error
       }
     },
     'Error al listar rifas'
   )
 }
 
-export async function adminCreateRifa(datos: RifasInsert) {
-  const { data, error } = await adminSupabase.from('rifas').insert(datos).select().single()
-  if (error) return { success: false as const, error: error.message }
-  return { success: true as const, data }
+// 2. OBTENER RIFA INDIVIDUAL
+export async function adminGetRifa(id: string): Promise<{ success: boolean; data?: AdminRifa; error?: string }> {
+  return safeAdminQuery(
+    async () => {
+      const result = await createAdminQuery('rifas')
+        .select(`
+          *,
+          categorias_rifas (
+            id,
+            nombre,
+            icono
+          )
+        `)
+        .eq('id', id)
+        .single()
+      
+      return { data: result.data, error: result.error }
+    },
+    'Error al obtener rifa'
+  )
 }
 
-export async function adminUpdateRifa(id: string, datos: RifasUpdate) {
-  const { error } = await adminSupabase.from('rifas').update(datos).eq('id', id)
-  if (error) return { success: false as const, error: error.message }
-  return { success: true as const }
+// 3. CREAR RIFA
+export async function adminCreateRifa(datos: RifasInsertCustom): Promise<{ success: boolean; data?: AdminRifa; error?: string }> {
+  return safeAdminQuery(
+    async () => {
+      // Validar datos requeridos
+      if (!datos.titulo || !datos.precio_ticket) {
+        throw new Error('Título y precio del ticket son requeridos')
+      }
+
+      // Validar precio del ticket
+      if (datos.precio_ticket <= 0) {
+        throw new Error('El precio del ticket debe ser mayor a 0')
+      }
+
+      // Validar numero_tickets_comprar
+      if (datos.numero_tickets_comprar && !Array.isArray(datos.numero_tickets_comprar)) {
+        throw new Error('numero_tickets_comprar debe ser un array')
+      }
+
+      // Validar progreso_manual
+      if (datos.progreso_manual !== undefined && (datos.progreso_manual < 0 || datos.progreso_manual > 100)) {
+        throw new Error('progreso_manual debe estar entre 0 y 100')
+      }
+
+      // Establecer valores por defecto
+      const datosConValoresPorDefecto = {
+        ...datos,
+        estado: datos.estado || 'activa',
+        fecha_creacion: datos.fecha_creacion || new Date().toISOString(),
+        total_tickets: datos.total_tickets || 0,
+        tickets_disponibles: datos.tickets_disponibles || datos.total_tickets || 0,
+        numero_tickets_comprar: datos.numero_tickets_comprar || [1, 2, 3, 5, 10],
+        progreso_manual: datos.progreso_manual !== undefined ? datos.progreso_manual : null
+      }
+
+      const { data, error } = await createAdminQuery('rifas')
+        .insert(datosConValoresPorDefecto)
+        .select(`
+          *,
+          categorias_rifas (
+            id,
+            nombre,
+            icono
+          )
+        `)
+        .single()
+      
+      if (error) throw error
+      return { data, error: null }
+    },
+    'Error al crear rifa'
+  )
 }
 
-export async function adminChangeRifaState(id: string, estado: 'activa' | 'cerrada' | 'finalizada') {
-  const { error } = await adminSupabase
-    .from('rifas')
-    .update({ estado, fecha_cierre: estado !== 'activa' ? new Date().toISOString() : null })
-    .eq('id', id)
-  if (error) return { success: false as const, error: error.message }
-  return { success: true as const }
+// 4. ACTUALIZAR RIFA
+export async function adminUpdateRifa(id: string, datos: RifasUpdateCustom): Promise<{ success: boolean; data?: AdminRifa; error?: string }> {
+  return safeAdminQuery(
+    async () => {
+      const { data, error } = await createAdminQuery('rifas')
+        .update(datos)
+        .eq('id', id)
+        .select(`
+          *,
+          categorias_rifas (
+            id,
+            nombre,
+            icono
+          )
+        `)
+        .single()
+      
+      if (error) throw error
+      return { data, error: null }
+    },
+    'Error al actualizar rifa'
+  )
 }
 
-export async function adminRifasStats() {
-  const { data, error } = await adminSupabase.from('rifas').select('estado')
-  if (error) return { success: false as const, error: error.message }
-  const total = data.length
-  const activas = data.filter((r: any) => r.estado === 'activa').length
-  const cerradas = data.filter((r: any) => r.estado === 'cerrada').length
-  const finalizadas = data.filter((r: any) => r.estado === 'finalizada').length
-  return { success: true as const, data: { total, activas, cerradas, finalizadas } }
+// 5. CAMBIAR ESTADO DE RIFA
+export async function adminChangeRifaState(id: string, estado: 'activa' | 'cerrada'): Promise<{ success: boolean; error?: string }> {
+  return safeAdminQuery(
+    async () => {
+      const { error } = await createAdminQuery('rifas')
+        .update({ 
+          estado: estado,
+          fecha_cierre: estado !== 'activa' ? new Date().toISOString() : null
+        })
+        .eq('id', id)
+      
+      if (error) throw error
+      return { data: null, error: null }
+    },
+    'Error al cambiar estado de rifa'
+  )
 }
 
+// 6. ELIMINAR RIFA
+export async function adminDeleteRifa(id: string): Promise<{ success: boolean; error?: string; details?: any }> {
+  try {
+    console.log('🗑️ [adminDeleteRifa] Iniciando eliminación de rifa:', id)
+    
+    // Verificar si la rifa tiene tickets asociados
+    console.log('🔍 [adminDeleteRifa] Verificando tickets asociados...')
+    const { data: tickets, error: ticketsError } = await createAdminQuery('tickets')
+      .select('id, pago_id')
+      .eq('rifa_id', id)
+      .limit(5) // Limitar para performance
 
+    if (ticketsError) {
+      console.error('❌ Error al verificar tickets:', ticketsError)
+      return { success: false, error: 'Error al verificar tickets: ' + ticketsError.message }
+    }
+
+    console.log('🎫 [adminDeleteRifa] Tickets encontrados:', tickets?.length || 0)
+    
+    if (tickets && tickets.length > 0) {
+      // Verificar si algún ticket tiene pago asociado
+      const ticketsConPago = tickets.filter((t: any) => t.pago_id)
+      console.log('💰 [adminDeleteRifa] Tickets con pago:', ticketsConPago.length)
+      
+      if (ticketsConPago.length > 0) {
+        return { 
+          success: false, 
+          error: `No se puede eliminar la rifa porque tiene ${ticketsConPago.length} ticket(s) con pagos asociados`,
+          details: { ticketsCount: tickets.length, ticketsConPago: ticketsConPago.length }
+        }
+      } else {
+        return { 
+          success: false, 
+          error: `No se puede eliminar la rifa porque tiene ${tickets.length} ticket(s) asociados`,
+          details: { ticketsCount: tickets.length }
+        }
+      }
+    }
+
+    console.log('✅ [adminDeleteRifa] No hay dependencias, procediendo con eliminación...')
+    
+    // Si no hay dependencias, proceder con la eliminación
+    const { error } = await createAdminQuery('rifas')
+      .delete()
+      .eq('id', id)
+    
+    if (error) {
+      console.error('❌ Error al eliminar rifa:', error)
+      return { success: false, error: error.message }
+    }
+
+    console.log('🗑️ ✅ [adminDeleteRifa] Rifa eliminada exitosamente')
+    return { success: true }
+
+  } catch (error) {
+    console.error('💥 Error inesperado al eliminar rifa:', error)
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Error desconocido' 
+    }
+  }
+}
+
+// 7. ELIMINAR MÚLTIPLES RIFAS
+export async function adminDeleteMultipleRifas(ids: string[]): Promise<{ success: boolean; error?: string; results?: any[] }> {
+  try {
+    const results = []
+    
+    for (const id of ids) {
+      const result = await adminDeleteRifa(id)
+      results.push({ id, ...result })
+      
+      if (!result.success) {
+        // Si falla una, continuar con las demás pero registrar el error
+        console.error(`Error al eliminar rifa ${id}:`, result.error)
+      }
+    }
+
+    const successCount = results.filter(r => r.success).length
+    const errorCount = results.filter(r => !r.success).length
+
+    if (errorCount === 0) {
+      return { success: true }
+    } else if (successCount > 0) {
+      return { 
+        success: false, 
+        error: `Se eliminaron ${successCount} rifas, pero fallaron ${errorCount}`,
+        results 
+      }
+    } else {
+      return { 
+        success: false, 
+        error: 'No se pudo eliminar ninguna rifa',
+        results 
+      }
+    }
+
+  } catch (error) {
+    console.error('Error inesperado al eliminar múltiples rifas:', error)
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Error desconocido' 
+    }
+  }
+}
+
+// =====================================================
+// 📋 FUNCIONES DE UTILIDAD
+// =====================================================
+
+// Obtener estadísticas de rifas
+export async function adminGetRifasStats(): Promise<{ success: boolean; data?: any; error?: string }> {
+  return safeAdminQuery(
+    async () => {
+      const { data, error } = await createAdminQuery('rifas')
+        .select('estado')
+
+      if (error) throw error
+
+      const estadisticas = {
+        total: data.length,
+        activas: data.filter((r: any) => r.estado === 'activa').length,
+        cerradas: data.filter((r: any) => r.estado === 'cerrada').length,
+        finalizadas: data.filter((r: any) => r.estado === 'finalizada').length
+      }
+
+      return { data: estadisticas, error: null }
+    },
+    'Error al obtener estadísticas de rifas'
+  )
+}
+
+// Obtener rifas por categoría
+export async function adminGetRifasByCategoria(categoriaId: string): Promise<{ success: boolean; data?: AdminRifa[]; error?: string }> {
+  return safeAdminQuery(
+    async () => {
+      const result = await createAdminQuery('rifas')
+        .select(`
+          *,
+          categorias_rifas (
+            id,
+            nombre,
+            icono
+          )
+        `)
+        .eq('categoria_id', categoriaId)
+        .eq('estado', 'activa')
+        .order('fecha_creacion', { ascending: false })
+
+      return { data: result.data || [], error: result.error }
+    },
+    'Error al obtener rifas por categoría'
+  )
+}

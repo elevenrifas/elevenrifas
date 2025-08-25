@@ -85,6 +85,7 @@ export const DB_CONFIG = {
       PRECIO_TICKET: 0.01,
       CANTIDAD_TICKETS: 1,
       MONTO_PAGO: 0.01,
+      PROGRESO_MANUAL: 0,
     },
     
     // Valores máximos
@@ -92,7 +93,41 @@ export const DB_CONFIG = {
       CANTIDAD_TICKETS: 100,
       MONTO_PAGO: 10000,
       TASA_CAMBIO: 1000,
+      PROGRESO_MANUAL: 100,
     },
+
+    // Configuración para numero_tickets_comprar
+    NUMERO_TICKETS_COMPRAR: {
+      VALORES_POR_DEFECTO: [1, 2, 3, 5, 10],
+      VALORES_MAXIMOS: [1, 2, 3, 5, 10, 20, 50, 100],
+      CANTIDAD_MAXIMA: 100,
+    },
+
+    // Estados válidos para pagos
+    ESTADOS_PAGO: [
+      'pendiente',
+      'verificado',
+      'rechazado',
+      'cancelado',
+      'en_revision'
+    ],
+
+    // Estados válidos para rifas
+    ESTADOS_RIFA: [
+      'activa',
+      'cerrada',
+      'finalizada'
+    ],
+
+    // Tipos de pago válidos
+    TIPOS_PAGO: [
+      'pago_movil',
+      'binance',
+      'zelle',
+      'zinli',
+      'paypal',
+      'efectivo'
+    ],
   },
 
   // Configuración de seguridad

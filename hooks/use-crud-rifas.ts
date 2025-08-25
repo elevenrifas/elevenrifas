@@ -5,32 +5,24 @@ import { useState, useCallback } from 'react'
 import { useAdminRifas } from './use-admin-rifas'
 import type { AdminRifa } from '@/lib/database/admin_database/rifas'
 
-// Tipos para el CRUD
+// Tipos para el CRUD - Actualizado según el schema real de la BD
 export interface CrudRifaData {
   titulo: string
   descripcion?: string
   precio_ticket: number
   imagen_url?: string
-  estado: 'activa' | 'cerrada' | 'finalizada'
+  estado: 'activa' | 'cerrada'
   total_tickets: number
-  tickets_disponibles: number
-  premio_principal?: string
-  condiciones?: string
-  activa?: boolean
-  categoria_id?: string
-  cantidad_tickets?: number
+  tickets_disponibles?: number // Opcional ya que es un campo calculado
+  categoria_id?: string | null
   numero_tickets_comprar?: number[]
-  tipo_rifa?: string
-  categoria?: string
-  destacada?: boolean
+  progreso_manual?: number | null
+  fecha_cierre?: string | null
 }
 
 export interface CrudRifaFilters {
   estado?: string
-  categoria?: string
-  tipo_rifa?: string
-  destacada?: boolean
-  activa?: boolean
+  categoria_id?: string
 }
 
 export interface CrudRifaSort {
@@ -81,7 +73,7 @@ export interface UseCrudRifasReturn {
   updateRifa: (id: string, data: Partial<CrudRifaData>) => Promise<{ success: boolean; error?: string }>
   deleteRifa: (id: string) => Promise<{ success: boolean; error?: string }>
   deleteMultipleRifas: (ids: string[]) => Promise<{ success: boolean; error?: string }>
-  changeRifaState: (id: string, estado: 'activa' | 'cerrada' | 'finalizada') => Promise<{ success: boolean; error?: string }>
+  changeRifaState: (id: string, estado: 'activa' | 'cerrada') => Promise<{ success: boolean; error?: string }>
   
   // Operaciones de UI
   openCreateModal: () => void
@@ -222,16 +214,28 @@ export function useCrudRifas(options: {
   const deleteRifa = useCallback(async (id: string) => {
     try {
       setIsDeleting(true)
-      // Aquí implementarías la lógica real de eliminación
-      // Por ahora simulamos la eliminación
-      await new Promise(resolve => setTimeout(resolve, 1000))
       
-      closeDeleteModal()
-      await refreshRifas()
+      // Importar dinámicamente la función de eliminación
+      const { adminDeleteRifa } = await import('@/lib/database/admin_database/rifas')
       
-      return { success: true }
+      // Ejecutar la eliminación real
+      const result = await adminDeleteRifa(id)
+      
+      if (result.success) {
+        closeDeleteModal()
+        await refreshRifas()
+        return result
+      } else {
+        // Mostrar error específico al usuario
+        console.error('Error al eliminar rifa:', result.error)
+        if (result.details) {
+          console.error('Detalles del error:', result.details)
+        }
+        return result
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error inesperado al eliminar rifa'
+      console.error('Error inesperado en deleteRifa:', err)
       return { success: false, error: errorMessage }
     } finally {
       setIsDeleting(false)
@@ -241,22 +245,35 @@ export function useCrudRifas(options: {
   const deleteMultipleRifas = useCallback(async (ids: string[]) => {
     try {
       setIsDeleting(true)
-      // Aquí implementarías la lógica real de eliminación múltiple
-      await new Promise(resolve => setTimeout(resolve, 1000))
       
-      clearSelection()
-      await refreshRifas()
+      // Importar dinámicamente la función de eliminación múltiple
+      const { adminDeleteMultipleRifas } = await import('@/lib/database/admin_database/rifas')
       
-      return { success: true }
+      // Ejecutar la eliminación múltiple real
+      const result = await adminDeleteMultipleRifas(ids)
+      
+      if (result.success) {
+        clearSelection()
+        await refreshRifas()
+        return result
+      } else {
+        // Mostrar error específico al usuario
+        console.error('Error al eliminar múltiples rifas:', result.error)
+        if (result.results) {
+          console.error('Resultados individuales:', result.results)
+        }
+        return result
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error inesperado al eliminar rifas'
+      console.error('Error inesperado en deleteMultipleRifas:', err)
       return { success: false, error: errorMessage }
     } finally {
       setIsDeleting(false)
     }
   }, [refreshRifas])
 
-  const changeRifaState = useCallback(async (id: string, estado: 'activa' | 'cerrada' | 'finalizada') => {
+  const changeRifaState = useCallback(async (id: string, estado: 'activa' | 'cerrada') => {
     try {
       const result = await baseChangeRifaState(id, estado)
       return result

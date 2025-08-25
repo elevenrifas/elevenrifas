@@ -7,30 +7,18 @@ export interface Database {
           nombre: string
           icono: string
           descripcion?: string
-          color: string
-          activa: boolean
-          orden: number
-          fecha_creacion: string
         }
         Insert: {
           id?: string
           nombre: string
           icono: string
           descripcion?: string
-          color?: string
-          activa?: boolean
-          orden?: number
-          fecha_creacion?: string
         }
         Update: {
           id?: string
           nombre?: string
           icono?: string
           descripcion?: string
-          color?: string
-          activa?: boolean
-          orden?: number
-          fecha_creacion?: string
         }
       }
       rifas: {
@@ -62,11 +50,12 @@ export interface Database {
           destacada: boolean
           orden: number
           slug?: string
+          progreso_manual?: number
           categorias_rifas?: {
             id: string
             nombre: string
             icono: string
-            color: string
+            descripcion?: string
           }
         }
         Insert: {
@@ -97,6 +86,7 @@ export interface Database {
           destacada?: boolean
           orden?: number
           slug?: string
+          progreso_manual?: number
         }
         Update: {
           id?: string
@@ -126,6 +116,7 @@ export interface Database {
           destacada?: boolean
           orden?: number
           slug?: string
+          progreso_manual?: number
         }
       }
       tickets: {

@@ -9,6 +9,7 @@ const tabs = [
   { href: "/admin/rifas", label: "Rifas" },
   { href: "/admin/usuarios", label: "Usuarios" },
   { href: "/admin/pagos", label: "Pagos" },
+  { href: "/admin/clientes", label: "Clientes" },
 ];
 
 export default function AdminNavbar() {
