@@ -3,6 +3,24 @@ import Link from "next/link";
 import Image from "next/image";
 
 export function Footer() {
+  const partners = [
+    {
+      name: "Super Gana",
+      logo: "/super.png",
+      description: "Plataforma líder en sorteos"
+    },
+    {
+      name: "Táchira Su Lotería",
+      logo: "/tachira.png", 
+      description: "Lotería oficial del estado"
+    },
+    {
+      name: "CONALOT",
+      logo: "/conalot.png",
+      description: "Comisión Nacional de Lotería"
+    }
+  ];
+
   return (
     <footer className="relative bg-gradient-to-br from-foreground to-foreground/90 text-white overflow-hidden">
       {/* Elementos decorativos */}
@@ -11,18 +29,44 @@ export function Footer() {
       <div className="absolute bottom-20 left-10 w-24 h-24 bg-primary/5 rounded-full blur-2xl"></div>
       
       <div className="relative z-10 container mx-auto px-4 sm:px-6 py-16">
+        {/* Logo y descripción */}
+        <div className="md:col-span-2 text-center mb-8">
+          <div className="flex items-center justify-center gap-3 mb-6">
+            <Image 
+              src="/E_LOGOb.png" 
+              alt="Eleven Motors Logo" 
+              width={200} 
+              height={80} 
+              className="h-16 w-auto"
+            />
+          </div>
+        </div>
+
+        {/* Partners Oficiales - Solo iconos */}
+        <div className="mb-12">
+          <div className="flex flex-wrap items-center justify-center gap-10 lg:gap-16">
+            {partners.map((partner, index) => (
+              <div key={index} className="group text-center">
+                <div className="w-20 h-20 lg:w-28 lg:h-28 mx-auto bg-white rounded-xl p-3 flex items-center justify-center hover:bg-slate-50 transition-all duration-300 mb-2 shadow-md">
+                  <Image
+                    src={partner.logo}
+                    alt={`${partner.name} logo`}
+                    width={80}
+                    height={80}
+                    className="object-contain w-full h-full"
+                  />
+                </div>
+                <p className="text-xs text-white/60 group-hover:text-white/80 transition-colors duration-300 font-medium">
+                  {partner.name}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
-          {/* Logo y descripción */}
+          {/* Descripción */}
           <div className="md:col-span-2 text-center">
-            <div className="flex items-center justify-center gap-3 mb-6">
-              <Image 
-                src="/E_LOGOb.png" 
-                alt="Eleven Motors Logo" 
-                width={200} 
-                height={80} 
-                className="h-16 w-auto"
-              />
-            </div>
             <p className="text-white/80 leading-relaxed max-w-2xl mx-auto">
               Tu plataforma de confianza para participar en rifas exclusivas y ganar 
               premios increíbles. Seguridad, transparencia y diversión garantizada.

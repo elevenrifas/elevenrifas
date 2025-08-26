@@ -1,7 +1,6 @@
 
 import { Hero } from "@/components/Hero";
 import { RifaClientSection } from "@/components/RifaClientSection";
-import { FeaturesSection } from "@/components/FeaturesSection";
 import { Footer } from "@/components/Footer";
 import { obtenerRifasActivas } from "@/lib/database";
 import WithRifasLayout from "@/app/with-rifas-layout";
@@ -18,15 +17,12 @@ export default async function Home() {
 
   return (
     <WithRifasLayout rifas={rifas}>
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen relative">
         {/* Hero Section - Página completa sin navbar */}
         <Hero />
         
         {/* Sección de rifas activas */}
         <RifaClientSection rifas={rifas} />
-        
-        {/* Sección de características - ¿Por qué Eleven Rifas? */}
-        <FeaturesSection />
         
         {/* Footer */}
         <Footer />

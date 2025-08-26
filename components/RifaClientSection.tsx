@@ -38,9 +38,7 @@ export function RifaClientSection({ rifas }: Props) {
   };
 
   return (
-    <section id="rifas" className="relative py-20 overflow-hidden">
-      {/* Fondo azul claro para la segunda sección */}
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-blue-100/40 to-indigo-50"></div>
+    <section id="rifas" className="relative py-8 overflow-hidden bg-slate-200">
       
       {/* Elementos decorativos */}
       <div className="absolute top-20 right-10 w-32 h-32 bg-primary/5 rounded-full blur-3xl"></div>
@@ -49,19 +47,19 @@ export function RifaClientSection({ rifas }: Props) {
       <div className="relative z-10 container mx-auto px-4 sm:px-6">
         {/* Header de la sección */}
         <div className="text-center mb-16">
-          {/* Badge de destacado */}
-          <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mb-6">
+          {/* Badge de destacado - Ajustado para mejor visibilidad */}
+          <div className="inline-flex items-center gap-2 bg-white/90 text-[#fb0413] px-4 py-2 rounded-full text-sm font-medium mb-6 shadow-lg">
             <Trophy className="w-4 h-4" />
             <span>Premios Increíbles</span>
           </div>
           
-          {/* Título principal */}
-          <h2 className="text-4xl lg:text-6xl font-bold tracking-tight text-foreground mb-6">
-            Rifas <span className="text-primary">Disponibles</span>
+          {/* Título principal - Ajustado para fondo claro */}
+          <h2 className="text-4xl lg:text-6xl font-bold tracking-tight text-black mb-6">
+            Rifas <span className="text-[#fb0413]">Disponibles</span>
           </h2>
           
-          {/* Subtítulo mejorado */}
-          <p className="text-xl lg:text-2xl text-muted-foreground max-w-4xl mx-auto mb-8 leading-relaxed text-justify">
+          {/* Subtítulo mejorado - Ajustado para fondo claro */}
+          <p className="text-xl lg:text-2xl text-black max-w-4xl mx-auto mb-8 leading-relaxed text-justify">
             Aquí tienes nuestras rifas disponibles. Haz clic en cualquiera para participar.
           </p>
         </div>

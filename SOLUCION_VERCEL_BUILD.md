@@ -90,3 +90,4 @@ npm install
 - ✅ Configuración mínima para Vercel
 - ✅ Listo para deploy automático
 
+

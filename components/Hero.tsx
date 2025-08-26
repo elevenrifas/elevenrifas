@@ -31,9 +31,7 @@ export function Hero() {
   }, []);
 
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
-      {/* Fondo blanco para el Hero - Primera sección */}
-      <div className="absolute inset-0 bg-white"></div>
+    <section className="relative py-8 flex items-center justify-center overflow-hidden bg-gradient-to-b from-slate-900 via-slate-700 via-slate-500 to-slate-200">
       
       {/* Elementos decorativos sutiles */}
       <div className="absolute inset-0 pointer-events-none">
@@ -41,12 +39,12 @@ export function Hero() {
         <div className={`absolute top-40 right-20 w-24 h-24 bg-[#fb0413]/3 rounded-full blur-2xl transition-all duration-1000 delay-300 ${isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-50'}`}></div>
       </div>
 
-      <div className="relative z-10 container mx-auto px-4 sm:px-6 py-12">
+      <div className="relative z-20 container mx-auto px-4 sm:px-6 py-12">
         <div className="text-center space-y-0">
-          {/* Badge personalizado "Rifas Premium" */}
+          {/* Badge personalizado "El que no juega no gana" */}
           <div className={`inline-flex items-center gap-2 bg-gradient-to-r from-[#fb0413] to-[#fb0413]/80 backdrop-blur-sm text-white px-6 py-3 rounded-full text-sm font-bold shadow-lg transition-all duration-1000 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
             <Star className="w-5 h-5 text-yellow-300" />
-            <span>RIFAS PREMIUM</span>
+            <span>EL QUE NO JUEGA NO GANA</span>
           </div>
 
           {/* Logo principal - E_LOGO.png como protagonista */}
@@ -54,7 +52,7 @@ export function Hero() {
             {/* Logo principal sin decoraciones */}
             <div className="relative w-80 h-64 lg:w-96 lg:h-80 overflow-hidden">
               <Image
-                src="/E_LOGO.png"
+                src="/logoblancorojo.png"
                 alt="Eleven Rifas Logo"
                 fill
                 priority
@@ -65,15 +63,15 @@ export function Hero() {
           </div>
 
           {/* Subtítulo - MÁS PEGADO AL LOGO */}
-          <p className={`subtitle-hero max-w-2xl mx-auto transition-all duration-1000 delay-400 -mt-20 text-xl ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
+          <p className={`subtitle-hero max-w-2xl mx-auto transition-all duration-1000 delay-400 -mt-20 text-xl text-white ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
             ¡Tu boleto puede cambiar tu vida hoy!
           </p>
         </div>
 
         {/* Recuadro rojo curvo MUCHO MÁS ALTO que se extiende más allá del viewport */}
         <div className={`relative mt-8 transition-all duration-1000 delay-600 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
-          {/* Recuadro principal rojo - MUCHO MÁS ALTO */}
-          <div className="relative bg-[#fb0413] rounded-3xl p-6 lg:p-8 shadow-2xl min-h-[600px] lg:min-h-[800px] flex flex-col items-center justify-start">
+          {/* Recuadro principal rojo - SIN BORDE INFERIOR */}
+          <div className="relative bg-[#fb0413] rounded-t-3xl p-6 lg:p-8 shadow-2xl min-h-[550px] lg:min-h-[600px] flex flex-col items-center justify-start">
             {/* Contenido dentro del recuadro rojo - MÁS PEGADO AL TOPE */}
             <div className="text-center text-white space-y-6 mt-8 lg:mt-12">
               {/* Texto animado "¿LISTO PARA GANAR?" */}
@@ -138,37 +136,25 @@ export function Hero() {
               </div>
             </div>
 
-            {/* Imagen del coche regalo - MOVIDA A LA IZQUIERDA Y 7% MÁS GRANDE */}
-            <div className="relative w-full max-w-5xl mx-auto mt-4 lg:mt-6 flex-1 flex items-center justify-center">
-              <div className="relative w-full h-[400px] lg:h-[500px] max-w-2xl -ml-5 -mr-16 lg:-mr-32">
-                <Image
-                  src="/car-gift-with-red-ribbon-bqxzgz2ttsvm4e9a (1).png"
-                  alt="Coche premio envuelto como regalo"
-                  fill
-                  priority
-                  sizes="(max-width: 1024px) 100vw, 80vw"
-                  className="object-contain drop-shadow-2xl scale-[1.34] lg:scale-[1.2] animate-float lg:animate-float-lg"
-                />
-                
-                {/* Efecto de brillo sutil */}
-                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#fb0413]/10 rounded-3xl"></div>
-                
-                {/* Efecto de partículas brillantes */}
-                <div className="absolute inset-0 pointer-events-none">
-                  {[...Array(6)].map((_, i) => (
-                    <div
-                      key={i}
-                      className="absolute w-2 h-2 bg-yellow-300 rounded-full animate-ping"
-                      style={{
-                        top: `${20 + i * 15}%`,
-                        left: `${30 + i * 10}%`,
-                        animationDelay: `${i * 0.2}s`,
-                        animationDuration: '2s'
-                      }}
-                    />
-                  ))}
-                </div>
-              </div>
+          </div>
+          
+          {/* Imagen conectada con el contenedor */}
+          <div className="relative w-full h-[280px] lg:h-[320px] -mt-8 lg:-mt-12 mx-0">
+            <Image
+              src="/3car-gift-with-red-ribbon-bqxzgz2ttsvm4e9a (1).jpg"
+              alt="Familia ganadora con premios increíbles"
+              fill
+              priority
+              sizes="100vw"
+              className="object-cover rounded-b-3xl"
+              style={{ objectPosition: '60% center' }}
+            />
+            
+            {/* Gradiente FUERTE arriba que rápidamente vuelve a transparente */}
+            <div className="absolute inset-0 rounded-b-3xl pointer-events-none" 
+                 style={{ 
+                   background: 'linear-gradient(to bottom, rgba(251, 4, 19, 0.9) 0%, rgba(251, 4, 19, 0.7) 8%, rgba(251, 4, 19, 0.4) 18%, rgba(251, 4, 19, 0.1) 28%, transparent 35%)'
+                 }}>
             </div>
           </div>
         </div>
