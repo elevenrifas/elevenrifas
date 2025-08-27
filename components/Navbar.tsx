@@ -5,13 +5,13 @@ import { ArrowLeft } from "lucide-react";
 
 export default function Navbar({ showBackButton = false, onBack }: { showBackButton?: boolean; onBack?: () => void }) {
   return (
-    <header className="w-full sticky top-0 z-50 backdrop-blur-md bg-white/80 border-b border-border">
+    <header className="w-full sticky top-0 z-50 backdrop-blur-md bg-slate-900/90 border-b border-slate-600/50">
       <div className="container mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
         {/* Botón de volver (izquierda) */}
         {showBackButton && onBack && (
           <button
             onClick={onBack}
-            className="flex items-center gap-2 px-4 py-2 text-base font-semibold text-primary bg-white hover:bg-gray-50 transition-all duration-200 rounded-lg shadow-md hover:shadow-lg hover:-translate-y-0.5 border border-primary/20"
+            className="flex items-center gap-2 px-4 py-2 text-base font-semibold text-white bg-slate-800 hover:bg-slate-700 transition-all duration-200 rounded-lg shadow-md hover:shadow-lg hover:-translate-y-0.5 border border-slate-600"
           >
             <ArrowLeft className="h-5 w-5" />
             Volver
@@ -25,7 +25,7 @@ export default function Navbar({ showBackButton = false, onBack }: { showBackBut
         <div className="flex-1 flex justify-end">
           <Link href="/" className="flex items-center justify-center group">
             <Image 
-              src="/E_LOGO.png" 
+              src="/logoblancorojo.png" 
               alt="Eleven Rifas Logo" 
               width={300} 
               height={90} 

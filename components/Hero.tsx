@@ -1,6 +1,6 @@
 "use client";
 import { Button } from "@/components/ui/button";
-import { Star, Trophy, Sparkles, Gift } from "lucide-react";
+import { DollarSign, Trophy, Sparkles, Gift, ChevronDown, ArrowDown, ArrowDownCircle, ChevronDownCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -43,8 +43,9 @@ export function Hero() {
         <div className="text-center space-y-0">
           {/* Badge personalizado "El que no juega no gana" */}
           <div className={`inline-flex items-center gap-2 bg-gradient-to-r from-[#fb0413] to-[#fb0413]/80 backdrop-blur-sm text-white px-6 py-3 rounded-full text-sm font-bold shadow-lg transition-all duration-1000 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
-            <Star className="w-5 h-5 text-yellow-300" />
+            <DollarSign className="w-5 h-5 text-yellow-300" />
             <span>EL QUE NO JUEGA NO GANA</span>
+            <DollarSign className="w-5 h-5 text-yellow-300" />
           </div>
 
           {/* Logo principal - E_LOGO.png como protagonista */}
@@ -110,9 +111,9 @@ export function Hero() {
                   
                   {/* Contenido del botón */}
                   <div className="relative flex items-center gap-2">
-                    <Trophy className="w-5 h-5 animate-pulse" />
+                    <ArrowDown className="w-5 h-5" style={{ animation: 'float-down 2s ease-in-out infinite' }} />
                     <span>¡Participa Ahora!</span>
-                    <Sparkles className="w-5 h-5 animate-bounce" />
+                    <ArrowDown className="w-5 h-5" style={{ animation: 'float-down 2s ease-in-out infinite 0.3s' }} />
                   </div>
                 </Button>
                 
@@ -129,7 +130,7 @@ export function Hero() {
                     {/* Contenido del botón */}
                     <div className="relative flex items-center gap-2">
                       <Gift className="w-5 h-5" />
-                      <span>Ver mis rifas</span>
+                      <span>Ver mis tickets</span>
                     </div>
                   </Button>
                 </Link>
@@ -161,7 +162,7 @@ export function Hero() {
       </div>
 
       {/* Estilos CSS personalizados para las animaciones */}
-      <style jsx>{`
+      <style>{`
         @keyframes float {
           0%, 100% { transform: translateY(0px) scale(1.34); }
           50% { transform: translateY(-10px) scale(1.34); }
@@ -176,8 +177,15 @@ export function Hero() {
           70% { transform: translate3d(0,-15px,0); }
           90% { transform: translate3d(0,-4px,0); }
         }
+        @keyframes float-down {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(8px); }
+        }
         .animate-float {
           animation: float 3s ease-in-out infinite;
+        }
+        .animate-float-down {
+          animation: float-down 2s ease-in-out infinite;
         }
       `}</style>
     </section>
