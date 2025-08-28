@@ -1,8 +1,8 @@
 "use client";
-import { useState, Suspense } from "react";
+import { useState, Suspense, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowRight, CheckCircle, Copy, Smartphone, Wallet, ChevronDown, FileText, Check, CreditCard, Zap, Globe, Banknote } from "lucide-react";
+import { ArrowRight, CheckCircle, Copy, Smartphone, Wallet, ChevronDown, FileText, Check, CreditCard, Zap, Globe, Banknote, Plus, Minus } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
@@ -69,6 +69,38 @@ function PasoCantidad({ cantidad, setCantidad, precioTicket, rifaId }: {
   // Asegurar opciones únicas para evitar claves duplicadas
   const opcionesUnicas = Array.from(new Set(opciones));
 
+  // Inicializar y validar cantidad
+  useEffect(() => {
+    if (opcionesUnicas.length > 0) {
+      if (cantidad === 0) {
+        // Si es la primera vez, seleccionar el segundo elemento (recomendado)
+        if (opcionesUnicas.length > 1) {
+          setCantidad(opcionesUnicas[1]);
+        } else {
+          setCantidad(opcionesUnicas[0]);
+        }
+      } else if (cantidad < Math.min(...opcionesUnicas)) {
+        // Si la cantidad es menor que el mínimo, corregir
+        setCantidad(Math.min(...opcionesUnicas));
+      }
+    }
+  }, [opcionesUnicas, cantidad]);
+
+  // Función para incrementar cantidad
+  const incrementarCantidad = () => {
+    setCantidad(cantidad + 1);
+  };
+
+  // Función para decrementar cantidad
+  const decrementarCantidad = () => {
+    const minimo = Math.min(...opcionesUnicas);
+    if (cantidad > minimo) {
+      setCantidad(cantidad - 1);
+    }
+  };
+
+
+
   return (
     <div className="space-y-8">
       <div className="text-center space-y-4">
@@ -76,22 +108,67 @@ function PasoCantidad({ cantidad, setCantidad, precioTicket, rifaId }: {
         <p className="text-xl text-slate-200">Selecciona la cantidad de tickets para participar</p>
       </div>
 
+      {/* Cuadros de opciones predefinidas */}
       <div className="grid grid-cols-3 gap-4 max-w-2xl mx-auto">
         {opcionesUnicas.map((opcion: number, idx: number) => (
           <button
             key={`${opcion}-${idx}`}
             onClick={() => setCantidad(opcion)}
-            className={`p-6 rounded-2xl border-2 transition-all duration-300 hover:scale-105 ${
+            className={`p-6 rounded-2xl border-2 transition-all duration-300 hover:scale-105 relative ${
               cantidad === opcion
-                ? "border-white bg-white/20 text-white"
+                ? idx === 1 && opcionesUnicas.length > 1
+                  ? "border-[#fb0413] bg-[#fb0413]/20 text-white"
+                  : "border-white bg-white/20 text-white"
                 : "border-slate-300 hover:border-white/50 text-slate-200"
             }`}
           >
+            {cantidad === opcion && idx === 1 && opcionesUnicas.length > 1 && (
+              <div className="absolute inset-0 bg-[#fb0413]/10 rounded-2xl pointer-events-none"></div>
+            )}
             <div className="text-2xl font-bold">{opcion}</div>
             <div className="text-sm text-slate-300">tickets</div>
+
           </button>
         ))}
       </div>
+
+      {/* Selector numérico con botones + y - */}
+      <div className="flex justify-center items-center space-x-6">
+        <button
+          onClick={decrementarCantidad}
+          disabled={cantidad <= Math.min(...opcionesUnicas)}
+          className={`p-3 rounded-full border-2 transition-all duration-300 hover:scale-105 ${
+            cantidad <= Math.min(...opcionesUnicas)
+              ? "border-slate-500 text-slate-500 cursor-not-allowed"
+              : "border-white text-white hover:bg-white hover:text-slate-900"
+          }`}
+        >
+          <Minus className="h-6 w-6" />
+        </button>
+        
+        <div className="text-center">
+          <input
+            type="number"
+            min={Math.min(...opcionesUnicas)}
+            value={cantidad}
+            onChange={(e) => {
+              const valor = parseInt(e.target.value) || Math.min(...opcionesUnicas);
+              setCantidad(Math.max(Math.min(...opcionesUnicas), valor));
+            }}
+            className="w-24 bg-transparent border-none text-white text-center text-4xl font-bold focus:outline-none focus:ring-2 focus:ring-white/50 rounded px-4 py-2"
+          />
+          <div className="text-sm text-slate-300 mt-1">tickets</div>
+        </div>
+        
+        <button
+          onClick={incrementarCantidad}
+          className="p-3 rounded-full border-2 border-white text-white hover:bg-white hover:text-slate-900 transition-all duration-300 hover:scale-105"
+        >
+          <Plus className="h-6 w-6" />
+        </button>
+      </div>
+
+
 
       <div className="text-center space-y-4">
         <div className="text-2xl font-bold text-white">
@@ -1048,7 +1125,7 @@ function ComprarPageContent() {
   
   // Estado para los 5 pasos - MOVIDO AL INICIO para evitar hooks condicionales
   const [pasoActual, setPasoActual] = useState(1);
-  const [cantidad, setCantidad] = useState(0);
+  const [cantidad, setCantidad] = useState(0); // Se inicializará con el primer número disponible
   const [metodoPago, setMetodoPago] = useState("");
   const [datosPersona, setDatosPersona] = useState<DatosPersona>({
     nombre: "",
@@ -1061,6 +1138,18 @@ function ComprarPageContent() {
   // Estado para el modal de términos y condiciones
   const [showTerminosModal, setShowTerminosModal] = useState(false);
   const [aceptadoTerminos, setAceptadoTerminos] = useState(false);
+  
+  // Inicializar cantidad con el segundo número disponible de las opciones (recomendado)
+  useEffect(() => {
+    if (rifaActiva && rifaActiva.numero_tickets_comprar && Array.isArray(rifaActiva.numero_tickets_comprar)) {
+      const opcionesOrdenadas = [...rifaActiva.numero_tickets_comprar].sort((a, b) => a - b);
+      if (opcionesOrdenadas.length > 1) {
+        setCantidad(opcionesOrdenadas[1]); // Segundo elemento (índice 1)
+      } else if (opcionesOrdenadas.length > 0) {
+        setCantidad(opcionesOrdenadas[0]); // Fallback al primero si solo hay uno
+      }
+    }
+  }, [rifaActiva]);
   
   console.log('🔍 Contexto de rifas:', { rifas: rifas.length, rifaActiva });
   

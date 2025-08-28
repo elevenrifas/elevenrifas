@@ -39,6 +39,7 @@ export interface RifaConTickets {
   activa: boolean
   tickets: TicketConRifa[]
   total_tickets: number
+  precio_promedio: number
 }
 
 // =====================================================
@@ -107,13 +108,20 @@ export async function obtenerRifasConTickets(
           estado: ticket.rifa.estado,
           activa: ticket.rifa.activa,
           tickets: [],
-          total_tickets: 0
+          total_tickets: 0,
+          precio_promedio: 0
         })
       }
       
       const rifa = rifasMap.get(rifaId)!
       rifa.tickets.push(ticket)
       rifa.total_tickets += 1
+      
+      // Calcular precio promedio (asumiendo que todos los tickets tienen el mismo precio)
+      if (rifa.total_tickets === 1) {
+        // Para el primer ticket, usar el precio de la rifa
+        rifa.precio_promedio = 10 // Precio por defecto, ajustar según necesidad
+      }
     })
     
     return Array.from(rifasMap.values())

@@ -95,7 +95,6 @@ export function RifaClientSection({ rifas }: Props) {
           
           {/* Indicador de página */}
           <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">Página</span>
             <div className="px-2 py-1 bg-white/80 backdrop-blur-sm text-primary rounded-md font-medium text-sm border border-primary/20">
               {currentPage} de {totalPages}
             </div>
