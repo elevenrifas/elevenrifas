@@ -15,6 +15,8 @@ create table public.pagos (
   estado character varying null,
   rechazo_logs character varying null,
   rifa_id uuid null,
+  comprobante_pago_url character varying(500) null,
+  comprobante_pago_nombre character varying(255) null,
   constraint pagos_pkey primary key (id),
   constraint tickets_rifa_id_fkey foreign KEY (rifa_id) references rifas (id) on delete CASCADE,
   constraint pagos_tipo_pago_check check (

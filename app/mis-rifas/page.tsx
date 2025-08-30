@@ -57,7 +57,7 @@ export default function MisRifasPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-700 via-slate-500 to-slate-200">
+    <div className="min-h-screen bg-gradient-to-b from-black via-black to-zinc-950">
       <Navbar showBackButton={true} onBack={() => window.location.href = '/'} />
       
       {/* Elementos decorativos sutiles */}
@@ -84,94 +84,94 @@ export default function MisRifasPage() {
             {/* Formulario de búsqueda */}
             <div className={`transition-all duration-1000 delay-200 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
               <Card className="mb-8 border-white/20 bg-white/10 backdrop-blur-sm shadow-xl">
-                <CardHeader>
+              <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-white">
                     <Search className="h-5 w-5 text-[#fb0413]" />
-                    Buscar mis rifas
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  
-                  {/* Selector de tipo de búsqueda */}
-                  <div className="flex gap-4 justify-center">
-                    <Button
-                      variant={tipoBusqueda === "cedula" ? "default" : "outline"}
-                      onClick={() => setTipoBusqueda("cedula")}
+                  Buscar mis rifas
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                
+                {/* Selector de tipo de búsqueda */}
+                <div className="flex gap-4 justify-center">
+                  <Button
+                    variant={tipoBusqueda === "cedula" ? "default" : "outline"}
+                    onClick={() => setTipoBusqueda("cedula")}
                       className={`flex items-center gap-2 transition-all duration-300 hover:scale-105 ${
                         tipoBusqueda === "cedula"
                           ? "bg-[#fb0413] hover:bg-[#fb0413]/90 text-white"
                           : "border-white text-white hover:bg-white/10"
                       }`}
-                    >
-                      <User className="h-4 w-4" />
-                      Cédula
-                    </Button>
-                    <Button
-                      variant={tipoBusqueda === "email" ? "default" : "outline"}
-                      onClick={() => setTipoBusqueda("email")}
+                  >
+                    <User className="h-4 w-4" />
+                    Cédula
+                  </Button>
+                  <Button
+                    variant={tipoBusqueda === "email" ? "default" : "outline"}
+                    onClick={() => setTipoBusqueda("email")}
                       className={`flex items-center gap-2 transition-all duration-300 hover:scale-105 ${
                         tipoBusqueda === "email"
                           ? "bg-[#fb0413] hover:bg-[#fb0413]/90 text-white"
                           : "border-white text-white hover:bg-white/10"
                       }`}
-                    >
-                      <Mail className="h-4 w-4" />
-                      Correo
-                    </Button>
-                  </div>
+                  >
+                    <Mail className="h-4 w-4" />
+                    Correo
+                  </Button>
+                </div>
 
-                  {/* Campo de entrada */}
+                {/* Campo de entrada */}
                   <div className="space-y-3">
                     <Label htmlFor="busqueda" className="text-white font-medium">
-                      {tipoBusqueda === "cedula" ? "Número de Cédula" : "Correo Electrónico"}
-                    </Label>
-                    <div className="flex gap-3">
-                      <Input
-                        id="busqueda"
-                        type={tipoBusqueda === "cedula" ? "text" : "email"}
-                        placeholder={tipoBusqueda === "cedula" ? "Ej: 12345678" : "Ej: usuario@email.com"}
-                        value={valorBusqueda}
-                        onChange={(e) => setValorBusqueda(e.target.value)}
-                        onKeyPress={handleKeyPress}
+                    {tipoBusqueda === "cedula" ? "Número de Cédula" : "Correo Electrónico"}
+                  </Label>
+                  <div className="flex gap-3">
+                    <Input
+                      id="busqueda"
+                      type={tipoBusqueda === "cedula" ? "text" : "email"}
+                      placeholder={tipoBusqueda === "cedula" ? "Ej: 12345678" : "Ej: usuario@email.com"}
+                      value={valorBusqueda}
+                      onChange={(e) => setValorBusqueda(e.target.value)}
+                      onKeyPress={handleKeyPress}
                         className="flex-1 bg-white/10 border-white/30 text-white placeholder:text-slate-300 focus:border-[#fb0413] focus:ring-[#fb0413]/20"
-                      />
-                      <Button 
-                        onClick={buscarRifas}
-                        disabled={!valorBusqueda.trim() || isLoading}
+                    />
+                    <Button 
+                      onClick={buscarRifas}
+                      disabled={!valorBusqueda.trim() || isLoading}
                         className="px-8 py-2 bg-[#fb0413] hover:bg-[#fb0413]/90 text-white font-semibold transition-all duration-300 hover:scale-105 active:scale-95 shadow-lg"
-                      >
-                        {isLoading ? "Buscando..." : "Buscar"}
-                      </Button>
-                    </div>
+                    >
+                      {isLoading ? "Buscando..." : "Buscar"}
+                    </Button>
                   </div>
+                </div>
 
-                  {/* Botón limpiar */}
-                  {hasSearched && (
-                    <div className="text-center">
-                      <Button 
-                        variant="outline" 
-                        onClick={limpiarBusqueda}
-                        className="text-sm border-white/30 text-white hover:bg-white/10 transition-all duration-300 hover:scale-105"
-                      >
-                        Nueva búsqueda
-                      </Button>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                {/* Botón limpiar */}
+                {hasSearched && (
+                  <div className="text-center">
+                    <Button 
+                      variant="outline" 
+                      onClick={limpiarBusqueda}
+                      className="text-sm border-white/30 text-white hover:bg-white/10 transition-all duration-300 hover:scale-105"
+                    >
+                      Limpiar búsqueda
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
             </div>
 
             {/* Error */}
             {error && (
               <div className={`transition-all duration-1000 delay-300 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
                 <Card className="mb-6 border-red-400/30 bg-red-500/10 backdrop-blur-sm">
-                  <CardContent className="pt-6">
+                <CardContent className="pt-6">
                     <div className="flex items-center gap-3 text-red-300">
-                      <AlertCircle className="h-5 w-5" />
-                      <p>{error}</p>
-                    </div>
-                  </CardContent>
-                </Card>
+                    <AlertCircle className="h-5 w-5" />
+                    <p>{error}</p>
+                  </div>
+                </CardContent>
+              </Card>
               </div>
             )}
 
@@ -260,16 +260,9 @@ export default function MisRifasPage() {
                     <h3 className="text-xl font-semibold text-white mb-2">
                       No se encontraron rifas
                     </h3>
-                    <p className="text-slate-200 mb-4">
+                    <p className="text-slate-200">
                       No se encontraron rifas asociadas a este {tipoBusqueda === "cedula" ? "número de cédula" : "correo electrónico"}.
                     </p>
-                    <Button 
-                      variant="outline" 
-                      onClick={limpiarBusqueda}
-                      className="border-white/30 text-white hover:bg-white/10 transition-all duration-300 hover:scale-105"
-                    >
-                      Intentar con otro dato
-                    </Button>
                   </Card>
                 )}
               </div>
@@ -281,12 +274,12 @@ export default function MisRifasPage() {
                 <Card className="text-center py-12 border-white/20 bg-white/10 backdrop-blur-sm">
                   <div className="text-[#fb0413] text-6xl mb-4">🎫</div>
                   <h3 className="text-xl font-semibold text-white mb-2">
-                    Consulta tus rifas
-                  </h3>
+                  Consulta tus rifas
+                </h3>
                   <p className="text-slate-200">
-                    Ingresa tu cédula o correo electrónico para ver todas las rifas en las que has participado.
-                  </p>
-                </Card>
+                  Ingresa tu cédula o correo electrónico para ver todas las rifas en las que has participado.
+                </p>
+              </Card>
               </div>
             )}
           </div>

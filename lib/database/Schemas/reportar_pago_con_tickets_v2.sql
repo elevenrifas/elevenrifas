@@ -10,6 +10,8 @@ CREATE OR REPLACE FUNCTION reportar_pago_con_tickets_v2(
     p_cedula_pago VARCHAR(20),
     p_fecha_visita DATE,
     p_estado VARCHAR(50),
+    p_comprobante_pago_url VARCHAR(500),
+    p_comprobante_pago_nombre VARCHAR(255),
     p_cantidad_tickets INTEGER,
     p_rifa_id UUID,
     p_nombre VARCHAR(255),
@@ -49,7 +51,9 @@ BEGIN
             banco_pago,
             cedula_pago,
             fecha_visita,
-            rifa_id
+            rifa_id,
+            comprobante_pago_url,
+            comprobante_pago_nombre
         ) VALUES (
             p_tipo_pago,
             COALESCE(p_estado, 'pendiente'),
@@ -62,7 +66,9 @@ BEGIN
             p_banco_pago,
             p_cedula_pago,
             p_fecha_visita,
-            p_rifa_id
+            p_rifa_id,
+            p_comprobante_pago_url,
+            p_comprobante_pago_nombre
         ) RETURNING id INTO pago_id;
 
         -- PASO 3: Crear múltiples tickets usando la función auxiliar

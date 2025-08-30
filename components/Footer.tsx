@@ -22,12 +22,22 @@ export function Footer() {
   ];
 
   return (
-    <footer className="relative backdrop-blur-md bg-slate-900/90 text-white overflow-hidden">
+    <footer className="relative backdrop-blur-md bg-black/95 text-white overflow-hidden">
       {/* Elementos decorativos */}
       <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-primary/80 to-primary"></div>
-      <div className="absolute top-0 left-0 w-full h-px bg-slate-600/50"></div>
-      <div className="absolute top-20 right-10 w-32 h-32 bg-primary/10 rounded-full blur-3xl"></div>
-      <div className="absolute bottom-20 left-10 w-24 h-24 bg-primary/5 rounded-full blur-2xl"></div>
+      <div className="absolute top-0 left-0 w-full h-px bg-gray-600/70"></div>
+      
+      {/* Efectos de partículas brillantes */}
+      <div className="absolute top-20 right-10 w-32 h-32 bg-primary/10 rounded-full blur-3xl animate-pulse"></div>
+      <div className="absolute bottom-20 left-10 w-24 h-24 bg-primary/5 rounded-full blur-2xl animate-pulse"></div>
+      
+      {/* Efectos adicionales cool */}
+      <div className="absolute top-40 left-20 w-16 h-16 bg-primary/5 rounded-full blur-2xl animate-pulse delay-1000"></div>
+      <div className="absolute bottom-40 right-20 w-20 h-20 bg-primary/8 rounded-full blur-2xl animate-pulse delay-500"></div>
+      
+      {/* Líneas de energía sutiles */}
+      <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent"></div>
+      <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent"></div>
       
       <div className="relative z-10 container mx-auto px-4 sm:px-6 py-16">
         {/* Logo y descripción */}
@@ -48,7 +58,7 @@ export function Footer() {
           <div className="flex flex-wrap items-center justify-center gap-10 lg:gap-16">
             {partners.map((partner, index) => (
               <div key={index} className="group text-center">
-                <div className="w-20 h-20 lg:w-28 lg:h-28 mx-auto bg-white rounded-xl p-3 flex items-center justify-center hover:bg-slate-50 transition-all duration-300 mb-2 shadow-md">
+                <div className="w-20 h-20 lg:w-28 lg:h-28 mx-auto bg-white rounded-xl p-3 flex items-center justify-center hover:bg-gray-50 transition-all duration-300 mb-2 shadow-md">
                   <Image
                     src={partner.logo}
                     alt={`${partner.name} logo`}

@@ -31,7 +31,7 @@ export function Hero() {
   }, []);
 
   return (
-    <section className="relative py-8 flex items-center justify-center overflow-hidden bg-gradient-to-b from-slate-900 via-slate-700 via-slate-500 to-slate-200">
+    <section className="relative py-8 flex items-center justify-center overflow-hidden bg-gradient-to-b from-black via-gray-800 via-gray-600 to-slate-200">
       
       {/* Elementos decorativos sutiles */}
       <div className="absolute inset-0 pointer-events-none">

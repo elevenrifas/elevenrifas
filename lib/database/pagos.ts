@@ -30,6 +30,7 @@ export interface DatosPagoCompleto {
   cedula_pago?: string;
   fecha_visita?: string;
   estado?: string;
+  comprobante_url?: string;
   
   // Datos de los tickets
   cantidad_tickets: number;
@@ -74,6 +75,7 @@ export async function reportarPagoConTickets(datos: DatosPagoCompleto): Promise<
       p_cedula_pago: datos.cedula_pago,
       p_fecha_visita: datos.fecha_visita,
       p_estado: datos.estado || 'pendiente',
+      p_comprobante_url: datos.comprobante_url,
       
       // Parámetros de los tickets
       p_cantidad_tickets: datos.cantidad_tickets,
@@ -131,7 +133,8 @@ export async function reportarPagoConTicketsTS(datos: DatosPagoCompleto): Promis
         telefono_pago: datos.telefono_pago,
         banco_pago: datos.banco_pago,
         cedula_pago: datos.cedula_pago,
-        fecha_visita: datos.fecha_visita
+        fecha_visita: datos.fecha_visita,
+        comprobante_url: datos.comprobante_url
       })
       .select()
       .single();

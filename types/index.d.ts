@@ -56,6 +56,9 @@ export interface DatosPago {
   correoPaypal?: string;
   fechaVisita?: string;
   notas?: string;
+  // Campos para comprobantes de pago
+  comprobantePago?: File | null;
+  comprobanteUrl?: string;
 }
 
 export interface RifaComprada {

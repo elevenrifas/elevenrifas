@@ -48,8 +48,8 @@ export function RifaClientSection({ rifas }: Props) {
         {/* Header de la sección */}
         <div className="text-center mb-16">
           {/* Badge de destacado - Ajustado para mejor visibilidad */}
-          <div className="inline-flex items-center gap-2 bg-white/90 text-[#fb0413] px-4 py-2 rounded-full text-sm font-medium mb-6 shadow-lg">
-            <Trophy className="w-4 h-4" />
+          <div className="inline-flex items-center gap-2 bg-amber-500/90 text-white px-4 py-2 rounded-full text-sm font-medium mb-6 shadow-lg">
+            <Trophy className="w-4 h-4 text-amber-100" />
             <span>Premios Increíbles</span>
           </div>
           
@@ -86,7 +86,7 @@ export function RifaClientSection({ rifas }: Props) {
             className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-300 ${
               currentPage === 1
                 ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
-                : 'bg-white text-primary hover:bg-gray-50 hover:text-primary/80 border border-primary/30 hover:border-primary/50 hover:scale-105 shadow-sm'
+                : 'bg-amber-500 text-white hover:bg-amber-600 hover:text-white border border-amber-600 hover:border-amber-700 hover:scale-105 shadow-sm'
             }`}
           >
             <ChevronLeft className="w-4 h-4" />
@@ -95,7 +95,7 @@ export function RifaClientSection({ rifas }: Props) {
           
           {/* Indicador de página */}
           <div className="flex items-center gap-2">
-            <div className="px-2 py-1 bg-white/80 backdrop-blur-sm text-primary rounded-md font-medium text-sm border border-primary/20">
+            <div className="px-2 py-1 bg-amber-500/80 backdrop-blur-sm text-white rounded-md font-medium text-sm border border-amber-400/30">
               {currentPage} de {totalPages}
             </div>
           </div>
@@ -107,7 +107,7 @@ export function RifaClientSection({ rifas }: Props) {
             className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-300 ${
               currentPage === totalPages
                 ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
-                : 'bg-white text-primary hover:bg-gray-50 hover:text-primary/80 border border-primary/30 hover:border-primary/50 hover:scale-105 shadow-sm'
+                : 'bg-amber-500 text-white hover:bg-amber-600 hover:text-white border border-amber-600 hover:border-amber-700 hover:scale-105 shadow-sm'
             }`}
           >
             Siguiente

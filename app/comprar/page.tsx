@@ -116,13 +116,11 @@ function PasoCantidad({ cantidad, setCantidad, precioTicket, rifaId }: {
             onClick={() => setCantidad(opcion)}
             className={`p-6 rounded-2xl border-2 transition-all duration-300 hover:scale-105 relative ${
               cantidad === opcion
-                ? idx === 1 && opcionesUnicas.length > 1
-                  ? "border-[#fb0413] bg-[#fb0413]/20 text-white"
-                  : "border-white bg-white/20 text-white"
+                ? "border-[#fb0413] bg-[#fb0413]/20 text-white"
                 : "border-slate-300 hover:border-white/50 text-slate-200"
             }`}
           >
-            {cantidad === opcion && idx === 1 && opcionesUnicas.length > 1 && (
+            {cantidad === opcion && (
               <div className="absolute inset-0 bg-[#fb0413]/10 rounded-2xl pointer-events-none"></div>
             )}
             <div className="text-2xl font-bold">{opcion}</div>
@@ -170,11 +168,7 @@ function PasoCantidad({ cantidad, setCantidad, precioTicket, rifaId }: {
 
 
 
-      <div className="text-center space-y-4">
-        <div className="text-2xl font-bold text-white">
-          Total: {formatCurrencyVE(cantidad * precioTicket)}
-        </div>
-      </div>
+
     </div>
   );
 }
@@ -205,12 +199,15 @@ function PasoMetodoPago({ metodoPago, setMetodoPago }: {
           <button
             key={metodo.id}
             onClick={() => setMetodoPago(metodo.id)}
-            className={`p-6 rounded-2xl border-2 transition-all duration-300 hover:scale-105 text-left ${
+            className={`p-6 rounded-2xl border-2 transition-all duration-300 hover:scale-105 text-left relative ${
               metodoPago === metodo.id
-                ? "border-white bg-white/20 text-white"
+                ? "border-[#fb0413] bg-[#fb0413]/20 text-white"
                 : "border-slate-300 hover:border-white/50 text-slate-200"
             }`}
           >
+            {metodoPago === metodo.id && (
+              <div className="absolute inset-0 bg-[#fb0413]/10 rounded-2xl pointer-events-none"></div>
+            )}
             <div className="mb-3 text-white">{metodo.icono}</div>
             <div className="text-xl font-bold mb-2">{metodo.nombre}</div>
             <div className="text-sm text-slate-300">{metodo.descripcion}</div>
@@ -287,13 +284,100 @@ function PasoDatosPersona({ datos, setDatos }: {
 }
 
 // Componente para el Paso 4: Datos del método de pago
-function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTicket }: {
+function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTicket, tituloRifa }: {
   metodoPago: string;
   datosPago: DatosPago;
   setDatosPago: (datos: DatosPago) => void;
   cantidad: number;
   precioTicket: number;
+  tituloRifa: string;
 }) {
+  
+  // Función para manejar la subida de comprobante
+  const handleComprobanteChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setDatosPago({
+        ...datosPago,
+        comprobantePago: file,
+        comprobanteUrl: file.name
+      });
+    }
+  };
+
+  // Función para eliminar comprobante
+  const removeComprobante = () => {
+    setDatosPago({
+      ...datosPago,
+      comprobantePago: null,
+      comprobanteUrl: undefined
+    });
+  };
+
+  // Componente reutilizable para input de comprobante (OPCIONAL)
+  const ComprobanteInput = () => {
+    // Crear nombre de carpeta sanitizado para mostrar
+    const nombreCarpeta = tituloRifa
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '_')
+      .replace(/_+/g, '_')
+      .trim();
+    
+    return (
+      <div className="space-y-3">
+        <label className="block text-sm font-medium text-white mb-2">
+          📎 Comprobante de Pago <span className="text-slate-400 text-xs">(Opcional)</span>
+        </label>
+        
+        {datosPago.comprobantePago ? (
+          <div className="flex items-center justify-between p-3 bg-green-500/20 border border-green-500/50 rounded-lg">
+            <div className="flex items-center space-x-3">
+              <CheckCircle className="h-5 w-5 text-green-400" />
+              <div className="text-sm">
+                <div className="text-green-300 font-medium">
+                  {datosPago.comprobantePago?.name}
+                </div>
+                <div className="text-green-400 text-xs">
+                  Archivo seleccionado correctamente
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={removeComprobante}
+              className="p-1 hover:bg-red-500/20 rounded transition-colors"
+              title="Eliminar archivo"
+            >
+              <Minus className="h-4 w-4 text-red-400" />
+            </button>
+          </div>
+        ) : (
+          <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:border-white/50 transition-colors cursor-pointer">
+            <input
+              type="file"
+              accept="image/*,.pdf,.doc,.docx"
+              onChange={handleComprobanteChange}
+              className="hidden"
+              id="comprobante-pago"
+            />
+            <label htmlFor="comprobante-pago" className="cursor-pointer">
+              <div className="space-y-2">
+                <FileText className="h-8 w-8 text-slate-300 mx-auto" />
+                <div className="text-sm text-slate-300">
+                  <span className="font-medium text-white">Haz clic para subir</span> o arrastra aquí
+                </div>
+                <div className="text-xs text-slate-400">
+                  PNG, JPG, PDF, DOC hasta 10MB
+                </div>
+                <div className="text-xs text-slate-500">
+                  Se guardará en: @comprobante/{nombreCarpeta}/
+                </div>
+              </div>
+            </label>
+          </div>
+        )}
+      </div>
+    );
+  };
   // Lista de bancos de Venezuela
   const bancosVenezuela = [
     "Banco de Venezuela",
@@ -434,6 +518,9 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
                 className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white/10 text-white placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-white backdrop-blur-sm"
               />
             </div>
+
+            {/* Input de comprobante */}
+            <ComprobanteInput />
           </div>
         );
 
@@ -497,6 +584,9 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
                 className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white/10 text-white placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-white backdrop-blur-sm"
               />
             </div>
+
+            {/* Input de comprobante */}
+            <ComprobanteInput />
           </div>
         );
 
@@ -560,6 +650,9 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
                 className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white/10 text-white placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-white backdrop-blur-sm"
               />
             </div>
+
+            {/* Input de comprobante */}
+            <ComprobanteInput />
           </div>
         );
 
@@ -623,6 +716,9 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
                   className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white/10 text-white placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-white backdrop-blur-sm"
                 />
               </div>
+
+              {/* Input de comprobante */}
+              <ComprobanteInput />
             </div>
           );
 
@@ -686,6 +782,9 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
                   className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white/10 text-white placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-white backdrop-blur-sm"
                 />
               </div>
+
+              {/* Input de comprobante */}
+              <ComprobanteInput />
             </div>
           );
 
@@ -744,11 +843,12 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
                   type="date"
                   value={datosPago.fechaVisita || ""}
                   onChange={(e) => handleChange("fechaVisita", e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white/10 text-white placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-white backdrop-blur-sm"
+                  className="w-full px-4 py-3 rounded border border-slate-300 bg-white/10 text-white placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-white backdrop-blur-sm"
                 />
               </div>
 
-
+              {/* Input de comprobante */}
+              <ComprobanteInput />
             </div>
           );
 
@@ -823,6 +923,9 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
                 className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white/10 text-white placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-white backdrop-blur-sm"
               />
             </div>
+
+            {/* Input de comprobante */}
+            <ComprobanteInput />
           </div>
         );
 
@@ -876,6 +979,9 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
                 className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white/10 text-white placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-white backdrop-blur-sm"
               />
             </div>
+
+            {/* Input de comprobante */}
+            <ComprobanteInput />
           </div>
         );
 
@@ -929,6 +1035,9 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
                 className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white/10 text-white placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-white backdrop-blur-sm"
               />
             </div>
+
+            {/* Input de comprobante */}
+            <ComprobanteInput />
           </div>
         );
 
@@ -991,6 +1100,9 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
                 className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white/10 text-white placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-white backdrop-blur-sm resize-none"
               />
             </div>
+
+            {/* Input de comprobante */}
+            <ComprobanteInput />
             </div>
           );
 
@@ -1109,7 +1221,7 @@ function PasoReportePago({ rifa, cantidad, metodoPago, datosPersona }: {
           {/* Botón para volver al inicio */}
           <div className="text-center pt-4">
             <Link href="/">
-              <Button className="px-8 py-3 text-lg font-medium bg-gradient-to-r from-primary via-red-500 to-yellow-500 bg-[length:200%_100%] animate-gradient-move">
+              <Button className="px-8 py-3 text-lg font-medium bg-gradient-to-r from-primary via-red-500 to-amber-500 bg-[length:200%_100%] animate-gradient-move">
                 <CheckCircle className="mr-2 h-5 w-5" />
                 Volver al Inicio
               </Button>
@@ -1157,7 +1269,7 @@ function ComprarPageContent() {
   if (!rifaActiva) {
     console.log('❌ No hay rifa activa en el contexto');
     return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-700 via-slate-500 to-slate-200">
+      <div className="min-h-screen bg-gradient-to-b from-black via-gray-800 via-gray-600 to-slate-200">
         <Navbar />
         <div className="container mx-auto px-4 py-20 text-center">
           <h1 className="text-3xl font-bold text-white mb-4">
@@ -1191,6 +1303,51 @@ function ComprarPageContent() {
     console.log('🚀 Iniciando reporte de pago y creación de tickets');
     
     try {
+      // Manejar comprobante de pago si existe (OPCIONAL)
+      let comprobanteUrl = '';
+      
+      if (datosPago.comprobantePago) {
+        console.log('📎 Procesando comprobante de pago:', datosPago.comprobantePago.name);
+        
+        try {
+          // Crear nombre de carpeta sanitizado
+          const nombreRifaSanitizado = rifa.titulo
+            .toLowerCase()
+            .replace(/[^a-z0-9]/g, '_')
+            .replace(/_+/g, '_')
+            .trim();
+          
+          // Subir archivo usando la API
+          const formData = new FormData();
+          formData.append('file', datosPago.comprobantePago);
+          formData.append('carpetaRifa', nombreRifaSanitizado);
+          
+          const response = await fetch('/api/upload-comprobante', {
+            method: 'POST',
+            body: formData
+          });
+          
+          if (!response.ok) {
+            throw new Error(`Error al subir archivo: ${response.statusText}`);
+          }
+          
+          const result = await response.json();
+          comprobanteUrl = result.ruta;
+          
+          console.log('📎 Comprobante subido exitosamente:', { 
+            url: comprobanteUrl, 
+            nombre: datosPago.comprobantePago.name,
+            carpetaRifa: nombreRifaSanitizado,
+            resultado: result
+          });
+          
+        } catch (error) {
+          console.error('❌ Error subiendo comprobante:', error);
+          toast.error('Error al subir el comprobante. Intenta nuevamente.');
+          return; // No continuar si falla la subida
+        }
+      }
+
       // Preparar datos del pago
       const datosPagoCompleto: DatosPagoCompleto = {
         tipo_pago: metodoPago as 'pago_movil' | 'binance' | 'zelle' | 'zinli' | 'paypal' | 'efectivo',
@@ -1203,6 +1360,7 @@ function ComprarPageContent() {
         cedula_pago: datosPersona.cedula,
         fecha_visita: datosPago.fechaVisita,
         estado: 'pendiente',
+        comprobante_url: comprobanteUrl || undefined,
         cantidad_tickets: cantidad,
         rifa_id: rifa.id,
         nombre: datosPersona.nombre,
@@ -1282,7 +1440,8 @@ function ComprarPageContent() {
                datosPersona.telefono.trim() !== "" && 
                datosPersona.correo.trim() !== "";
       case 4: // Datos del pago
-        return true; // Siempre puede continuar desde el paso 4
+        // El comprobante es opcional, siempre puede continuar
+        return true;
       default:
         return false;
     }
@@ -1341,7 +1500,8 @@ function ComprarPageContent() {
             datosPago={datosPago}
             setDatosPago={setDatosPago}
             cantidad={cantidad}
-                         precioTicket={rifa.precio_ticket}
+            precioTicket={rifa.precio_ticket}
+            tituloRifa={rifa.titulo}
           />
         );
       case 5:
@@ -1359,7 +1519,7 @@ function ComprarPageContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-700 via-slate-500 to-slate-200">
+    <div className="min-h-screen bg-gradient-to-b from-black via-gray-800 via-gray-600 to-slate-200">
       <Navbar showBackButton={pasoActual < 5} onBack={pasoActual > 1 ? pasoAnterior : () => window.location.href = '/'} />
       
       {/* Modal de Términos y Condiciones */}
@@ -1414,7 +1574,7 @@ function ComprarPageContent() {
             <Button 
               onClick={confirmarTerminos}
               size="sm"
-              className="w-full sm:w-auto bg-gradient-to-r from-primary via-red-500 to-yellow-500 bg-[length:200%_100%] animate-gradient-move"
+              className="w-full sm:w-auto bg-gradient-to-r from-primary via-red-500 to-amber-500 bg-[length:200%_100%] animate-gradient-move"
             >
               <Check className="mr-1 h-3 w-3" />
               Acepto y Continuar
@@ -1440,7 +1600,7 @@ function ComprarPageContent() {
 
       {/* Barra flotante inferior - Solo visible en pasos 1-4 */}
       {pasoActual < 5 && (
-        <div className="fixed bottom-0 left-0 right-0 backdrop-blur-md bg-slate-900/90 border-t-2 border-slate-600/50 shadow-2xl z-50 rounded-t-2xl">
+        <div className="fixed bottom-0 left-0 right-0 backdrop-blur-xl bg-black/30 border-t-2 border-white/40 shadow-2xl z-50 rounded-t-2xl">
           <div className="container mx-auto px-4 sm:px-6 py-4">
             <div className="max-w-4xl mx-auto">
               <div className="flex flex-col space-y-3">
@@ -1486,7 +1646,7 @@ function ComprarPageContent() {
                     <Button 
                       onClick={siguientePaso}
                       disabled={!puedeContinuarConTerminos()}
-                      className="px-8 py-3 text-lg font-bold bg-gradient-to-r from-primary via-red-500 to-yellow-500 bg-[length:200%_100%] animate-gradient-move"
+                      className="px-8 py-3 text-lg font-bold bg-gradient-to-r from-primary via-red-500 to-amber-500 bg-[length:200%_100%] animate-gradient-move"
                     >
                       {getTextoBoton()}
                       <ArrowRight className="ml-2 h-5 w-5" />
@@ -1505,7 +1665,7 @@ function ComprarPageContent() {
 export default function ComprarPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-700 via-slate-500 to-slate-200 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-b from-black via-gray-800 via-gray-600 to-slate-200 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-white mx-auto"></div>
           <p className="mt-4 text-lg text-slate-200">Cargando...</p>

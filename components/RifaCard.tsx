@@ -132,13 +132,13 @@ export function RifaCard({ rifa }: Props) {
           <div className="space-y-2">
             <div className="flex justify-between items-center text-base">
               <span className="text-muted-foreground">Progreso de la rifa</span>
-              <span className="font-semibold text-yellow-500">
+                              <span className="font-semibold text-amber-500">
                 {calcularProgresoRifa()}%
               </span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
               <div 
-                className="bg-gradient-to-r from-primary via-yellow-500 to-red-500 h-3 rounded-full relative" 
+                className="bg-gradient-to-r from-primary via-amber-500 to-red-500 h-3 rounded-full relative" 
                 style={{
                   width: `${calcularProgresoRifa()}%`
                 }}
@@ -172,7 +172,7 @@ export function RifaCard({ rifa }: Props) {
           {/* Botón de acción mejorado */}
           <Button 
             onClick={handleComprar}
-            className="group relative w-full px-12 py-6 rounded-2xl font-bold text-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 active:scale-95 overflow-hidden bg-gradient-to-r from-primary via-red-500 to-yellow-500 bg-[length:200%_100%] animate-gradient-move"
+            className="group relative w-full px-12 py-6 rounded-2xl font-bold text-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 active:scale-95 overflow-hidden bg-gradient-to-r from-primary via-red-500 to-amber-500 bg-[length:200%_100%] animate-gradient-move"
           >
             {/* Contenido del botón */}
             <div className="relative flex items-center justify-center gap-3 text-white">

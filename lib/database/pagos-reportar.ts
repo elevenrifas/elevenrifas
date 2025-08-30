@@ -28,6 +28,7 @@ export interface DatosPagoCompleto {
   cedula_pago?: string;
   fecha_visita?: string;
   estado?: string;
+  comprobante_url?: string;
   
   // Datos de los tickets
   cantidad_tickets: number;
@@ -129,7 +130,8 @@ export async function reportarPagoConTicketsTS(
         banco_pago: datos.banco_pago,
         cedula_pago: datos.cedula_pago,
         fecha_visita: datos.fecha_visita,
-        rifa_id: datos.rifa_id
+        rifa_id: datos.rifa_id,
+        comprobante_url: datos.comprobante_url
       })
       .select()
       .single();
