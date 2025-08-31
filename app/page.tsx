@@ -2,12 +2,12 @@
 import { Hero } from "@/components/Hero";
 import { RifaClientSection } from "@/components/RifaClientSection";
 import { Footer } from "@/components/Footer";
-import { obtenerRifasActivas } from "@/lib/database";
+import { getRifasFull } from "@/lib/database/rifas";
 import WithRifasLayout from "@/app/with-rifas-layout";
 
 export default async function Home() {
-  // Obtener rifas activas desde la base de datos
-  const rifas = await obtenerRifasActivas();
+  // Obtener rifas con estadísticas calculadas desde la base de datos
+  const rifas = await getRifasFull();
   
   // Debug: Verificar que las rifas tengan IDs únicos
   // console.debug('🔍 Rifas obtenidas:', rifas);

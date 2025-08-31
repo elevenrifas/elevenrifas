@@ -1,159 +1,186 @@
 // =====================================================
 // 🎫 OPERACIONES DE TICKETS - ELEVEN RIFAS
 // =====================================================
-// Todas las operaciones relacionadas con tickets
-// Centralizadas y organizadas por funcionalidad
+// Funciones para consultar tickets de usuarios
 // =====================================================
 
 import { supabase } from './supabase'
-
-// =====================================================
-// INTERFACES PARA TICKETS
-// =====================================================
-
-export interface TicketConRifa {
-  id: string
-  rifa_id: string
-  numero_ticket: string
-  nombre: string
-  cedula: string
-  telefono?: string
-  correo: string
-  fecha_compra: string
-  pago_id?: string
-  // Datos de la rifa
-  rifa: {
-    id: string
-    titulo: string
-    imagen_url: string
-    estado: string
-    activa: boolean
-  }
-}
-
-export interface RifaConTickets {
-  rifa_id: string
-  titulo: string
-  imagen_url: string
-  estado: string
-  activa: boolean
-  tickets: TicketConRifa[]
-  total_tickets: number
-  precio_promedio: number
-}
-
-// =====================================================
-// CONSULTAS PRINCIPALES
-// =====================================================
+import type { RifaConTickets, TicketConRifa } from '@/types'
 
 /**
- * Obtener tickets por cédula o correo
+ * Obtener rifas con tickets agrupados por tipo de búsqueda
+ * @param tipo - 'cedula' o 'email'
+ * @param valor - Valor a buscar
+ * @returns Array de rifas con tickets agrupados
  */
-export async function obtenerTicketsPorIdentificacion(
-  tipo: 'cedula' | 'email',
+export async function obtenerRifasConTickets(
+  tipo: 'cedula' | 'email', 
   valor: string
-): Promise<TicketConRifa[]> {
+): Promise<RifaConTickets[]> {
   try {
-    const { data, error } = await supabase
+    // 1. Obtener tickets que coincidan con la búsqueda
+    const { data: tickets, error: ticketsError } = await supabase
       .from('tickets')
       .select(`
         *,
-        rifa:rifas(
+        rifas (
           id,
           titulo,
           imagen_url,
           estado,
-          activa
+          total_tickets,
+          precio_ticket
         )
       `)
       .eq(tipo === 'cedula' ? 'cedula' : 'correo', valor)
+      .eq('estado', 'pagado') // Solo tickets pagados
       .order('fecha_compra', { ascending: false })
 
-    if (error) {
-      console.error(`❌ Error al obtener tickets por ${tipo}:`, error.message)
+    if (ticketsError) {
+      console.error('❌ Error obteniendo tickets:', ticketsError)
+      throw new Error('Error al obtener tickets')
+    }
+
+    if (!tickets || tickets.length === 0) {
       return []
     }
 
-    return (data || []) as TicketConRifa[]
-
-  } catch (error) {
-    console.error('💥 Error inesperado al obtener tickets:', error)
-    return []
-  }
-}
-
-/**
- * Agrupar tickets por rifa para mostrar en la interfaz
- */
-export async function obtenerRifasConTickets(
-  tipo: 'cedula' | 'email',
-  valor: string
-): Promise<RifaConTickets[]> {
-  try {
-    const tickets = await obtenerTicketsPorIdentificacion(tipo, valor)
-    
-    // Agrupar tickets por rifa
+    // 2. Agrupar tickets por rifa
     const rifasMap = new Map<string, RifaConTickets>()
-    
-    tickets.forEach(ticket => {
-      if (!ticket.rifa) return
-      
-      const rifaId = ticket.rifa_id
+
+    tickets.forEach((ticket: any) => {
+      const rifa = ticket.rifas
+      if (!rifa) return
+
+      const rifaId = rifa.id
       
       if (!rifasMap.has(rifaId)) {
+        // Crear nueva entrada de rifa
         rifasMap.set(rifaId, {
           rifa_id: rifaId,
-          titulo: ticket.rifa.titulo,
-          imagen_url: ticket.rifa.imagen_url,
-          estado: ticket.rifa.estado,
-          activa: ticket.rifa.activa,
+          titulo: rifa.titulo,
+          imagen_url: rifa.imagen_url || '',
+          estado: rifa.estado,
           tickets: [],
-          total_tickets: 0,
+          total_tickets: rifa.total_tickets || 0,
           precio_promedio: 0
         })
       }
-      
-      const rifa = rifasMap.get(rifaId)!
-      rifa.tickets.push(ticket)
-      rifa.total_tickets += 1
-      
-      // Calcular precio promedio (asumiendo que todos los tickets tienen el mismo precio)
-      if (rifa.total_tickets === 1) {
-        // Para el primer ticket, usar el precio de la rifa
-        rifa.precio_promedio = 10 // Precio por defecto, ajustar según necesidad
+
+      // Agregar ticket a la rifa
+      const rifaConTickets = rifasMap.get(rifaId)!
+      const ticketConRifa: TicketConRifa = {
+        id: ticket.id,
+        rifa_id: ticket.rifa_id,
+        numero_ticket: ticket.numero_ticket,
+        precio: rifa.precio_ticket || 0,
+        nombre: ticket.nombre,
+        cedula: ticket.cedula,
+        telefono: ticket.telefono,
+        correo: ticket.correo,
+        estado: ticket.estado,
+        fecha_compra: ticket.fecha_compra,
+        fecha_verificacion: ticket.fecha_verificacion,
+        bloqueado_por_pago: false, // Por defecto
+        estado_verificacion: 'verificado', // Por defecto para tickets pagados
+        pago_id: ticket.pago_id,
+        email: ticket.correo,
+        rifa: {
+          id: rifa.id,
+          titulo: rifa.titulo,
+          imagen_url: rifa.imagen_url || '',
+          estado: rifa.estado
+        }
+      }
+
+      rifaConTickets.tickets.push(ticketConRifa)
+    })
+
+    // 3. Calcular estadísticas para cada rifa
+    const rifasConTickets = Array.from(rifasMap.values()).map(rifa => {
+      const totalTickets = rifa.tickets.length
+      const precioPromedio = totalTickets > 0 
+        ? rifa.tickets.reduce((sum, ticket) => sum + ticket.precio, 0) / totalTickets
+        : 0
+
+      return {
+        ...rifa,
+        precio_promedio: Math.round(precioPromedio * 100) / 100 // Redondear a 2 decimales
       }
     })
-    
-    return Array.from(rifasMap.values())
+
+    return rifasConTickets
 
   } catch (error) {
-    console.error('💥 Error inesperado al agrupar tickets por rifa:', error)
-    return []
+    console.error('💥 Error inesperado en obtenerRifasConTickets:', error)
+    throw new Error('Error interno del servidor')
   }
 }
 
 /**
- * Verificar si existen tickets para una identificación
+ * Obtener tickets de una rifa específica para un usuario
+ * @param rifaId - ID de la rifa
+ * @param cedula - Cédula del usuario
+ * @returns Array de tickets del usuario en esa rifa
  */
-export async function verificarExistenciaTickets(
-  tipo: 'cedula' | 'email',
-  valor: string
-): Promise<boolean> {
+export async function obtenerTicketsUsuarioEnRifa(
+  rifaId: string, 
+  cedula: string
+): Promise<TicketConRifa[]> {
   try {
-    const { count, error } = await supabase
+    const { data: tickets, error } = await supabase
       .from('tickets')
-      .select('*', { count: 'exact', head: true })
-      .eq(tipo === 'cedula' ? 'cedula' : 'correo', valor)
+      .select(`
+        *,
+        rifas (
+          id,
+          titulo,
+          imagen_url,
+          estado,
+          precio_ticket
+        )
+      `)
+      .eq('rifa_id', rifaId)
+      .eq('cedula', cedula)
+      .eq('estado', 'pagado')
+      .order('numero_ticket')
 
     if (error) {
-      console.error(`❌ Error al verificar tickets por ${tipo}:`, error.message)
-      return false
+      console.error('❌ Error obteniendo tickets del usuario:', error)
+      throw new Error('Error al obtener tickets')
     }
 
-    return (count || 0) > 0
+    if (!tickets || tickets.length === 0) {
+      return []
+    }
+
+    return tickets.map((ticket: any) => ({
+      id: ticket.id,
+      rifa_id: ticket.rifa_id,
+      numero_ticket: ticket.numero_ticket,
+      precio: ticket.rifas?.precio_ticket || 0,
+      nombre: ticket.nombre,
+      cedula: ticket.cedula,
+      telefono: ticket.telefono,
+      correo: ticket.correo,
+      estado: ticket.estado,
+      fecha_compra: ticket.fecha_compra,
+      fecha_verificacion: ticket.fecha_verificacion,
+      bloqueado_por_pago: false,
+      estado_verificacion: 'verificado',
+      pago_id: ticket.pago_id,
+      email: ticket.correo,
+      rifa: {
+        id: ticket.rifas?.id || '',
+        titulo: ticket.rifas?.titulo || '',
+        imagen_url: ticket.rifas?.imagen_url || '',
+        estado: ticket.rifas?.estado || ''
+      }
+    }))
 
   } catch (error) {
-    console.error('💥 Error inesperado al verificar tickets:', error)
-    return false
+    console.error('💥 Error inesperado en obtenerTicketsUsuarioEnRifa:', error)
+    throw new Error('Error interno del servidor')
   }
 }
+

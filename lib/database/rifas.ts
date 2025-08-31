@@ -9,39 +9,10 @@ import { supabase } from './supabase'
 import type { Database } from '@/types/supabase'
 import type { Rifa } from '@/types'
 
-// Tipos personalizados que incluyen progreso_manual
-interface RifasInsertCustom {
-  titulo: string;
-  descripcion?: string;
-  precio_ticket: number;
-  imagen_url?: string;
-  estado?: 'activa' | 'cerrada' | 'finalizada';
-  fecha_creacion?: string;
-  fecha_cierre?: string;
-  total_tickets?: number;
-  tickets_disponibles?: number;
-  condiciones?: string;
-  categoria_id?: string;
-  numero_tickets_comprar?: number[];
-  progreso_manual?: number;
-  activa?: boolean;
-}
-
-interface RifasUpdateCustom {
-  titulo?: string;
-  descripcion?: string;
-  precio_ticket?: number;
-  imagen_url?: string;
-  estado?: 'activa' | 'cerrada' | 'finalizada';
-  fecha_cierre?: string;
-  total_tickets?: number;
-  tickets_disponibles?: number;
-  condiciones?: string;
-  categoria_id?: string;
-  numero_tickets_comprar?: number[];
-  progreso_manual?: number;
-  activa?: boolean;
-}
+// Usar tipos de Supabase directamente
+type RifasInsert = Database['public']['Tables']['rifas']['Insert']
+type RifasUpdate = Database['public']['Tables']['rifas']['Update']
+type RifasRow = Database['public']['Tables']['rifas']['Row']
 
 // =====================================================
 // CONSULTAS PRINCIPALES
@@ -72,8 +43,8 @@ export async function obtenerRifasActivas(): Promise<Rifa[]> {
       return []
     }
 
-          // Transformar y validar datos
-      const rifasTransformadas = (data || []).map((rifa) => ({
+    // Transformar y validar datos
+    const rifasTransformadas = (data || []).map((rifa: any) => ({
         ...rifa,
         tipo_rifa: rifa.tipo_rifa || 'vehiculo',
         categoria: rifa.categoria || 'general',
@@ -91,7 +62,6 @@ export async function obtenerRifasActivas(): Promise<Rifa[]> {
         progreso_manual: rifa.progreso_manual || null
       }))
 
-    // console.debug(`✅ Rifas obtenidas: ${rifasTransformadas.length}`)
     return rifasTransformadas
 
   } catch (error) {
@@ -173,7 +143,7 @@ export async function obtenerRifasPorCategoria(categoriaId: string): Promise<Rif
 /**
  * Crear nueva rifa
  */
-export async function crearRifa(datos: RifasInsertCustom): Promise<{ success: boolean; id?: string; error?: string }> {
+export async function crearRifa(datos: RifasInsert): Promise<{ success: boolean; id?: string; error?: string }> {
   try {
     // Validar datos requeridos
     if (!datos.titulo || !datos.precio_ticket) {
@@ -204,7 +174,6 @@ export async function crearRifa(datos: RifasInsertCustom): Promise<{ success: bo
       tickets_disponibles: datos.tickets_disponibles || datos.total_tickets || 0,
       numero_tickets_comprar: datos.numero_tickets_comprar || [1, 2, 3, 5, 10],
       progreso_manual: datos.progreso_manual !== undefined ? datos.progreso_manual : null,
-      // Campo activa no existe en el schema real, usar estado en su lugar
     }
 
     const { data, error } = await supabase
@@ -231,7 +200,7 @@ export async function crearRifa(datos: RifasInsertCustom): Promise<{ success: bo
 /**
  * Actualizar rifa existente
  */
-export async function actualizarRifa(id: string, datos: RifasUpdateCustom): Promise<{ success: boolean; error?: string }> {
+export async function actualizarRifa(id: string, datos: RifasUpdate): Promise<{ success: boolean; error?: string }> {
   try {
     const { error } = await supabase
       .from('rifas')
@@ -255,7 +224,7 @@ export async function actualizarRifa(id: string, datos: RifasUpdateCustom): Prom
 /**
  * Cambiar estado de rifa
  */
-export async function cambiarEstadoRifa(id: string, nuevoEstado: 'activa' | 'cerrada' | 'finalizada'): Promise<{ success: boolean; error?: string }> {
+export async function cambiarEstadoRifa(id: string, nuevoEstado: 'activa' | 'cerrada'): Promise<{ success: boolean; error?: string }> {
   try {
     const { error } = await supabase
       .from('rifas')
@@ -301,7 +270,6 @@ export async function obtenerEstadisticasRifas() {
       total: data.length,
       activas: data.filter(r => r.estado === 'activa').length,
       cerradas: data.filter(r => r.estado === 'cerrada').length,
-      finalizadas: data.filter(r => r.estado === 'finalizada').length
     }
 
     return { success: true, data: estadisticas }
@@ -314,3 +282,307 @@ export async function obtenerEstadisticasRifas() {
   }
 }
 
+// =====================================================
+// FUNCIONES DE ESTADÍSTICAS OPTIMIZADAS
+// =====================================================
+
+/**
+ * Obtener rifa completa con estadísticas calculadas
+ * Usa la función SQL RPC optimizada existente
+ * CRÍTICO: Se usa en RifaCard para progreso en tiempo real
+ */
+export async function getRifaFull(rifa_id: string) {
+  // Validación de entrada
+  if (!rifa_id || typeof rifa_id !== 'string') {
+    console.error('❌ getRifaFull: rifa_id inválido:', rifa_id)
+    return null
+  }
+
+  try {
+    // Usar la función SQL RPC existente
+    const result: any = await supabase.rpc('get_rifa_full', { 
+      p_rifa_id: rifa_id 
+    })
+    
+    if (result.error) {
+      console.error('❌ getRifaFull: Error en RPC:', result.error.message)
+      // Fallback inmediato para mantener funcionalidad
+      return await getRifaStatsFallback(rifa_id)
+    }
+
+    if (!result.data || !Array.isArray(result.data) || result.data.length === 0) {
+      console.error('❌ getRifaFull: No se encontró rifa con ID:', rifa_id)
+      return null
+    }
+
+    const rifaStats = result.data[0]
+    
+    // Obtener datos completos de la rifa para campos adicionales
+    const { data: rifaCompleta, error: rifaError } = await supabase
+      .from('rifas')
+      .select(`
+        *,
+        categorias_rifas (
+          id,
+          nombre,
+          icono,
+          descripcion
+        )
+      `)
+      .eq('id', rifa_id)
+      .single()
+
+    if (rifaError) {
+      console.error('❌ getRifaFull: Error obteniendo datos completos:', rifaError.message)
+      // Retornar solo los datos de estadísticas si falla
+      return {
+        ...rifaStats,
+        categoria: null,
+        tipo_rifa: 'vehiculo',
+        destacada: false,
+        orden: 0,
+        slug: null,
+        // Campos críticos para RifaCard
+        progreso: rifaStats.progreso,
+        vendidos: rifaStats.vendidos,
+        disponibles: rifaStats.disponibles,
+        reservas_activas: rifaStats.reservas_activas
+      }
+    }
+
+    // Combinar estadísticas con datos completos
+    return {
+      ...rifaCompleta,
+      // Campos críticos para RifaCard - mantener compatibilidad
+      vendidos: rifaStats.vendidos,
+      reservas_activas: rifaStats.reservas_activas,
+      disponibles: rifaStats.disponibles,
+      progreso: rifaStats.progreso
+    }
+
+  } catch (error) {
+    console.error('💥 getRifaFull: Error inesperado:', error)
+    // Fallback para mantener funcionalidad crítica
+    return await getRifaStatsFallback(rifa_id)
+  }
+}
+
+/**
+ * Obtener todas las rifas con estadísticas calculadas
+ * Usa la función SQL RPC optimizada existente
+ * CRÍTICO: Se usa en Home page para listar todas las rifas
+ */
+export async function getRifasFull() {
+  try {
+    // Usar la función SQL RPC existente
+    const result: any = await supabase.rpc('get_rifas_full')
+    
+    if (result.error) {
+      console.error('❌ getRifasFull: Error en RPC:', result.error.message)
+      // Fallback inmediato para mantener funcionalidad del home
+      return await getRifasStatsFallback()
+    }
+
+    if (!result.data || !Array.isArray(result.data)) {
+      console.error('❌ getRifasFull: Datos inválidos retornados por RPC')
+      return []
+    }
+
+    // Obtener datos completos de todas las rifas
+    const { data: rifasCompletas, error: rifasError } = await supabase
+      .from('rifas')
+      .select(`
+        *,
+        categorias_rifas (
+          id,
+          nombre,
+          icono,
+          descripcion
+        )
+      `)
+      .eq('estado', 'activa')
+      .order('fecha_creacion', { ascending: false })
+
+    if (rifasError) {
+      console.error('❌ getRifasFull: Error obteniendo rifas completas:', rifasError.message)
+      return []
+    }
+
+    // Combinar estadísticas con datos completos
+    return rifasCompletas.map(rifa => {
+      const stats = result.data.find((s: any) => s.rifa_id === rifa.id)
+      
+      if (!stats) {
+        return {
+          ...rifa,
+          // Campos críticos para RifaCard - mantener compatibilidad
+          vendidos: 0,
+          reservas_activas: 0,
+          disponibles: rifa.total_tickets || 0,
+          progreso: 0
+        }
+      }
+
+      return {
+        ...rifa,
+        // Campos críticos para RifaCard - mantener compatibilidad
+        vendidos: stats.vendidos,
+        reservas_activas: stats.reservas_activas,
+        disponibles: stats.disponibles,
+        progreso: stats.progreso
+      }
+    })
+
+  } catch (error) {
+    console.error('💥 getRifasFull: Error inesperado:', error)
+    // Fallback para mantener funcionalidad crítica del home
+    return await getRifasStatsFallback()
+  }
+}
+
+// =====================================================
+// FUNCIONES DE FALLBACK OPTIMIZADAS
+// =====================================================
+
+/**
+ * Fallback optimizado para obtener estadísticas de una rifa
+ * Solo usar si las funciones RPC fallan completamente
+ * MANTIENE COMPATIBILIDAD TOTAL con RifaCard
+ */
+export async function getRifaStatsFallback(rifa_id: string) {
+  try {
+    const { data: rifa, error: rifaError } = await supabase
+      .from('rifas')
+      .select(`
+        *,
+        categorias_rifas (
+          id,
+          nombre,
+          icono,
+          descripcion
+        )
+      `)
+      .eq('id', rifa_id)
+      .single()
+
+    if (rifaError || !rifa) return null
+
+    // Contar tickets vendidos
+    const { count: vendidos } = await supabase
+      .from('tickets')
+      .select('*', { count: 'exact', head: true })
+      .eq('rifa_id', rifa_id)
+      .eq('estado', 'pagado')
+
+    // Contar reservas activas
+    const { count: reservas } = await supabase
+      .from('tickets')
+      .select('*', { count: 'exact', head: true })
+      .eq('rifa_id', rifa_id)
+      .eq('estado', 'reservado')
+      .gt('reservado_hasta', new Date().toISOString())
+
+    // Calcular estadísticas - MANTENER COMPATIBILIDAD
+    const totalTickets = rifa.total_tickets || 0
+    const ticketsVendidos = vendidos || 0
+    const reservasActivas = reservas || 0
+    const disponibles = Math.max(0, totalTickets - ticketsVendidos - reservasActivas)
+    const progreso = totalTickets > 0 ? Math.round((ticketsVendidos / totalTickets) * 100) : 0
+    
+    return {
+      ...rifa,
+      // Campos críticos para RifaCard - mantener compatibilidad
+      vendidos: ticketsVendidos,
+      reservas_activas: reservasActivas,
+      disponibles,
+      progreso
+    }
+
+  } catch (error) {
+    console.error('💥 getRifaStatsFallback: Error:', error)
+    return null
+  }
+}
+
+/**
+ * Fallback optimizado para obtener estadísticas de todas las rifas
+ * Solo usar si las funciones RPC fallan completamente
+ * MANTIENE COMPATIBILIDAD TOTAL con Home page
+ */
+export async function getRifasStatsFallback() {
+  try {
+    // Obtener todas las rifas activas
+    const { data: rifas, error: rifasError } = await supabase
+      .from('rifas')
+      .select(`
+        *,
+        categorias_rifas (
+          id,
+          nombre,
+          icono,
+          descripcion
+        )
+      `)
+      .eq('estado', 'activa')
+      .order('fecha_creacion', { ascending: false })
+
+    if (rifasError || !rifas) {
+      console.error('❌ getRifasStatsFallback: Error obteniendo rifas:', rifasError)
+      return []
+    }
+
+    // Para cada rifa, calcular estadísticas
+    const rifasConStats = await Promise.all(
+      rifas.map(async (rifa) => {
+        try {
+          // Contar tickets vendidos
+          const { count: vendidos } = await supabase
+            .from('tickets')
+            .select('*', { count: 'exact', head: true })
+            .eq('rifa_id', rifa.id)
+            .eq('estado', 'pagado')
+
+          // Contar reservas activas
+          const { count: reservasActivas } = await supabase
+            .from('tickets')
+            .select('*', { count: 'exact', head: true })
+            .eq('rifa_id', rifa.id)
+            .eq('estado', 'reservado')
+            .gt('reservado_hasta', new Date().toISOString())
+
+          // Calcular estadísticas - MANTENER COMPATIBILIDAD
+          const totalTickets = rifa.total_tickets || 0
+          const ticketsVendidos = vendidos || 0
+          const reservas = reservasActivas || 0
+          const disponibles = Math.max(0, totalTickets - ticketsVendidos - reservas)
+          const progreso = totalTickets > 0 ? Math.round((ticketsVendidos / totalTickets) * 100) : 0
+
+          return {
+            ...rifa,
+            // Campos críticos para RifaCard - mantener compatibilidad
+            vendidos: ticketsVendidos,
+            reservas_activas: reservas,
+            disponibles,
+            progreso
+          }
+        } catch (error) {
+          console.error(`❌ getRifasStatsFallback: Error para rifa ${rifa.id}:`, error)
+          return {
+            ...rifa,
+            // Campos críticos para RifaCard - mantener compatibilidad
+            vendidos: 0,
+            reservas_activas: 0,
+            disponibles: rifa.total_tickets || 0,
+            progreso: 0
+          }
+        }
+      })
+    )
+
+    return rifasConStats
+
+  } catch (error) {
+    console.error('💥 getRifasStatsFallback: Error fatal:', error)
+    return []
+  }
+}

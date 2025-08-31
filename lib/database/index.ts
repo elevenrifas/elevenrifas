@@ -8,11 +8,8 @@
 // Cliente de Supabase centralizado (lado del cliente)
 export { supabase } from './supabase'
 
-// Cliente de Supabase del servidor (compatible con ambos contextos)
-export { createServerClient } from './supabase-server'
-
 // NOTA: Para Server Components con cookies completas, importar directamente:
-// import { createSSRClient } from '@/lib/database/supabase-ssr'
+// import { createServerClient } from '@/lib/database/supabase-server'
 
 // =====================================================
 // 🚀 SISTEMA UNIFICADO DE EXTRACCIÓN DE DATOS

@@ -22,3 +22,4 @@ AND column_name IN ('comprobante_pago_url', 'comprobante_pago_nombre');
 -- Mostrar estructura final de la tabla
 \d+ public.pagos;
 
+

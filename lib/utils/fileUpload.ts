@@ -82,3 +82,4 @@ export function validarArchivo(file: File): boolean {
   return tiposPermitidos.includes(file.type) && file.size <= tamañoMaximo;
 }
 
+

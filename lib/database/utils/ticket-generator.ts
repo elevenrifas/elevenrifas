@@ -20,18 +20,68 @@ export interface TicketNumberOptions {
  * @returns Array de números de ticket existentes ordenados
  */
 export async function getExistingTicketNumbers(rifa_id: string): Promise<string[]> {
+  console.log('🔍 OBTENIENDO TICKETS EXISTENTES:', { rifa_id });
+  
   const { data: tickets, error } = await supabase
     .from('tickets')
-    .select('numero_ticket')
+    .select('numero_ticket, estado, reservado_hasta')
     .eq('rifa_id', rifa_id)
     .order('numero_ticket', { ascending: true });
 
   if (error) {
-    console.error('Error obteniendo tickets existentes:', error);
+    console.error('❌ ERROR OBTENIENDO TICKETS EXISTENTES:', error);
     return [];
   }
-
-  return tickets.map(ticket => ticket.numero_ticket);
+  
+  console.log('📊 TICKETS ENCONTRADOS EN BD:', {
+    total: tickets?.length || 0,
+    primeros_5: tickets?.slice(0, 5) || [],
+    ultimos_5: tickets?.slice(-5) || []
+  });
+  
+  const now = Date.now();
+  const filteredTickets = (tickets as any[])
+    .filter((t) => {
+      // Tickets PAGADOS ocupan números definitivamente
+      if (t.estado === 'pagado') return true;
+      
+      // Tickets RESERVADOS activos (no expirados) SÍ ocupan números
+      // Esto evita que dos personas reserven los mismos números
+      if (t.estado === 'reservado' && t.reservado_hasta) {
+        const reservadoHasta = new Date(t.reservado_hasta).getTime();
+        if (now < reservadoHasta) {
+          return true; // ✅ Reserva activa = ocupa número
+        }
+        // Reserva expirada = no ocupa número
+        console.log(`⏰ Reserva expirada para ticket ${t.numero_ticket}, liberando número`);
+        return false;
+      }
+      
+      // pendiente/liberado no ocupan
+      return false;
+    });
+  
+  const result = filteredTickets.map((t) => t.numero_ticket);
+  
+  console.log('✅ TICKETS FILTRADOS (OCUPAN NÚMEROS):', {
+    total_filtrados: result.length,
+    primeros_5: result.slice(0, 5),
+    ultimos_5: result.slice(-5),
+    estados_originales: tickets?.map(t => ({ numero: t.numero_ticket, estado: t.estado, reservado_hasta: t.reservado_hasta })).slice(0, 5)
+  });
+  
+  // LOGGING DETALLADO PARA DEBUGGEAR EL PROBLEMA
+  console.log('🔍 ANÁLISIS DETALLADO DE ESTADOS:', {
+    total_tickets: tickets?.length || 0,
+    por_estado: tickets?.reduce((acc, t) => {
+      acc[t.estado] = (acc[t.estado] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>),
+    reservados_con_tiempo: tickets?.filter(t => t.estado === 'reservado' && t.reservado_hasta).length || 0,
+    reservados_sin_tiempo: tickets?.filter(t => t.estado === 'reservado' && !t.reservado_hasta).length || 0
+  });
+  
+  return result;
 }
 
 /**
@@ -47,14 +97,31 @@ export async function findAvailableTicketNumbers(
   minDigits: number = 5,
   maxNumber: number = 99999
 ): Promise<string[]> {
+  console.log('🔍 BUSCANDO NÚMEROS DISPONIBLES:', {
+    rifa_id,
+    minDigits,
+    maxNumber
+  });
+  
   const existingNumbers = await getExistingTicketNumbers(rifa_id);
+  console.log('📊 TICKETS EXISTENTES ENCONTRADOS:', {
+    cantidad: existingNumbers.length,
+    primeros_5: existingNumbers.slice(0, 5),
+    ultimos_5: existingNumbers.slice(-5)
+  });
   
   // Si no hay tickets existentes, todos los números están disponibles
   if (existingNumbers.length === 0) {
+    console.log('✅ NO HAY TICKETS EXISTENTES, TODOS DISPONIBLES');
     const availableNumbers: string[] = [];
     for (let i = 1; i <= maxNumber; i++) {
       availableNumbers.push(i.toString().padStart(minDigits, '0'));
     }
+    console.log('📋 NÚMEROS DISPONIBLES GENERADOS:', {
+      total: availableNumbers.length,
+      primer_numero: availableNumbers[0],
+      ultimo_numero: availableNumbers[availableNumbers.length - 1]
+    });
     return availableNumbers;
   }
 
@@ -84,6 +151,13 @@ export async function findAvailableTicketNumbers(
     availableNumbers.push(currentNumber.toString().padStart(minDigits, '0'));
     currentNumber++;
   }
+
+  console.log('📋 NÚMEROS DISPONIBLES CALCULADOS:', {
+    total_disponibles: availableNumbers.length,
+    primer_disponible: availableNumbers[0],
+    ultimo_disponible: availableNumbers[availableNumbers.length - 1],
+    rango: `${availableNumbers[0]} - ${availableNumbers[availableNumbers.length - 1]}`
+  });
 
   return availableNumbers;
 }
@@ -138,28 +212,75 @@ export async function generateMultipleTicketNumbers(
 ): Promise<string[]> {
   const { rifa_id, minDigits = 5, maxNumber = 99999 } = options;
   
+  console.log('🎲 GENERANDO MÚLTIPLES NÚMEROS:', {
+    rifa_id,
+    cantidad: count,
+    minDigits,
+    maxNumber
+  });
+  
   try {
-    // Obtener todos los números disponibles de una vez
-    const availableNumbers = await findAvailableTicketNumbers(rifa_id, minDigits, maxNumber);
+    // 🎲 GENERACIÓN ALEATORIA INTELIGENTE: Obtener números disponibles y seleccionar aleatoriamente
+    console.log('🔍 OBTENIENDO NÚMEROS DISPONIBLES PARA SELECCIÓN ALEATORIA...');
     
-    if (availableNumbers.length < count) {
-      throw new Error(`Solo hay ${availableNumbers.length} números disponibles, se solicitaron ${count}`);
+    // 🆕 OPTIMIZACIÓN: Obtener números ocupados de una vez
+    const { data: numerosOcupados, error: ocupadosError } = await supabase
+      .from('tickets')
+      .select('numero_ticket')
+      .eq('rifa_id', rifa_id)
+      .order('numero_ticket', { ascending: true });
+    
+    if (ocupadosError) {
+      console.error('❌ Error obteniendo números ocupados:', ocupadosError);
+      throw new Error(`Error obteniendo números ocupados: ${ocupadosError.message}`);
     }
-
-    // Mezclar aleatoriamente los números disponibles
-    const shuffledNumbers = [...availableNumbers].sort(() => Math.random() - 0.5);
     
-    // Tomar los primeros 'count' números
-    const selectedNumbers = shuffledNumbers.slice(0, count);
+    const numerosOcupadosSet = new Set((numerosOcupados || []).map(t => t.numero_ticket));
+    console.log(`📊 NÚMEROS OCUPADOS ENCONTRADOS: ${numerosOcupadosSet.size}`);
     
-    console.log(`🎫 Generados ${count} números únicos de ${availableNumbers.length} disponibles`);
+    // 🎯 GENERAR LISTA COMPLETA DE NÚMEROS DISPONIBLES
+    const numerosDisponibles: string[] = [];
+    for (let i = 1; i <= maxNumber; i++) {
+      const numeroFormateado = i.toString().padStart(minDigits, '0');
+      if (!numerosOcupadosSet.has(numeroFormateado)) {
+        numerosDisponibles.push(numeroFormateado);
+      }
+    }
+    
+    console.log(`📋 NÚMEROS DISPONIBLES CALCULADOS: ${numerosDisponibles.length}`);
+    
+    // ✅ VERIFICAR DISPONIBILIDAD
+    if (numerosDisponibles.length < count) {
+      const error = `Solo hay ${numerosDisponibles.length} números disponibles, se solicitaron ${count}`;
+      console.error('❌ ERROR DE DISPONIBILIDAD:', error);
+      throw new Error(error);
+    }
+    
+    // 🎲 SELECCIÓN ALEATORIA DE NÚMEROS DISPONIBLES
+    console.log('🎲 SELECCIONANDO NÚMEROS ALEATORIAMENTE DE LOS DISPONIBLES...');
+    
+    // Mezclar aleatoriamente la lista de números disponibles
+    const numerosMezclados = [...numerosDisponibles].sort(() => Math.random() - 0.5);
+    
+    // Tomar los primeros 'count' números de la lista mezclada
+    const selectedNumbers = numerosMezclados.slice(0, count);
+    
+    console.log('✅ NÚMEROS SELECCIONADOS ALEATORIAMENTE:', {
+      cantidad_seleccionada: selectedNumbers.length,
+      primeros_5: selectedNumbers.slice(0, 5),
+      ultimos_5: selectedNumbers.slice(-5),
+      total_disponibles: numerosDisponibles.length
+    });
     
     return selectedNumbers;
+    
+
     
   } catch (error) {
     console.error('Error generando múltiples números:', error);
     
-    // Fallback: generar uno por uno
+    // Fallback: generar uno por uno con validación individual
+    console.log('🔄 FALLBACK: Generando números uno por uno...');
     const ticketNumbers: string[] = [];
     
     for (let i = 0; i < count; i++) {
@@ -194,13 +315,34 @@ export async function getTicketAvailabilityStats(
   available: number;
   percentage: number;
 }> {
+  // Obtener el total real de tickets de la rifa
+  const { data: rifa, error: rifaError } = await supabase
+    .from('rifas')
+    .select('total_tickets')
+    .eq('id', rifa_id)
+    .single();
+
+  if (rifaError || !rifa || !rifa.total_tickets) {
+    throw new Error(`Error al obtener datos de la rifa: ${rifaError?.message || 'Rifa no encontrada'}`);
+  }
+
+  const totalRealRifa = rifa.total_tickets;
   const existingNumbers = await getExistingTicketNumbers(rifa_id);
-  const availableNumbers = await findAvailableTicketNumbers(rifa_id, minDigits, maxNumber);
   
-  const total = maxNumber;
+  console.log('📊 Calculando disponibilidad:', {
+    rifa_id,
+    totalRealRifa,
+    existingCount: existingNumbers.length,
+    existingNumbers: existingNumbers.slice(0, 5) // Solo mostrar primeros 5
+  });
+  
+  // Usar el total real de la rifa en lugar de maxNumber
+  const total = totalRealRifa;
   const existing = existingNumbers.length;
-  const available = availableNumbers.length;
-  const percentage = Math.round((available / total) * 100);
+  const available = Math.max(0, total - existing); // Asegurar que no sea negativo
+  const percentage = Math.round((existing / total) * 100);
+  
+  console.log('📊 Resultado:', { total, existing, available, percentage });
   
   return { total, existing, available, percentage };
 }

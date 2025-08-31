@@ -1,0 +1,22 @@
+{
+  "sistema_limpieza": {
+    "estado": "COMPLETAMENTE DESACTIVADO",
+    "desactivado_el": "2024-01-15T10:30:00.000Z",
+    "motivo": "Sistema pausado por solicitud del usuario",
+    "archivos_modificados": [
+      "app/layout.tsx - Import y llamada comentados",
+      "lib/cron/limpiar-reservas.ts - Auto-inicio comentado"
+    ],
+    "instrucciones": [
+      "El sistema NO se ejecutará automáticamente",
+      "No se importará el módulo de limpieza",
+      "No se llamará iniciarLimpiezaAutomatica()",
+      "Para reactivarlo: descomenta las líneas comentadas"
+    ],
+    "verificacion": [
+      "No verás logs de '🧹 INICIANDO SISTEMA DE LIMPIEZA AUTOMÁTICA'",
+      "No se ejecutará limpieza cada 2 minutos",
+      "Las reservas expiradas NO se liberarán automáticamente"
+    ]
+  }
+}

@@ -1,33 +1,33 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
+// import { iniciarLimpiezaAutomatica } from "@/lib/cron/limpiar-reservas"; // SISTEMA DE LIMPIEZA DESACTIVADO
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "ElevenRifas",
-  description: "Plataforma de rifas digitales",
+  title: "Eleven Rifas",
+  description: "Sistema de rifas online",
 };
+
+// SISTEMA DE LIMPIEZA AUTOMÁTICA DESACTIVADO
+// if (typeof window === 'undefined') {
+//   // Solo en el servidor
+//   console.log('🚀 INICIANDO SISTEMA DE LIMPIEZA AUTOMÁTICA...');
+//   iniciarLimpiezaAutomatica(2); // Cada 2 minutos
+// }
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
-    <html lang="es" className="dark">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground min-h-dvh` }>
+    <html lang="es">
+      <body className={inter.className}>
         {children}
-        <Toaster richColors position="top-center" />
+        <Toaster />
       </body>
     </html>
   );

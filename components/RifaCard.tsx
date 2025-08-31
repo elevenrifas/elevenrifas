@@ -4,6 +4,8 @@ import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { formatCurrencyVE } from "@/lib/formatters";
 import type { Rifa } from "@/types";
+import { getRifaFull } from "@/lib/database/rifas";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useRifas } from "@/lib/context/RifasContext";
 import { Car, Clock, Zap, Building, DollarSign, CreditCard } from "lucide-react";
@@ -37,21 +39,31 @@ function getCategoryIcon(iconName: string) {
 export function RifaCard({ rifa }: Props) {
   const router = useRouter();
   const { setRifaActiva } = useRifas();
+  const [stats, setStats] = useState<{ progreso: number; disponibles: number } | null>(null);
 
-  // Función para calcular el progreso de la rifa de manera inteligente
+  // Cargar progreso via RPC si está disponible
+  useEffect(() => {
+    let mounted = true;
+    getRifaFull(rifa.id)
+      .then((data: any) => {
+        if (!mounted || !data) return;
+        setStats({ progreso: data.progreso, disponibles: data.disponibles });
+      })
+      .catch(() => {})
+    return () => { mounted = false };
+  }, [rifa.id]);
+
+  // Función para calcular el progreso de la rifa (prioriza props con progreso del server)
   const calcularProgresoRifa = () => {
-    // Si hay progreso manual configurado y es mayor a 0, usarlo
-    if (rifa.progreso_manual && rifa.progreso_manual > 0) {
-      return Math.min(rifa.progreso_manual, 100); // Limitar a 100%
+    // Si viene desde el server (getRifasFull), úsalo
+    // @ts-ignore: algunas builds agregan estos campos por RPC
+    if ((rifa as any).progreso !== undefined) {
+      const p = (rifa as any).progreso as number;
+      return Math.min(Math.max(p, 0), 100);
     }
-    
-    // Si no hay progreso manual, calcular automáticamente
-    if (rifa.total_tickets && rifa.total_tickets > 0) {
-      const ticketsVendidos = rifa.total_tickets - (rifa.tickets_disponibles || 0);
-      return Math.round((ticketsVendidos / rifa.total_tickets) * 100);
-    }
-    
-    return 0; // Valor por defecto
+    // Si se cargó por RPC cliente, úsalo
+    if (stats) return Math.min(Math.max(stats.progreso, 0), 100);
+    return 0;
   };
 
   // Función para formatear precio en USD
@@ -67,9 +79,7 @@ export function RifaCard({ rifa }: Props) {
   const precioBs = rifa.precio_ticket * 145;
 
   const handleComprar = () => {
-    console.log('🎯 Seleccionando rifa:', rifa.titulo);
     setRifaActiva(rifa);
-    console.log('✅ Rifa establecida en contexto');
     router.push('/comprar');
   };
 
@@ -132,9 +142,7 @@ export function RifaCard({ rifa }: Props) {
           <div className="space-y-2">
             <div className="flex justify-between items-center text-base">
               <span className="text-muted-foreground">Progreso de la rifa</span>
-                              <span className="font-semibold text-amber-500">
-                {calcularProgresoRifa()}%
-              </span>
+              <span className="font-semibold text-amber-500">{calcularProgresoRifa()}%</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
               <div 
@@ -150,7 +158,7 @@ export function RifaCard({ rifa }: Props) {
           </div>
           
           {/* Información de precios sutil */}
-          <div className="flex items-center justify-between text-sm text-muted-foreground border-t border-gray-100 pt-3">
+          <div className="flex flex-col space-y-2 text-sm text-muted-foreground border-t border-gray-100 pt-3">
             <div className="flex items-center gap-2">
               <span className="font-medium">{formatCurrencyUSD(rifa.precio_ticket)}</span>
               <span className="text-xs">USD</span>
@@ -158,9 +166,7 @@ export function RifaCard({ rifa }: Props) {
             <div className="flex items-center gap-2">
               <span className="font-medium">{formatCurrencyVE(precioBs)}</span>
               <span className="text-xs">Bs</span>
-            </div>
-            <div className="text-xs text-muted-foreground">
-              Tasa: 145 Bs/USD
+              <span className="text-xs text-muted-foreground">(145 Bs/USD)</span>
             </div>
           </div>
           

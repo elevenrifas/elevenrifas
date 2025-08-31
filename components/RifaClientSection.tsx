@@ -18,12 +18,7 @@ export function RifaClientSection({ rifas }: Props) {
   const endIndex = startIndex + rifasPerPage;
   const currentRifas = rifas.slice(startIndex, endIndex);
   
-  // Debug: Verificar que no hay duplicados
-  console.log('🔍 Rifas totales:', rifas.length);
-  console.log('🔍 Rifas actuales:', currentRifas.length);
-  console.log('🔍 IDs de rifas actuales:', currentRifas.map(r => r.id));
-  console.log('🔍 IDs únicos de rifas actuales:', [...new Set(currentRifas.map(r => r.id))]);
-  console.log('🔍 Hay duplicados en currentRifas:', currentRifas.length !== [...new Set(currentRifas.map(r => r.id))].length);
+
   
   const goToNextPage = () => {
     if (currentPage < totalPages) {

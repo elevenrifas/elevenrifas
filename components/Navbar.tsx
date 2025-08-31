@@ -2,8 +2,37 @@
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft } from "lucide-react";
+import { useState, useEffect } from "react";
 
 export default function Navbar({ showBackButton = false, onBack }: { showBackButton?: boolean; onBack?: () => void }) {
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
+
+  // No renderizar nada hasta que la hidratación esté completa
+  if (!isHydrated) {
+    return (
+      <header className="w-full sticky top-0 z-50 backdrop-blur-xl bg-black/20 border-b border-white/20 shadow-lg">
+        <div className="container mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+          <div className="w-32"></div>
+          <div className="flex-1 flex justify-end">
+            <Link href="/" className="flex items-center justify-center group">
+              <Image 
+                src="/logoblancorojo.png" 
+                alt="Eleven Rifas Logo" 
+                width={300} 
+                height={90} 
+                className="h-16 w-auto group-hover:scale-105 transition-transform duration-300"
+              />
+            </Link>
+          </div>
+        </div>
+      </header>
+    );
+  }
+
   return (
     <header className="w-full sticky top-0 z-50 backdrop-blur-xl bg-black/20 border-b border-white/20 shadow-lg">
       <div className="container mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">

@@ -28,5 +28,6 @@ export { useCrudUsuariosVerificacion } from './use-crud-usuarios-verificacion'
 // Hooks de utilidad
 export { useCategorias } from './use-categorias'
 export { useLogger } from './use-logger'
-export { useMobile } from './use-mobile'
+export { useIsMobile as useMobile } from './use-mobile'
 export { useNavigation } from './use-navigation'
+export { useTicketAvailability } from './use-ticket-availability'

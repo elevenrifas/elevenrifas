@@ -23,29 +23,33 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Validar tipo de archivo
+    // Mostrar información del archivo para debugging
+    console.log('📤 ARCHIVO RECIBIDO:', {
+      nombre: file.name,
+      tipo: file.type,
+      tamaño: `${(file.size / (1024 * 1024)).toFixed(2)} MB`
+    });
+    
+    // Validar tipo de archivo - SOLO PNG, JPG, JPEG y PDF
     const tiposPermitidos = [
       'image/jpeg',
       'image/jpg', 
       'image/png',
-      'image/gif',
-      'application/pdf',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      'application/pdf'
     ];
     
     if (!tiposPermitidos.includes(file.type)) {
       return NextResponse.json(
-        { error: 'Tipo de archivo no permitido' },
+        { error: 'Tipo de archivo no permitido. Solo se aceptan: PNG, JPG, JPEG y PDF' },
         { status: 400 }
       );
     }
     
-    // Validar tamaño (10MB máximo)
-    const tamañoMaximo = 10 * 1024 * 1024;
+    // Validar tamaño (35MB máximo)
+    const tamañoMaximo = 35 * 1024 * 1024;
     if (file.size > tamañoMaximo) {
       return NextResponse.json(
-        { error: 'Archivo demasiado grande (máximo 10MB)' },
+        { error: 'Archivo demasiado grande (máximo 35MB)' },
         { status: 400 }
       );
     }
@@ -54,10 +58,15 @@ export async function POST(request: NextRequest) {
     const rutaBase = join(process.cwd(), 'public', 'comprobantes');
     const rutaCarpetaRifa = join(rutaBase, carpetaRifa);
     
+    console.log('📂 Procesando upload para carpeta:', carpetaRifa);
+    console.log('📂 Ruta completa:', rutaCarpetaRifa);
+    
     // Crear carpeta de rifa si no existe
     if (!existsSync(rutaCarpetaRifa)) {
       await mkdir(rutaCarpetaRifa, { recursive: true });
-      console.log('📁 Carpeta creada:', rutaCarpetaRifa);
+      console.log('✅ Carpeta creada:', rutaCarpetaRifa);
+    } else {
+      console.log('📁 Carpeta ya existe:', rutaCarpetaRifa);
     }
     
     // Generar nombre único para el archivo
@@ -96,4 +105,5 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
 

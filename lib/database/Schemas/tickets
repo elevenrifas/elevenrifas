@@ -8,11 +8,36 @@ create table public.tickets (
   correo character varying(255) not null,
   fecha_compra timestamp without time zone null default now(),
   pago_id uuid null,
-  rechazo_logs character varying null,
+  estado character varying not null default 'pendiente'::character varying,
+  reserva_id uuid null,
+  reservado_hasta timestamp without time zone null,
   constraint tickets_pkey primary key (id),
   constraint tickets_rifa_id_numero_ticket_key unique (rifa_id, numero_ticket),
   constraint tickets_pago_id_fkey foreign KEY (pago_id) references pagos (id),
-  constraint tickets_rifa_id_fkey foreign KEY (rifa_id) references rifas (id) on delete CASCADE
+  constraint tickets_rifa_id_fkey foreign KEY (rifa_id) references rifas (id) on delete CASCADE,
+  constraint tickets_estado_check check (
+    (
+      (estado)::text = any (
+        (
+          array[
+            'reservado'::character varying,
+            'pendiente'::character varying,
+            'pagado'::character varying,
+            'rechazado'::character varying,
+            'liberado'::character varying
+          ]
+        )::text[]
+      )
+    )
+  )
 ) TABLESPACE pg_default;
 
 create index IF not exists idx_tickets_pago_id on public.tickets using btree (pago_id) TABLESPACE pg_default;
+
+create index IF not exists idx_tickets_reserva_id on public.tickets using btree (reserva_id) TABLESPACE pg_default
+where
+  ((estado)::text = 'reservado'::text);
+
+create index IF not exists idx_tickets_reservado_hasta on public.tickets using btree (reservado_hasta) TABLESPACE pg_default
+where
+  ((estado)::text = 'reservado'::text);

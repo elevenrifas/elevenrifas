@@ -147,3 +147,4 @@ AND routine_schema = 'public';
 -- Mostrar la función creada
 \df+ public.reportar_pago_con_tickets
 
+

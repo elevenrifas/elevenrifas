@@ -145,3 +145,4 @@ La estructura de carpetas `@comprobante/` proporciona:
 **Ubicación**: `@comprobante/nombre_rifa_sanitizado/`
 **Formato**: `timestamp_nombre_original.extension`
 
+

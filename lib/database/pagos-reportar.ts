@@ -59,6 +59,7 @@ export interface TicketData {
   telefono: string;
   correo: string;
   fecha_compra: string;
+  estado: 'pagado' | 'pendiente' | 'reservado';
 }
 
 // =====================================================
@@ -73,19 +74,26 @@ export async function reportarPagoConTicketsTS(
   datos: DatosPagoCompleto
 ): Promise<ResultadoPagoCompleto> {
   
-  console.log('🚀 Iniciando reporte de pago y creación de tickets...');
-  console.log('📊 Datos recibidos:', {
+  console.log('🚀 INICIANDO reportarPagoConTicketsTS:', {
     rifa_id: datos.rifa_id,
-    cantidad_tickets: datos.cantidad_tickets,
-    monto_total_usd: datos.monto_usd,
-    monto_total_bs: datos.monto_bs
+    cantidad: datos.cantidad_tickets,
+    tipo_pago: datos.tipo_pago,
+    monto_usd: datos.monto_usd,
+    monto_bs: datos.monto_bs,
+    reserva_id: datos.reserva_id || 'N/A',
+    tiene_comprobante: !!datos.comprobante_pago_url
+  });
+  
+  console.log('📊 DATOS COMPLETOS RECIBIDOS:', {
+    ...datos,
+    comprobante_pago_url: datos.comprobante_pago_url || 'N/A'
   });
 
   try {
     // PASO 1: Verificar que la rifa existe y obtener información
     const { data: rifa, error: rifaError } = await supabase
       .from('rifas')
-      .select('id, precio_ticket, total_tickets, tickets_disponibles')
+      .select('id, precio_ticket, total_tickets')
       .eq('id', datos.rifa_id)
       .single();
 
@@ -99,144 +107,271 @@ export async function reportarPagoConTicketsTS(
     console.log('✅ Rifa verificada:', {
       id: rifa.id,
       precio_ticket: rifa.precio_ticket,
-      total_tickets: rifa.total_tickets,
-      tickets_disponibles: rifa.tickets_disponibles
+      total_tickets: rifa.total_tickets
     });
 
-    // PASO 2: Verificar disponibilidad de tickets
-    const ticketsDisponibles = rifa.tickets_disponibles || 0;
+    // 🆕 PASO 2: VERIFICAR SI HAY TICKETS RESERVADOS
+    let ticketsReservados: any[] = [];
+    let tieneReserva = false;
     
-    if (ticketsDisponibles < datos.cantidad_tickets) {
+    console.log('🔍 DIAGNÓSTICO DE RESERVA:', {
+      reserva_id_recibido: datos.reserva_id,
+      tipo_reserva_id: typeof datos.reserva_id,
+      cantidad_solicitada: datos.cantidad_tickets
+    });
+    
+    if (datos.reserva_id) {
+      console.log('🎫 VERIFICANDO TICKETS RESERVADOS...');
+      
+      const { data: reservados, error: reservadosError } = await supabase
+        .from('tickets')
+        .select('*')
+        .eq('reserva_id', datos.reserva_id)
+        .eq('estado', 'reservado')
+        .eq('rifa_id', datos.rifa_id);
+
+      if (reservadosError) {
+        console.error('❌ Error al buscar tickets reservados:', reservadosError);
+        return {
+          success: false,
+          error: `Error al buscar tickets reservados: ${reservadosError.message}`
+        };
+      }
+
+      console.log('📊 RESULTADO DE BÚSQUEDA DE TICKETS RESERVADOS:', {
+        reservados_encontrados: reservados?.length || 0,
+        reservados_datos: reservados || [],
+        reserva_id_buscado: datos.reserva_id,
+        rifa_id_buscado: datos.rifa_id
+      });
+
+      if (reservados && reservados.length === datos.cantidad_tickets) {
+        ticketsReservados = reservados;
+        tieneReserva = true;
+        console.log('✅ Tickets reservados encontrados:', {
+          cantidad: ticketsReservados.length,
+          reserva_id: datos.reserva_id,
+          numeros: ticketsReservados.map(t => t.numero_ticket)
+        });
+      } else {
+        console.log('⚠️ No se encontraron tickets reservados válidos:', {
+          esperados: datos.cantidad_tickets,
+          encontrados: reservados?.length || 0,
+          reserva_id: datos.reserva_id,
+          condicion_cumplida: reservados && reservados.length === datos.cantidad_tickets
+        });
+      }
+    } else {
+      console.log('⚠️ NO HAY RESERVA_ID - Se procederá a validar disponibilidad');
+    }
+    
+    console.log('🎯 ESTADO FINAL DE RESERVA:', {
+      tieneReserva,
+      ticketsReservados: ticketsReservados.length,
+      reserva_id: datos.reserva_id
+    });
+
+    // 🆕 PASO 3: SOLO VALIDAR DISPONIBILIDAD SI NO HAY RESERVA
+    console.log('🔍 DECISIÓN DE VALIDACIÓN:', {
+      tieneReserva,
+      ticketsReservados: ticketsReservados.length,
+      reserva_id: datos.reserva_id,
+      proceder_a_validar: !tieneReserva
+    });
+    
+    if (!tieneReserva) {
+      console.log('🔍 VERIFICANDO DISPONIBILIDAD (NO HAY RESERVA)...');
+    const statsPre = await getTicketAvailabilityStats(datos.rifa_id, 5, rifa.total_tickets || 0);
+    const disponiblesPre = statsPre.available;
+    
+    console.log('📊 DISPONIBILIDAD VERIFICADA:', {
+      disponibles: disponiblesPre,
+      solicitados: datos.cantidad_tickets,
+      total_rifa: rifa.total_tickets,
+      existing: statsPre.existing
+    });
+    
+    if (disponiblesPre < datos.cantidad_tickets) {
+      const error = `Solo hay ${disponiblesPre} tickets disponibles, se solicitaron ${datos.cantidad_tickets}`;
+      console.error('❌ ERROR DE DISPONIBILIDAD:', error);
       return {
         success: false,
-        error: `Solo hay ${ticketsDisponibles} tickets disponibles, se solicitaron ${datos.cantidad_tickets}`
+        error: error
       };
     }
+    
+    console.log('✅ DISPONIBILIDAD CONFIRMADA - Continuando con la creación del pago');
+    } else {
+      console.log('✅ USANDO TICKETS RESERVADOS - Saltando validación de disponibilidad');
+      console.log('🎫 Tickets reservados confirmados para uso:', {
+        cantidad: ticketsReservados.length,
+        reserva_id: datos.reserva_id,
+        numeros: ticketsReservados.map(t => t.numero_ticket)
+      });
+    }
 
-    // PASO 3: Crear el pago
+    // PASO 4: Crear el pago
     console.log('💳 Creando pago...');
+    
+    // Preparar datos del pago con validación (solo campos que existen en la tabla)
+    const pagoData = {
+      tipo_pago: datos.tipo_pago,
+      estado: datos.estado || 'pendiente',
+      monto_bs: datos.monto_bs,
+      monto_usd: datos.monto_usd,
+      tasa_cambio: datos.tasa_cambio,
+      referencia: datos.referencia || `AUTO-${Date.now()}`,
+      telefono_pago: datos.telefono_pago || null,
+      banco_pago: datos.banco_pago || null,
+      cedula_pago: datos.cedula_pago || null,
+      fecha_visita: datos.fecha_visita || null,
+      rifa_id: datos.rifa_id,
+      comprobante_url: datos.comprobante_pago_url || null
+    };
+
+    console.log('📝 Datos del pago a insertar:', pagoData);
     
     const { data: pago, error: pagoError } = await supabase
       .from('pagos')
-      .insert({
-        tipo_pago: datos.tipo_pago,
-        estado: datos.estado || 'pendiente',
-        monto_bs: datos.monto_bs,
-        monto_usd: datos.monto_usd,
-        tasa_cambio: datos.tasa_cambio,
-        referencia: datos.referencia,
-        fecha_pago: new Date().toISOString(),
-        telefono_pago: datos.telefono_pago,
-        banco_pago: datos.banco_pago,
-        cedula_pago: datos.cedula_pago,
-        fecha_visita: datos.fecha_visita,
-        rifa_id: datos.rifa_id,
-        comprobante_url: datos.comprobante_url
-      })
+      .insert(pagoData)
       .select()
       .single();
 
     if (pagoError || !pago) {
+      console.error('❌ Error al crear pago:', pagoError);
+      console.error('📝 Datos que causaron el error:', pagoData);
       return {
         success: false,
-        error: `Error al crear pago: ${pagoError?.message || 'Pago no creado'}`
+        error: `Error al crear pago: ${pagoError?.message || 'Pago no creado'}. Detalles: ${JSON.stringify(pagoError?.details || {})}`
       };
     }
 
     const pago_id = pago.id;
     console.log('✅ Pago creado:', pago_id);
-
-    // PASO 4: Generar números de ticket únicos
-    console.log('🎫 Generando números de ticket únicos...');
     
-    const ticketOptions: TicketNumberOptions = {
-      rifa_id: datos.rifa_id,
-      minDigits: 5, // 00001, 00002, etc.
-      maxNumber: 99999 // Número máximo de ticket
-    };
-
-    // Obtener estadísticas de disponibilidad
-    const stats = await getTicketAvailabilityStats(datos.rifa_id, 5, 99999);
-    console.log('📊 Estadísticas de tickets:', {
-      total: stats.total,
-      existentes: stats.existing,
-      disponibles: stats.available,
-      porcentaje: `${stats.percentage}%`
-    });
-
-    const numerosTicket = await generateMultipleTicketNumbers(
-      ticketOptions, 
-      datos.cantidad_tickets
-    );
-
-    console.log('✅ Números de ticket generados:', numerosTicket);
-
-    // PASO 5: Crear los tickets
-    console.log('🎫 Creando tickets...');
+    // 🆕 PASO 5: USAR TICKETS RESERVADOS O CREAR NUEVOS
+    let tickets_creados: any[] = [];
     
-    const ticketsData: TicketData[] = numerosTicket.map(numero => ({
-      rifa_id: datos.rifa_id,
-      pago_id: pago_id,
-      numero_ticket: numero,
-      nombre: datos.nombre,
-      cedula: datos.cedula,
-      telefono: datos.telefono,
-      correo: datos.correo,
-      fecha_compra: new Date().toISOString()
-    }));
-
-    const { data: tickets, error: ticketsError } = await supabase
-      .from('tickets')
-      .insert(ticketsData)
-      .select();
-
-    if (ticketsError || !tickets) {
-      // Si falla la creación de tickets, eliminar el pago creado
-      console.error('❌ Error creando tickets, eliminando pago...');
-      await supabase
-        .from('pagos')
-        .delete()
-        .eq('id', pago_id);
+    if (tieneReserva && ticketsReservados.length > 0) {
+      // ✅ OPCIÓN A: Usar tickets reservados existentes
+      console.log('🎫 ADOPTANDO TICKETS RESERVADOS...');
       
-      return {
-        success: false,
-        error: `Error al crear tickets: ${ticketsError?.message || 'Tickets no creados'}`
+      const { data: ticketsActualizados, error: actualizacionError } = await supabase
+        .from('tickets')
+        .update({
+          pago_id: pago_id,
+          estado: 'pagado',
+          reservado_hasta: null,
+          reserva_id: null,
+          fecha_compra: new Date().toISOString()
+        })
+        .eq('reserva_id', datos.reserva_id)
+        .eq('estado', 'reservado')
+        .eq('rifa_id', datos.rifa_id)
+        .select('*');
+
+      if (actualizacionError) {
+        console.error('❌ Error al actualizar tickets reservados:', actualizacionError);
+        // Limpiar pago creado
+        await supabase.from('pagos').delete().eq('id', pago_id);
+        return {
+          success: false,
+          error: `Error al actualizar tickets reservados: ${actualizacionError.message}`
+        };
+      }
+
+      tickets_creados = ticketsActualizados || [];
+      console.log('✅ Tickets reservados adoptados:', {
+        cantidad: tickets_creados.length,
+        numeros: tickets_creados.map(t => t.numero_ticket)
+      });
+
+    } else {
+      // ✅ OPCIÓN B: Crear nuevos tickets
+      console.log('🆕 CREANDO NUEVOS TICKETS...');
+      
+      for (let i = 0; i < datos.cantidad_tickets; i++) {
+        const { data: numero_ticket, error: numeroError } = await supabase.rpc(
+          'generar_numero_ticket',
+          { rifa_id_param: datos.rifa_id }
+        );
+        
+        if (numeroError) {
+          console.error(`❌ Error al generar número de ticket ${i + 1}:`, numeroError);
+          // Limpiar pago creado
+          await supabase.from('pagos').delete().eq('id', pago_id);
+        return {
+          success: false,
+            error: `Error al generar número de ticket ${i + 1}: ${numeroError.message}`
+          };
+        }
+        
+        const { data: ticket, error: ticketError } = await supabase
+          .from('tickets')
+          .insert({
+        rifa_id: datos.rifa_id,
+        pago_id: pago_id,
+            numero_ticket: numero_ticket,
+        nombre: datos.nombre,
+        cedula: datos.cedula,
+        telefono: datos.telefono,
+        correo: datos.correo,
+        fecha_compra: new Date().toISOString(),
+        estado: 'pagado'
+          })
+          .select()
+          .single();
+          
+        if (ticketError || !ticket) {
+          console.error(`❌ Error al crear ticket ${i + 1}:`, ticketError);
+          // Limpiar pago creado
+          await supabase.from('pagos').delete().eq('id', pago_id);
+          return {
+            success: false,
+            error: `Error al crear ticket ${i + 1}: ${ticketError?.message || 'Ticket no creado'}`
+          };
+        }
+        
+        tickets_creados.push(ticket);
+      }
+      
+      console.log('✅ Nuevos tickets creados:', {
+        cantidad: tickets_creados.length,
+        numeros: tickets_creados.map(t => t.numero_ticket)
+      });
+    }
+    
+    // 🆕 PASO 6: VERIFICACIÓN FINAL
+    if (tickets_creados.length !== datos.cantidad_tickets) {
+      console.error('❌ VERIFICACIÓN FINAL FALLIDA - LIMPIANDO TODO');
+      
+      // Limpiar pago creado
+      await supabase.from('pagos').delete().eq('id', pago_id);
+        
+        return {
+          success: false,
+        error: `Verificación final fallida: se esperaban ${datos.cantidad_tickets} tickets, se crearon ${tickets_creados.length}`
       };
     }
-
-    console.log('✅ Tickets creados:', tickets.length);
-
-    // PASO 6: Actualizar contador de tickets disponibles en la rifa
-    console.log('📊 Actualizando contador de tickets disponibles...');
     
-    const { error: updateError } = await supabase
-      .from('rifas')
-      .update({ 
-        tickets_disponibles: Math.max(0, (rifa.tickets_disponibles || 0) - datos.cantidad_tickets)
-      })
-      .eq('id', datos.rifa_id);
-
-    if (updateError) {
-      console.warn('⚠️ Error actualizando contador de tickets vendidos:', updateError);
-      // No es crítico, continuar
-    }
-
-    // PASO 7: Retornar resultado exitoso
-    console.log('🎉 Proceso completado exitosamente');
+    console.log('🎉 PAGO COMPLETADO EXITOSAMENTE:', {
+      pago_id,
+      tickets_creados: tickets_creados.length,
+      numeros: tickets_creados.map(t => t.numero_ticket)
+    });
     
     return {
       success: true,
       pago_id: pago_id,
-      tickets_creados: datos.cantidad_tickets,
+      tickets_creados: tickets_creados.length,
       detalles: {
         pago: pago,
-        tickets: tickets
+        tickets: tickets_creados
       }
     };
 
   } catch (error) {
-    console.error('💥 Error inesperado:', error);
-    
+    console.error('❌ ERROR GENERAL EN reportarPagoConTicketsTS:', error);
     return {
       success: false,
       error: `Error inesperado: ${error instanceof Error ? error.message : 'Error desconocido'}`

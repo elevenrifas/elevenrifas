@@ -30,3 +30,4 @@ AND column_name = 'comprobante_url';
 -- Mostrar estructura final de la tabla
 \d+ public.pagos;
 
+
