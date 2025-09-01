@@ -14,6 +14,32 @@
   --admin-ring: hsl(var(--ring));
 }
 
+/* FORZAR TEMA OSCURO PARA EL SIDEBAR ADMIN */
+.admin-theme.dark {
+  --sidebar: hsl(240 5.9% 10%) !important; /* NEGRO */
+  --sidebar-foreground: hsl(240 4.8% 95.9%) !important; /* TEXTO CLARO */
+  --sidebar-primary: hsl(224.3 76.3% 48%) !important; /* AZUL */
+  --sidebar-primary-foreground: hsl(0 0% 100%) !important; /* TEXTO BLANCO */
+  --sidebar-accent: hsl(240 3.7% 15.9%) !important; /* GRIS OSCURO */
+  --sidebar-accent-foreground: hsl(240 4.8% 95.9%) !important; /* TEXTO CLARO */
+  --sidebar-border: hsl(240 3.7% 15.9%) !important; /* BORDE OSCURO */
+  --sidebar-ring: hsl(217.2 91.2% 59.8%) !important; /* ANILLO AZUL */
+}
+
+/* ANIMACIÓN PARA LA BARRA DE PROGRESO - IGUAL QUE EL FRONTEND */
+@keyframes progress-shine {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-progress-shine {
+  animation: progress-shine 2s ease-in-out infinite;
+}
+
 /* Animaciones suaves para elementos del admin */
 .admin-card {
   transition: all 0.2s ease-in-out;

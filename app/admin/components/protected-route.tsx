@@ -1,21 +1,28 @@
 "use client"
 
-import React from 'react'
-import { useAdminAuthContext } from "@/lib/context/AdminAuthContext"
+import React from "react"
 import { usePathname } from "next/navigation"
 import { Loader2 } from "lucide-react"
+import { useAdminAuthState } from "@/lib/context/AdminAuthContextSimple"
+
+// =====================================================
+// 🛡️ PROTECTED ROUTE - ELEVEN RIFAS
+// =====================================================
+// Componente que protege todas las rutas admin
+// Usa el nuevo sistema de autenticación optimizado
+// =====================================================
 
 interface ProtectedRouteProps {
   children: React.ReactNode
 }
 
 export const ProtectedRoute = React.memo(({ children }: ProtectedRouteProps) => {
-  const { loading, isAdmin, user } = useAdminAuthContext()
+  const { user, isAdmin, isLoading } = useAdminAuthState()
   const pathname = usePathname()
   
   // Solo mostrar logs en desarrollo
   if (process.env.NODE_ENV === 'development') {
-    console.log('🔒 ProtectedRoute - Estado:', { loading, isAdmin, pathname })
+    console.log('🔒 ProtectedRoute - Estado:', { isLoading, isAdmin, pathname })
   }
   
   // Si estamos en la página de login, no necesitamos protección
@@ -24,7 +31,7 @@ export const ProtectedRoute = React.memo(({ children }: ProtectedRouteProps) => 
   }
 
   // Mostrar loading mientras se verifica la autenticación
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex min-h-full items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">

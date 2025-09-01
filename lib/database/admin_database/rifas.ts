@@ -63,6 +63,11 @@ interface RifasUpdateCustom {
 export type AdminRifa = RifasInsertCustom & { 
   id: string;
   categorias_rifas?: CategoriaRifa;
+  // Campos de progreso calculados por RPC
+  vendidos?: number;
+  reservas_activas?: number;
+  disponibles?: number;
+  progreso?: number;
 }
 
 // =====================================================
@@ -123,12 +128,138 @@ export async function adminListRifas(options: {
       console.log('🔍 [adminListRifas] Paginación aplicada')
 
       console.log('🔍 [adminListRifas] Ejecutando query...')
-      const result = await query
-      console.log('🔍 [adminListRifas] Resultado obtenido:', result)
       
-      return { 
-        data: result.data || [],
-        error: result.error
+      try {
+        // Usar la función RPC get_rifas_full para obtener estadísticas calculadas
+        console.log('🔍 [adminListRifas] Usando RPC get_rifas_full...')
+        const rpcResult: any = await adminSupabase.rpc('get_rifas_full')
+        
+        if (rpcResult.error) {
+          console.error('❌ [adminListRifas] Error en RPC get_rifas_full:', rpcResult.error.message)
+          // Fallback a consulta normal si falla el RPC
+          console.log('🔄 [adminListRifas] Usando fallback...')
+          const result = await query
+          return { 
+            data: result.data || [],
+            error: result.error
+          }
+        }
+
+        if (!rpcResult.data || !Array.isArray(rpcResult.data)) {
+          console.error('❌ [adminListRifas] Datos inválidos retornados por RPC')
+          throw new Error('Datos inválidos del RPC')
+        }
+
+        console.log('✅ [adminListRifas] RPC exitoso, procesando datos...')
+        
+        // Obtener datos completos de todas las rifas con categorías (incluyendo inactivas/cerradas)
+        const { data: rifasCompletas, error: rifasError } = await adminSupabase
+          .from('rifas')
+          .select(`
+            *,
+            categorias_rifas (
+              id,
+              nombre,
+              icono
+            )
+          `)
+
+        if (rifasError) {
+          console.error('❌ [adminListRifas] Error obteniendo rifas completas:', rifasError.message)
+          throw rifasError
+        }
+
+        // Combinar estadísticas RPC con datos completos
+        const rifasConStats = rifasCompletas.map((rifa: any) => {
+          const stats = rpcResult.data.find((s: any) => s.rifa_id === rifa.id)
+          
+          if (!stats) {
+            return {
+              ...rifa,
+              // Campos críticos para la barra de progreso - mantener compatibilidad
+              vendidos: 0,
+              reservas_activas: 0,
+              disponibles: rifa.total_tickets || 0,
+              progreso: 0
+            }
+          }
+
+          return {
+            ...rifa,
+            // Campos críticos para la barra de progreso - mantener compatibilidad
+            vendidos: stats.vendidos,
+            reservas_activas: stats.reservas_activas,
+            disponibles: stats.disponibles,
+            progreso: stats.progreso
+          }
+        })
+
+        // Aplicar filtros de estado
+        let rifasFiltradas = rifasConStats
+        
+        if (!incluirCerradas) {
+          rifasFiltradas = rifasFiltradas.filter((r: any) => r.estado !== 'cerrada')
+        }
+        
+        if (!incluirInactivas) {
+          rifasFiltradas = rifasFiltradas.filter((r: any) => r.estado === 'activa')
+        }
+
+        // Aplicar ordenamiento
+        rifasFiltradas.sort((a: any, b: any) => {
+          let aValue: any, bValue: any
+          
+          switch (ordenarPor) {
+            case 'fecha_creacion':
+              aValue = new Date(a.fecha_creacion || 0)
+              bValue = new Date(b.fecha_creacion || 0)
+              break
+            case 'titulo':
+              aValue = a.titulo?.toLowerCase() || ''
+              bValue = b.titulo?.toLowerCase() || ''
+              break
+            case 'estado':
+              aValue = a.estado || ''
+              bValue = b.estado || ''
+              break
+            case 'precio_ticket':
+              aValue = a.precio_ticket || 0
+              bValue = b.precio_ticket || 0
+              break
+            default:
+              aValue = new Date(a.fecha_creacion || 0)
+              bValue = new Date(b.fecha_creacion || 0)
+          }
+          
+          if (orden === 'asc') {
+            return aValue > bValue ? 1 : -1
+          } else {
+            return aValue < bValue ? 1 : -1
+          }
+        })
+
+        // Aplicar paginación
+        const rifasPaginadas = rifasFiltradas.slice(offset, offset + limite)
+        
+        console.log('✅ [adminListRifas] Procesamiento exitoso')
+        console.log('📊 [adminListRifas] Total rifas:', rifasFiltradas.length)
+        console.log('📊 [adminListRifas] Rifas retornadas:', rifasPaginadas.length)
+        
+        return { 
+          data: rifasPaginadas,
+          error: null,
+          total: rifasFiltradas.length
+        }
+        
+      } catch (error) {
+        console.error('💥 [adminListRifas] Error inesperado:', error)
+        // Fallback a consulta normal si hay error
+        console.log('🔄 [adminListRifas] Usando fallback por error...')
+        const result = await query
+        return { 
+          data: result.data || [],
+          error: result.error
+        }
       }
     },
     'Error al listar rifas'

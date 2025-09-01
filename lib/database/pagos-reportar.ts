@@ -81,12 +81,12 @@ export async function reportarPagoConTicketsTS(
     monto_usd: datos.monto_usd,
     monto_bs: datos.monto_bs,
     reserva_id: datos.reserva_id || 'N/A',
-    tiene_comprobante: !!datos.comprobante_pago_url
+          tiene_comprobante: !!datos.comprobante_url
   });
   
   console.log('📊 DATOS COMPLETOS RECIBIDOS:', {
     ...datos,
-    comprobante_pago_url: datos.comprobante_pago_url || 'N/A'
+          comprobante_url: datos.comprobante_url || 'N/A'
   });
 
   try {
@@ -226,7 +226,7 @@ export async function reportarPagoConTicketsTS(
       cedula_pago: datos.cedula_pago || null,
       fecha_visita: datos.fecha_visita || null,
       rifa_id: datos.rifa_id,
-      comprobante_url: datos.comprobante_pago_url || null
+      comprobante_url: datos.comprobante_url || null
     };
 
     console.log('📝 Datos del pago a insertar:', pagoData);

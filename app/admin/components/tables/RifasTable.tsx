@@ -347,28 +347,46 @@ export function RifasTable({
       header: "Título",
       cell: ({ row }) => {
         const rifa = row.original
+        
+        // Usar el campo progreso que viene del servidor (igual que el frontend)
+        const progreso = rifa.progreso || 0
+        
+        // Información adicional para mostrar
         const totalTickets = rifa.total_tickets || 0
-        const ticketsDisponibles = rifa.tickets_disponibles || 0
-        const ticketsVendidos = totalTickets - ticketsDisponibles
-        const porcentajeVenta = totalTickets > 0 ? Math.round((ticketsVendidos / totalTickets) * 100) : 0
+        const ticketsVendidos = rifa.vendidos || 0
+        const ticketsDisponibles = rifa.disponibles || totalTickets
         
         return (
-          <div className="space-y-2">
-            <div className="font-medium">{row.getValue("titulo")}</div>
+          <div className="space-y-3">
+            {/* Título de la rifa */}
+            <div className="font-medium text-base">{row.getValue("titulo")}</div>
             
-            {/* Barra de progreso de venta */}
-            <div className="space-y-1">
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>Tickets vendidos: {ticketsVendidos}/{totalTickets}</span>
-                <span className="font-medium text-red-600">{porcentajeVenta}%</span>
+            {/* Barra de progreso mejorada - igual que el frontend hero */}
+            <div className="space-y-2">
+              {/* Información de tickets */}
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-muted-foreground">Progreso de la rifa</span>
+                <span className="font-semibold text-amber-500">{progreso}%</span>
               </div>
               
-              {/* Barra de progreso visual */}
-              <div className="w-full bg-gray-200 rounded-full h-2">
+              {/* Barra de progreso visual con gradiente y efectos */}
+              <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
                 <div 
-                  className="bg-gradient-to-r from-red-500 to-red-600 h-2 rounded-full transition-all duration-300 ease-in-out"
-                  style={{ width: `${porcentajeVenta}%` }}
-                />
+                  className="bg-gradient-to-r from-red-500 to-red-600 h-3 rounded-full relative transition-all duration-300 ease-in-out" 
+                  style={{ width: `${progreso}%` }}
+                >
+                  {/* Efecto de brillo animado - igual que el frontend */}
+                  <div 
+                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-progress-shine" 
+                    style={{width: '100%'}}
+                  />
+                </div>
+              </div>
+              
+              {/* Información detallada de tickets */}
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>Tickets vendidos: {ticketsVendidos}/{totalTickets}</span>
+                <span className="font-medium text-green-600">{ticketsDisponibles} disponibles</span>
               </div>
             </div>
           </div>

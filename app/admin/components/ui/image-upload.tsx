@@ -9,9 +9,10 @@ interface ImageUploadProps {
   value?: string
   onChange: (value: string) => void
   className?: string
+  rifaId?: string // ID de la rifa para organizar archivos
 }
 
-export function ImageUpload({ value, onChange, className }: ImageUploadProps) {
+export function ImageUpload({ value, onChange, className, rifaId }: ImageUploadProps) {
   const [isUploading, setIsUploading] = useState(false)
   const [preview, setPreview] = useState<string | null>(value || null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -32,12 +33,19 @@ export function ImageUpload({ value, onChange, className }: ImageUploadProps) {
       return
     }
 
+    // Validar que tengamos rifaId
+    if (!rifaId) {
+      alert('Error: No se puede subir imagen sin ID de rifa')
+      return
+    }
+
     setIsUploading(true)
 
     try {
       // Crear FormData para enviar la imagen
       const formData = new FormData()
       formData.append('image', file)
+      formData.append('rifaId', rifaId)
 
       // Enviar imagen al servidor
       const response = await fetch('/api/upload-image', {
@@ -46,7 +54,8 @@ export function ImageUpload({ value, onChange, className }: ImageUploadProps) {
       })
 
       if (!response.ok) {
-        throw new Error('Error al subir la imagen')
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Error al subir la imagen')
       }
 
       const data = await response.json()
@@ -57,7 +66,7 @@ export function ImageUpload({ value, onChange, className }: ImageUploadProps) {
       
     } catch (error) {
       console.error('Error al subir imagen:', error)
-      alert('Error al subir la imagen. Por favor intenta de nuevo.')
+      alert(error instanceof Error ? error.message : 'Error al subir la imagen. Por favor intenta de nuevo.')
     } finally {
       setIsUploading(false)
     }

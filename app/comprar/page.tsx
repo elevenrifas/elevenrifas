@@ -1765,6 +1765,7 @@ function ComprarPageContent() {
           const formData = new FormData();
           formData.append('file', datosPago.comprobantePago);
           formData.append('carpetaRifa', nombreCarpeta);
+          formData.append('rifaId', rifa.id);
           
           const response = await fetch('/api/upload-comprobante', {
             method: 'POST',

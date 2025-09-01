@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
-import { existsSync } from 'fs';
+import { uploadComprobante } from '@/lib/utils/supabaseStorage';
 
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File;
     const carpetaRifa = formData.get('carpetaRifa') as string;
+    const rifaId = formData.get('rifaId') as string;
     
     if (!file) {
       return NextResponse.json(
@@ -22,12 +21,21 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    if (!rifaId) {
+      return NextResponse.json(
+        { error: 'No se proporcionó ID de rifa' },
+        { status: 400 }
+      );
+    }
     
     // Mostrar información del archivo para debugging
-    console.log('📤 ARCHIVO RECIBIDO:', {
+    console.log('📤 [upload-comprobante] ARCHIVO RECIBIDO:', {
       nombre: file.name,
       tipo: file.type,
-      tamaño: `${(file.size / (1024 * 1024)).toFixed(2)} MB`
+      tamaño: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
+      rifaId,
+      carpetaRifa
     });
     
     // Validar tipo de archivo - SOLO PNG, JPG, JPEG y PDF
@@ -54,48 +62,31 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Crear ruta base para comprobantes
-    const rutaBase = join(process.cwd(), 'public', 'comprobantes');
-    const rutaCarpetaRifa = join(rutaBase, carpetaRifa);
+    console.log('📂 [upload-comprobante] Procesando upload para rifa:', rifaId);
     
-    console.log('📂 Procesando upload para carpeta:', carpetaRifa);
-    console.log('📂 Ruta completa:', rutaCarpetaRifa);
+    // Subir comprobante a Supabase Storage
+    const result = await uploadComprobante(file, rifaId);
     
-    // Crear carpeta de rifa si no existe
-    if (!existsSync(rutaCarpetaRifa)) {
-      await mkdir(rutaCarpetaRifa, { recursive: true });
-      console.log('✅ Carpeta creada:', rutaCarpetaRifa);
-    } else {
-      console.log('📁 Carpeta ya existe:', rutaCarpetaRifa);
+    if (!result.success) {
+      console.error('❌ [upload-comprobante] Error subiendo comprobante:', result.error);
+      return NextResponse.json(
+        { error: result.error || 'Error al subir el comprobante' },
+        { status: 500 }
+      );
     }
     
-    // Generar nombre único para el archivo
-    const timestamp = Date.now();
-    const nombreArchivo = `${timestamp}_${file.name}`;
-    const rutaCompleta = join(rutaCarpetaRifa, nombreArchivo);
-    
-    // Convertir File a Buffer
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    
-    // Escribir archivo
-    await writeFile(rutaCompleta, buffer);
-    
-    console.log('📁 Archivo subido:', rutaCompleta);
-    
-    // Retornar ruta relativa para la base de datos
-    const rutaRelativa = `/comprobantes/${carpetaRifa}/${nombreArchivo}`;
+    console.log('✅ [upload-comprobante] Comprobante subido exitosamente:', result.url);
     
     return NextResponse.json({
       success: true,
-      ruta: rutaRelativa,
+      ruta: result.url,
       nombre: file.name,
       tamaño: file.size,
       tipo: file.type
     });
     
   } catch (error) {
-    console.error('❌ Error subiendo archivo:', error);
+    console.error('💥 [upload-comprobante] Error inesperado:', error);
     return NextResponse.json(
       { 
         error: 'Error interno del servidor',

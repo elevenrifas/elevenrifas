@@ -446,6 +446,7 @@ export function RifaFormModal({
                       <ImageUpload
                         value={field.value}
                         onChange={field.onChange}
+                        rifaId={rifa?.id || 'new'}
                       />
                     </FormControl>
                     <FormMessage />

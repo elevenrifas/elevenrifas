@@ -6,7 +6,7 @@ import {
   SidebarInset,
   SidebarProvider,
 } from "@/components/ui/sidebar";
-import { AdminAuthProvider } from "@/lib/context/AdminAuthContext";
+import { AdminAuthProviderSimple } from "@/lib/context/AdminAuthContextSimple";
 import "../styles/admin-theme.css";
 
 export const metadata: Metadata = {
@@ -16,9 +16,9 @@ export const metadata: Metadata = {
 
 export default function AdminPanelLayout({ children }: { children: React.ReactNode }) {
   return (
-    <AdminAuthProvider>
+    <AdminAuthProviderSimple>
       <ProtectedRoute>
-        <div className="admin-theme">
+        <div className="admin-theme dark">
           <SidebarProvider
             style={
               {
@@ -41,7 +41,7 @@ export default function AdminPanelLayout({ children }: { children: React.ReactNo
           </SidebarProvider>
         </div>
       </ProtectedRoute>
-    </AdminAuthProvider>
+    </AdminAuthProviderSimple>
   );
 }
 

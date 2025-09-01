@@ -1,16 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { writeFile, mkdir } from 'fs/promises'
-import { join } from 'path'
-import { existsSync } from 'fs'
+import { uploadRifaImage } from '@/lib/utils/supabaseStorage'
 
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
     const file = formData.get('image') as File
+    const rifaId = formData.get('rifaId') as string
 
     if (!file) {
       return NextResponse.json(
         { error: 'No se proporcionó ninguna imagen' },
+        { status: 400 }
+      )
+    }
+
+    if (!rifaId) {
+      return NextResponse.json(
+        { error: 'No se proporcionó ID de rifa' },
         { status: 400 }
       )
     }
@@ -31,38 +37,35 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Crear directorio si no existe
-    const imagesDir = join(process.cwd(), 'public', 'images')
-    if (!existsSync(imagesDir)) {
-      await mkdir(imagesDir, { recursive: true })
+    console.log('📤 [upload-image] Subiendo imagen para rifa:', rifaId)
+    console.log('📤 [upload-image] Archivo:', {
+      nombre: file.name,
+      tipo: file.type,
+      tamaño: `${(file.size / (1024 * 1024)).toFixed(2)} MB`
+    })
+
+    // Subir imagen a Supabase Storage
+    const result = await uploadRifaImage(file, rifaId)
+
+    if (!result.success) {
+      console.error('❌ [upload-image] Error subiendo imagen:', result.error)
+      return NextResponse.json(
+        { error: result.error || 'Error al subir la imagen' },
+        { status: 500 }
+      )
     }
 
-    // Generar nombre único para el archivo
-    const timestamp = Date.now()
-    const randomString = Math.random().toString(36).substring(2, 15)
-    const extension = file.name.split('.').pop()
-    const fileName = `${timestamp}_${randomString}.${extension}`
-
-    // Ruta completa del archivo
-    const filePath = join(imagesDir, fileName)
-
-    // Convertir archivo a buffer y guardarlo
-    const bytes = await file.arrayBuffer()
-    const buffer = Buffer.from(bytes)
-    await writeFile(filePath, buffer)
-
-    // URL pública de la imagen
-    const imageUrl = `/images/${fileName}`
+    console.log('✅ [upload-image] Imagen subida exitosamente:', result.url)
 
     return NextResponse.json({
       success: true,
-      imageUrl,
-      fileName,
+      imageUrl: result.url,
+      fileName: result.fileName,
       message: 'Imagen subida exitosamente'
     })
 
   } catch (error) {
-    console.error('Error al subir imagen:', error)
+    console.error('💥 [upload-image] Error inesperado:', error)
     return NextResponse.json(
       { error: 'Error interno del servidor al subir la imagen' },
       { status: 500 }

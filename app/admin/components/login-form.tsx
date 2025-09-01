@@ -8,13 +8,14 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { adminSignIn } from "@/lib/database/admin_database"
-import { REDIRECTS } from "@/lib/routes"
+import { useAdminAuthActions } from "@/lib/context/AdminAuthContextSimple"
+import { ADMIN_ROUTES } from "@/lib/routes"
 import { Lock, Mail, Eye, EyeOff, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export function LoginForm() {
   const router = useRouter()
+  const { signIn } = useAdminAuthActions()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
@@ -39,16 +40,16 @@ export function LoginForm() {
     setError(null)
 
     try {
-      // Usar la lógica centralizada de base de datos
-      const result = await adminSignIn(email, password)
+      // Usar el nuevo sistema de autenticación
+      const result = await signIn(email, password)
 
       if (!result.success) {
         setError(result.error ?? 'Error de autenticación')
         return
       }
 
-      // Login exitoso, redirigir al dashboard
-      router.replace(REDIRECTS.AFTER_LOGIN)
+      // Login exitoso, redirigir a rifas
+      router.replace(ADMIN_ROUTES.RIFAS)
       
     } catch (error) {
       console.error("Error inesperado:", error)

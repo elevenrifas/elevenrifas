@@ -199,7 +199,7 @@ export async function reportarPagoConTicketsTS(datos: DatosPagoCompleto): Promis
         banco_pago: datos.banco_pago,
         cedula_pago: datos.cedula_pago,
         fecha_visita: datos.fecha_visita,
-        comprobante_pago_url: datos.comprobante_url,
+        comprobante_url: datos.comprobante_url,
         comprobante_pago_nombre: datos.comprobante_url ? datos.comprobante_url.split('/').pop() : null
       })
       .select()

@@ -17,7 +17,7 @@ import {
   XCircle,
   Bug
 } from 'lucide-react'
-import { useAdminAuth } from '@/hooks/use-admin-auth'
+import { useAdminAuthState } from '@/lib/context/AdminAuthContextSimple'
 import { useLogger } from '@/hooks/use-logger'
 import { supabase } from '@/lib/database'
 
@@ -58,7 +58,7 @@ export default function AdminDashboardPage() {
   const [error, setError] = useState<string | null>(null)
   const [warning, setWarning] = useState<string | null>(null)
 
-  const { user, profile, loading: authLoading, isAdmin } = useAdminAuth()
+  const { user, profile, isLoading: authLoading, isAdmin } = useAdminAuthState()
 
   // Función para cargar datos del dashboard
   const loadDashboardData = async () => {
