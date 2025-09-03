@@ -81,14 +81,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem>
             <SidebarMenuButton
               asChild
-              className="data-[slot=sidebar-menu-button]:!p-4 !h-20 !min-h-20"
-              isActive={pathname === "/admin/rifas"}
+              className="data-[slot=sidebar-menu-button]:!p-6 !h-28 !min-h-28"
             >
-              <a href="/admin/rifas" className="flex items-center justify-center h-full">
+              <a href="/admin/rifas" className="flex items-center justify-center h-full w-full">
                 <img 
-                  src="/E_LOGOb.png" 
+                  src="/logoblancorojo.png" 
                   alt="ElevenRifas Logo" 
-                  className="h-16 w-auto object-contain"
+                  className="h-24 w-auto object-contain max-w-full"
                 />
               </a>
             </SidebarMenuButton>

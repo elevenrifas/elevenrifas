@@ -31,6 +31,15 @@ export function NavMain({
           {items.map((item) => {
             const isActive = pathname === item.url
             
+            // Debug log
+            if (process.env.NODE_ENV === 'development') {
+              console.log(`🔍 NavMain - ${item.title}:`, { 
+                pathname, 
+                itemUrl: item.url, 
+                isActive 
+              })
+            }
+            
             return (
               <SidebarMenuItem key={item.title}>
                 <SidebarMenuButton 

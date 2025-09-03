@@ -149,8 +149,30 @@ export function DeleteConfirmModal({
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[500px]">
+    <Dialog 
+      open={isOpen} 
+      onOpenChange={(open) => {
+        // Solo permitir cerrar si NO se está procesando
+        if (!isProcessing && !isDeleting) {
+          onClose()
+        }
+      }}
+    >
+      <DialogContent 
+        className="sm:max-w-[500px]"
+        // Prevenir cierre con ESC durante envío
+        onEscapeKeyDown={(e) => {
+          if (isProcessing || isDeleting) {
+            e.preventDefault()
+          }
+        }}
+        // Prevenir cierre con click fuera durante envío
+        onPointerDownOutside={(e) => {
+          if (isProcessing || isDeleting) {
+            e.preventDefault()
+          }
+        }}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-destructive">
             <AlertTriangle className="h-5 w-5" />

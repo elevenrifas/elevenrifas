@@ -24,12 +24,17 @@ export function NavUser({
     avatar: string
   }
 }) {
+  const handleLogout = () => {
+    // Aquí implementarías la lógica de logout
+    console.log('Logout clicked')
+  }
+
   return (
     <SidebarMenu>
-      <SidebarMenuItem>
+      <SidebarMenuItem className="relative">
         <SidebarMenuButton
           size="lg"
-          className="flex items-center gap-3"
+          className="flex items-center gap-3 pr-12"
         >
           <Avatar className="h-8 w-8 rounded-lg grayscale">
             <AvatarImage src={user.avatar} alt={user.name} />
@@ -41,13 +46,22 @@ export function NavUser({
               {user.email}
             </span>
           </div>
-          <button 
-            className="ml-auto p-2 hover:bg-sidebar-accent rounded-lg transition-colors"
-            title="Cerrar sesión"
-          >
-            <LogOut className="size-4" />
-          </button>
         </SidebarMenuButton>
+        <div
+          className="absolute top-1.5 right-1.5 p-1.5 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-md transition-colors cursor-pointer"
+          onClick={handleLogout}
+          title="Cerrar sesión"
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              handleLogout()
+            }
+          }}
+        >
+          <LogOut className="size-4" />
+        </div>
       </SidebarMenuItem>
     </SidebarMenu>
   )

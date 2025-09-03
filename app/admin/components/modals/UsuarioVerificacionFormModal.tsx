@@ -155,13 +155,46 @@ export function UsuarioVerificacionFormModal({
   const isSubmittingState = isSubmitting || isSubmittingLocal
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+    <Dialog 
+      open={isOpen} 
+      onOpenChange={(open) => {
+        // Solo permitir cerrar si NO se está enviando
+        if (!isSubmittingState) {
+          onClose()
+        }
+      }}
+    >
+      <DialogContent 
+        className="max-w-2xl max-h-[90vh] overflow-y-auto"
+        // Prevenir cierre con ESC durante envío
+        onEscapeKeyDown={(e) => {
+          if (isSubmittingState) {
+            e.preventDefault()
+          }
+        }}
+        // Prevenir cierre con click fuera durante envío
+        onPointerDownOutside={(e) => {
+          if (isSubmittingState) {
+            e.preventDefault()
+          }
+        }}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <User className="h-5 w-5 text-blue-600" />
-            {isEditing ? 'Editar Usuario de Verificación' : 'Crear Usuario de Verificación'}
+            {isSubmittingState ? (
+              isEditing ? 'Actualizando Usuario...' : 'Creando Usuario...'
+            ) : (
+              isEditing ? 'Editar Usuario de Verificación' : 'Crear Usuario de Verificación'
+            )}
           </DialogTitle>
+          {isSubmittingState && (
+            <DialogDescription>
+              <span className="text-amber-600 font-medium">
+                ⏳ Procesando... Por favor espera, no cierres este modal
+              </span>
+            </DialogDescription>
+          )}
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">

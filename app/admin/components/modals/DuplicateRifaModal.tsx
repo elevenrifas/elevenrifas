@@ -42,8 +42,30 @@ export function DuplicateRifaModal({
   if (!rifa) return null
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+    <Dialog 
+      open={isOpen} 
+      onOpenChange={(open) => {
+        // Solo permitir cerrar si NO se está procesando
+        if (!isSubmitting) {
+          onClose()
+        }
+      }}
+    >
+      <DialogContent 
+        className="max-w-md"
+        // Prevenir cierre con ESC durante envío
+        onEscapeKeyDown={(e) => {
+          if (isSubmitting) {
+            e.preventDefault()
+          }
+        }}
+        // Prevenir cierre con click fuera durante envío
+        onPointerDownOutside={(e) => {
+          if (isSubmitting) {
+            e.preventDefault()
+          }
+        }}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Copy className="h-5 w-5" />

@@ -43,21 +43,32 @@ export function NavDocuments({
     <SidebarGroup className="group-data-[collapsible=icon]:hidden">
       <SidebarGroupLabel>{title}</SidebarGroupLabel>
       <SidebarMenu>
-        {items.map((item) => (
-          <SidebarMenuItem key={item.name}>
-            <SidebarMenuButton 
-              asChild
-              isActive={pathname === item.url}
-            >
-              <a href={item.url}>
-                <item.icon />
-                <span>{item.name}</span>
-              </a>
-            </SidebarMenuButton>
-
-          </SidebarMenuItem>
-        ))}
-
+        {items.map((item) => {
+          const isActive = pathname === item.url
+          
+          // Debug log
+          if (process.env.NODE_ENV === 'development') {
+            console.log(`🔍 NavDocuments - ${item.name}:`, { 
+              pathname, 
+              itemUrl: item.url, 
+              isActive 
+            })
+          }
+          
+          return (
+            <SidebarMenuItem key={item.name}>
+              <SidebarMenuButton 
+                asChild
+                isActive={isActive}
+              >
+                <a href={item.url}>
+                  <item.icon />
+                  <span>{item.name}</span>
+                </a>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          )
+        })}
       </SidebarMenu>
     </SidebarGroup>
   )

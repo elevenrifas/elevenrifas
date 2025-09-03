@@ -119,6 +119,8 @@ export function RifasTable({
     initialPageSize: 10
   })
 
+
+
   // Función para manejar la exportación
   const handleExport = () => {
     try {
@@ -137,7 +139,6 @@ export function RifasTable({
         fecha_creacion: rifa.fecha_creacion || '',
         fecha_cierre: rifa.fecha_cierre || '',
         total_tickets: rifa.total_tickets || 0,
-        tickets_disponibles: rifa.tickets_disponibles || 0,
         categoria_id: rifa.categoria_id || '',
         numero_tickets_comprar: rifa.numero_tickets_comprar || [1, 2, 3, 5, 10, 15, 20, 25, 50]
       }))
@@ -167,7 +168,6 @@ export function RifasTable({
         'Precio Ticket',
         'Estado',
         'Total Tickets',
-        'Tickets Disponibles',
         'Fecha Creación',
         'Fecha Cierre',
         'Categoría ID'
@@ -183,7 +183,6 @@ export function RifasTable({
           rifa.precio_ticket,
           rifa.estado,
           rifa.total_tickets,
-          rifa.tickets_disponibles,
           rifa.fecha_creacion,
           rifa.fecha_cierre,
           rifa.categoria_id
@@ -230,9 +229,8 @@ export function RifasTable({
         descripcion: rifa.descripcion || '',
         precio_ticket: rifa.precio_ticket,
         imagen_url: rifa.imagen_url || '',
-        estado: 'cerrada', // Siempre cerrada por defecto
+                estado: 'cerrada', // Siempre cerrada por defecto
         total_tickets: rifa.total_tickets || 100,
-        tickets_disponibles: rifa.total_tickets || 100, // Mismo que total al duplicar
         categoria_id: rifa.categoria_id || null,
         numero_tickets_comprar: rifa.numero_tickets_comprar || [1, 2, 3, 5, 10, 15, 20, 25, 50],
         progreso_manual: rifa.progreso_manual || null,
@@ -267,7 +265,6 @@ export function RifasTable({
         imagen_url: data.imagen_url,
         estado: data.estado,
         total_tickets: data.total_tickets,
-        tickets_disponibles: data.total_tickets, // Inicialmente igual al total
         categoria_id: data.categoria_id,
         numero_tickets_comprar: data.numero_tickets_comprar || [1, 2, 3, 5, 10, 15, 20, 25, 50],
         progreso_manual: data.progreso_manual,
@@ -297,7 +294,6 @@ export function RifasTable({
           imagen_url: data.imagen_url,
           estado: data.estado,
           total_tickets: data.total_tickets,
-          tickets_disponibles: data.tickets_disponibles,
           categoria_id: data.categoria_id,
           numero_tickets_comprar: data.numero_tickets_comprar || [1, 2, 3, 5, 10, 15, 20, 25, 50],
           progreso_manual: data.progreso_manual,
@@ -345,6 +341,37 @@ export function RifasTable({
     {
       accessorKey: "titulo",
       header: "Título",
+      enableColumnFilter: true,
+      filterFn: (row, id, value) => {
+        const searchTerm = value.toLowerCase().trim()
+        if (!searchTerm) return true
+        
+        const rifa = row.original
+        
+        // Buscar en múltiples campos
+        return (
+          // Título
+          rifa.titulo?.toLowerCase().includes(searchTerm) ||
+          // Descripción
+          rifa.descripcion?.toLowerCase().includes(searchTerm) ||
+          // Categoría
+          rifa.categorias_rifas?.nombre?.toLowerCase().includes(searchTerm) ||
+          // Marca
+          rifa.marca?.toLowerCase().includes(searchTerm) ||
+          // Modelo
+          rifa.modelo?.toLowerCase().includes(searchTerm) ||
+          // Estado
+          rifa.estado?.toLowerCase().includes(searchTerm) ||
+          // Tipo de rifa
+          rifa.tipo_rifa?.toLowerCase().includes(searchTerm) ||
+          // Color
+          rifa.color?.toLowerCase().includes(searchTerm) ||
+          // Año
+          rifa.ano?.toString().includes(searchTerm) ||
+          // Precio
+          rifa.precio_ticket?.toString().includes(searchTerm)
+        )
+      },
       cell: ({ row }) => {
         const rifa = row.original
         
@@ -442,66 +469,43 @@ export function RifasTable({
         }
       },
     },
-    {
-      accessorKey: "tickets_disponibles",
-      header: "Tickets Disponibles",
-      cell: ({ row }) => {
-        try {
-          const disponibles = row.getValue("tickets_disponibles") as number || 0
-          return (
-            <div className="flex items-center justify-center">
-              <Badge variant="secondary" className="text-xs font-mono">
-                {disponibles}
-              </Badge>
-            </div>
-          )
-        } catch (error) {
-          console.warn('Error al renderizar tickets_disponibles:', error)
-          return (
-            <div className="flex items-center justify-center">
-              <Badge variant="outline" className="text-xs font-mono">
-                0
-              </Badge>
-            </div>
-          )
-        }
-      },
-    },
+
     {
       accessorKey: "estado",
       header: "Estado",
       cell: ({ row }) => {
         const estado = row.getValue("estado") as string
-        const getEstadoVariant = (estado: string) => {
+        
+        const getEstadoColor = (estado: string) => {
           switch (estado) {
             case 'activa':
-              return 'default'
+              return 'bg-green-100 text-green-800 border-green-200'
             case 'cerrada':
-              return 'secondary'
+              return 'bg-red-100 text-red-800 border-red-200'
             case 'finalizada':
-              return 'destructive'
+              return 'bg-gray-100 text-gray-800 border-gray-200'
             default:
-              return 'outline'
+              return 'bg-gray-100 text-gray-800 border-gray-200'
           }
         }
         
         const getEstadoIcon = (estado: string) => {
           switch (estado) {
             case 'activa':
-              return <Play className="h-3 w-3" />
+              return <div className="w-2 h-2 bg-green-500 rounded-full" />
             case 'cerrada':
-              return <Square className="h-3 w-3" />
+              return <div className="w-2 h-2 bg-red-500 rounded-full" />
             case 'finalizada':
-              return <CheckCircle className="h-3 w-3" />
+              return <div className="w-2 h-2 bg-gray-500 rounded-full" />
             default:
-              return <Tag className="h-3 w-3" />
+              return <div className="w-2 h-2 bg-gray-500 rounded-full" />
           }
         }
         
         return (
-          <Badge variant={getEstadoVariant(estado)} className="flex items-center gap-1">
+          <Badge variant="outline" className={`flex items-center justify-center gap-2 px-3 py-1 w-24 ${getEstadoColor(estado)}`}>
             {getEstadoIcon(estado)}
-            {estado.charAt(0).toUpperCase() + estado.slice(1)}
+            <span className="font-medium capitalize">{estado}</span>
           </Badge>
         )
       },
@@ -648,7 +652,7 @@ export function RifasTable({
         title: "Rifas",
         description: "Gestiona todas las rifas del sistema",
         searchKey: "titulo",
-        searchPlaceholder: "Buscar rifas...",
+        searchPlaceholder: "Buscar en título, descripción, categoría, marca, modelo...",
         loading: isLoading || isRefreshing,
         error: error,
         onRowSelectionChange: selectMultipleRifas,

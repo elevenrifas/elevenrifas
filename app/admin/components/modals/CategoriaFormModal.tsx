@@ -139,15 +139,47 @@ export function CategoriaFormModal({
   const submitText = isEditing ? 'Guardar Cambios' : 'Crear Categoría'
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px]">
+    <Dialog 
+      open={isOpen} 
+      onOpenChange={(open) => {
+        // Solo permitir cerrar si NO se está enviando
+        if (!isSubmitting) {
+          onClose()
+        }
+      }}
+    >
+      <DialogContent 
+        className="max-w-md"
+        // Prevenir cierre con ESC durante envío
+        onEscapeKeyDown={(e) => {
+          if (isSubmitting) {
+            e.preventDefault()
+          }
+        }}
+        // Prevenir cierre con click fuera durante envío
+        onPointerDownOutside={(e) => {
+          if (isSubmitting) {
+            e.preventDefault()
+          }
+        }}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Tag className="h-5 w-5" />
-            {title}
+            {isSubmitting ? (
+              isEditing ? 'Actualizando Categoría...' : 'Creando Categoría...'
+            ) : (
+              title
+            )}
           </DialogTitle>
           <DialogDescription>
-            {description}
+            {isSubmitting ? (
+              <span className="text-amber-600 font-medium">
+                ⏳ Procesando... Por favor espera, no cierres este modal
+              </span>
+            ) : (
+              description
+            )}
           </DialogDescription>
         </DialogHeader>
 

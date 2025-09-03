@@ -278,28 +278,55 @@ export function RifaFormModal({
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+    <Dialog 
+      open={isOpen} 
+      onOpenChange={(open) => {
+        // Solo permitir cerrar si NO se está enviando
+        if (!isSubmitting) {
+          onClose()
+        }
+      }}
+    >
+      <DialogContent 
+        className="max-w-4xl max-h-[90vh] overflow-y-auto"
+        // Prevenir cierre con ESC durante envío
+        onEscapeKeyDown={(e) => {
+          if (isSubmitting) {
+            e.preventDefault()
+          }
+        }}
+        // Prevenir cierre con click fuera durante envío
+        onPointerDownOutside={(e) => {
+          if (isSubmitting) {
+            e.preventDefault()
+          }
+        }}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            {isEditing ? (
-              <>
-                <Edit className="h-5 w-5" />
-                Editar Rifa
-              </>
-            ) : (
-              <>
-                <Plus className="h-5 w-5" />
-                Crear Nueva Rifa
-              </>
-            )}
+                            {isEditing ? (
+                  <>
+                    <Edit className="h-5 w-5" />
+                    {isSubmitting ? 'Actualizando Rifa...' : 'Editar Rifa'}
+                  </>
+                ) : (
+                  <>
+                    <Plus className="h-5 w-5" />
+                    {isSubmitting ? 'Creando Rifa...' : 'Crear Nueva Rifa'}
+                  </>
+                )}
           </DialogTitle>
-          <DialogDescription>
-            {isEditing 
-              ? "Modifica los datos de la rifa seleccionada"
-              : "Completa la información para crear una nueva rifa"
-            }
-          </DialogDescription>
+                      <DialogDescription>
+              {isSubmitting ? (
+                <span className="text-amber-600 font-medium">
+                  ⏳ Procesando... Por favor espera, no cierres este modal
+                </span>
+              ) : (
+                isEditing 
+                  ? "Modifica los datos de la rifa seleccionada"
+                  : "Completa la información para crear una nueva rifa"
+              )}
+            </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
@@ -347,37 +374,47 @@ export function RifaFormModal({
 
             <Separator />
 
-            {/* Estado y Categoría - Sin división, al mismo nivel */}
+            {/* Estado y Categoría */}
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <FormField
+                                <FormField
                   control={form.control}
                   name="estado"
                   render={({ field }) => (
-                    <FormItem className="space-y-3">
+                    <FormItem>
                       <FormLabel className="text-base font-semibold text-gray-900">Estado *</FormLabel>
-                      <Select onValueChange={(value) => {
-                        // Establecer fecha de cierre automáticamente
-                        if (value === "cerrada") {
-                          form.setValue("fecha_cierre", new Date().toISOString());
-                        } else {
-                          form.setValue("fecha_cierre", null);
-                        }
-                        field.onChange(value);
-                      }} defaultValue={field.value}>
-                        <FormControl>
+                      <FormControl>
+                        <Select 
+                          onValueChange={field.onChange} 
+                          defaultValue={field.value}
+                          disabled={isSubmitting}
+                        >
                           <SelectTrigger className="h-11 border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200">
-                            <SelectValue placeholder="Seleccionar estado" />
+                            <SelectValue placeholder="Seleccionar estado">
+                              {field.value && (
+                                <div className="flex items-center gap-2">
+                                  <div className={`w-2 h-2 rounded-full ${field.value === 'activa' ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                                  <span className="capitalize">{field.value}</span>
+                                </div>
+                              )}
+                            </SelectValue>
                           </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="activa">Activa</SelectItem>
-                          <SelectItem value="cerrada">Cerrada</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormDescription className="text-sm text-gray-600">
-                        Al cambiar a "Cerrada" se establecerá automáticamente la fecha de cierre
-                      </FormDescription>
+                          <SelectContent>
+                            <SelectItem value="activa">
+                              <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                <span>Activa</span>
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="cerrada">
+                              <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                                <span>Cerrada</span>
+                              </div>
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -387,49 +424,111 @@ export function RifaFormModal({
                   control={form.control}
                   name="categoria_id"
                   render={({ field }) => (
-                    <FormItem className="space-y-3">
+                    <FormItem>
                       <FormLabel className="text-base font-semibold text-gray-900">Categoría</FormLabel>
-                      <Select onValueChange={(value) => {
-                        // Convertir "none" a null para la base de datos
-                        const categoriaValue = value === "none" ? null : value;
-                        console.log('🔍 Categoría seleccionada:', { value, categoriaValue });
-                        field.onChange(categoriaValue);
-                      }} defaultValue={field.value || "none"}>
-                        <FormControl>
+                      <FormControl>
+                        <Select onValueChange={(value) => {
+                          // Convertir "none" a null para la base de datos
+                          const categoriaValue = value === "none" ? null : value;
+                          console.log('🔍 Categoría seleccionada:', { value, categoriaValue });
+                          field.onChange(categoriaValue);
+                        }} defaultValue={field.value || "none"}>
                           <SelectTrigger className="h-11 border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200">
                             <SelectValue placeholder="Seleccionar categoría" />
                           </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="none">Sin categoría</SelectItem>
-                          {categoriasLoading ? (
-                            <SelectItem value="loading" disabled>
-                              Cargando categorías...
-                            </SelectItem>
-                          ) : (
-                            categorias.map((categoria) => {
-                              const IconComponent = getCategoryIcon(categoria.icono);
-                              return (
-                                <SelectItem key={categoria.id} value={categoria.id}>
-                                  <div className="flex items-center gap-2">
-                                    <IconComponent className="h-4 w-4 text-red-600" />
-                                    <span>{categoria.nombre}</span>
-                                  </div>
-                                </SelectItem>
-                              );
-                            })
-                          )}
-                        </SelectContent>
-                      </Select>
-                      
-                      <FormDescription className="text-sm text-gray-600">
-                        Si necesitas una nueva categoría, puedes crearla en la sección de Categorías
-                      </FormDescription>
+                          <SelectContent>
+                            <SelectItem value="none">Sin categoría</SelectItem>
+                            {categoriasLoading ? (
+                              <SelectItem value="loading" disabled>
+                                Cargando categorías...
+                              </SelectItem>
+                            ) : (
+                              categorias.map((categoria) => {
+                                const IconComponent = getCategoryIcon(categoria.icono);
+                                return (
+                                  <SelectItem key={categoria.id} value={categoria.id}>
+                                    <div className="flex items-center gap-2">
+                                      <IconComponent className="h-4 w-4 text-red-600" />
+                                      <span>{categoria.nombre}</span>
+                                    </div>
+                                  </SelectItem>
+                                );
+                              })
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
+
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
+
+              {/* Fecha de Cierre - Campo independiente debajo del grid */}
+              <FormField
+                control={form.control}
+                name="fecha_cierre"
+                render={({ field }) => (
+                  <FormItem className="space-y-3">
+                    <FormLabel className="text-base font-semibold text-gray-900">Fecha de Cierre</FormLabel>
+                    <FormControl>
+                      <div className="flex gap-2">
+                        <Input
+                          type="datetime-local"
+                          value={field.value ? new Date(field.value).toISOString().slice(0, 16) : ''}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (value) {
+                              // Convertir la fecha local a ISO string
+                              const date = new Date(value);
+                              field.onChange(date.toISOString());
+                            } else {
+                              field.onChange(null);
+                            }
+                          }}
+                          disabled={isSubmitting}
+                          className="h-11 border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 text-base"
+                        />
+                        {field.value && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => field.onChange(null)}
+                            disabled={isSubmitting}
+                            className="h-11 px-3"
+                          >
+                            Limpiar
+                          </Button>
+                        )}
+                      </div>
+                    </FormControl>
+                    
+                    {/* Indicador visual de fecha establecida */}
+                    {field.value && (
+                      <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+                        <div className="flex items-center gap-2 text-sm text-blue-800">
+                          <Calendar className="h-4 w-4" />
+                          <span className="font-medium">Fecha de cierre establecida:</span>
+                          <span>{new Date(field.value).toLocaleString('es-ES', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}</span>
+                        </div>
+                      </div>
+                    )}
+                    
+                    <FormDescription className="text-sm text-gray-600">
+                      Fecha y hora cuando se cerrará la rifa. Deja vacío si no quieres establecer una fecha específica.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
 
             <Separator />

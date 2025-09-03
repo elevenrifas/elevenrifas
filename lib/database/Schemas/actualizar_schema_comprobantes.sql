@@ -31,3 +31,4 @@ AND column_name = 'comprobante_url';
 \d+ public.pagos;
 
 
+

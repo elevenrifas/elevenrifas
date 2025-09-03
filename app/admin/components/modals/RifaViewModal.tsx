@@ -84,8 +84,24 @@ export function RifaViewModal({
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+    <Dialog 
+      open={isOpen} 
+      onOpenChange={(open) => {
+        // Solo permitir cerrar si NO se está procesando
+        onClose()
+      }}
+    >
+      <DialogContent 
+        className="max-w-4xl max-h-[90vh] overflow-y-auto"
+        // Prevenir cierre con ESC
+        onEscapeKeyDown={(e) => {
+          // Permitir cierre con ESC para modales de solo lectura
+        }}
+        // Prevenir cierre con click fuera
+        onPointerDownOutside={(e) => {
+          // Permitir cierre con click fuera para modales de solo lectura
+        }}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Eye className="h-5 w-5" />

@@ -129,18 +129,49 @@ export function TicketFormModal({
   const isLoading = isSubmitting || isProcessing
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+    <Dialog 
+      open={isOpen} 
+      onOpenChange={(open) => {
+        // Solo permitir cerrar si NO se está enviando
+        if (!isLoading) {
+          onClose()
+        }
+      }}
+    >
+      <DialogContent 
+        className="max-w-2xl max-h-[90vh] overflow-y-auto"
+        // Prevenir cierre con ESC durante envío
+        onEscapeKeyDown={(e) => {
+          if (isLoading) {
+            e.preventDefault()
+          }
+        }}
+        // Prevenir cierre con click fuera durante envío
+        onPointerDownOutside={(e) => {
+          if (isLoading) {
+            e.preventDefault()
+          }
+        }}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Ticket className="h-5 w-5" />
-            {mode === 'create' ? 'Crear Nuevo Ticket' : 'Editar Ticket'}
+            {isLoading ? (
+              mode === 'create' ? 'Creando Ticket...' : 'Actualizando Ticket...'
+            ) : (
+              mode === 'create' ? 'Crear Nuevo Ticket' : 'Editar Ticket'
+            )}
           </DialogTitle>
           <DialogDescription>
-            {mode === 'create' 
-              ? 'Complete la información para crear un nuevo ticket'
-              : 'Modifique la información del ticket'
-            }
+            {isLoading ? (
+              <span className="text-amber-600 font-medium">
+                ⏳ Procesando... Por favor espera, no cierres este modal
+              </span>
+            ) : (
+              mode === 'create' 
+                ? 'Complete la información para crear un nuevo ticket'
+                : 'Modifique la información del ticket'
+            )}
           </DialogDescription>
         </DialogHeader>
 

@@ -53,16 +53,24 @@ export function RifaCard({ rifa }: Props) {
     return () => { mounted = false };
   }, [rifa.id]);
 
-  // Función para calcular el progreso de la rifa (prioriza props con progreso del server)
+  // Función para calcular el progreso de la rifa (prioriza progreso_manual si es > 0)
   const calcularProgresoRifa = () => {
-    // Si viene desde el server (getRifasFull), úsalo
+    // PRIORIDAD 1: Si hay progreso_manual > 0, úsalo (permite override manual)
+    if (rifa.progreso_manual && rifa.progreso_manual > 0) {
+      return Math.min(Math.max(rifa.progreso_manual, 0), 100);
+    }
+    
+    // PRIORIDAD 2: Si viene desde el server (getRifasFull), úsalo
     // @ts-ignore: algunas builds agregan estos campos por RPC
     if ((rifa as any).progreso !== undefined) {
       const p = (rifa as any).progreso as number;
       return Math.min(Math.max(p, 0), 100);
     }
-    // Si se cargó por RPC cliente, úsalo
+    
+    // PRIORIDAD 3: Si se cargó por RPC cliente, úsalo
     if (stats) return Math.min(Math.max(stats.progreso, 0), 100);
+    
+    // FALLBACK: Si no hay ningún progreso, retorna 0
     return 0;
   };
 

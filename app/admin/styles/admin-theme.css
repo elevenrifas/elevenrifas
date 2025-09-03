@@ -77,8 +77,8 @@
 }
 
 /* ESTILOS PARA EL SIDEBAR ACTIVO */
-/* Estado activo principal */
-[data-active="true"] {
+/* Estado activo para items de navegación - FORZADO */
+[data-slot="sidebar-menu-button"][data-active="true"] {
   background-color: #ff0000 !important;
   color: white !important;
   border-left: 4px solid #ff0000 !important;
@@ -89,8 +89,8 @@
   box-shadow: 0 2px 8px rgba(255, 0, 0, 0.3) !important;
 }
 
-/* Hover para items activos */
-[data-active="true"]:hover {
+/* Hover para items activos - FORZADO */
+[data-slot="sidebar-menu-button"][data-active="true"]:hover {
   background-color: #cc0000 !important;
   transform: translateX(2px) !important;
   box-shadow: 0 4px 12px rgba(255, 0, 0, 0.4) !important;
@@ -120,6 +120,25 @@
 /* Efecto de transición suave para todos los cambios */
 [data-slot="sidebar-menu-button"] * {
   transition: all 0.2s ease-in-out !important;
+}
+
+/* SOBRESCRIBIR ESTILOS DEL SIDEBAR BASE PARA ESTADO ACTIVO */
+[data-slot="sidebar-menu-button"][data-active="true"] {
+  background-color: #ff0000 !important;
+  color: white !important;
+  border-left: 4px solid #ff0000 !important;
+  font-weight: bold !important;
+  border-radius: 8px !important;
+  position: relative !important;
+  transition: all 0.2s ease-in-out !important;
+  box-shadow: 0 2px 8px rgba(255, 0, 0, 0.3) !important;
+}
+
+/* SOBRESCRIBIR HOVER PARA ESTADO ACTIVO */
+[data-slot="sidebar-menu-button"][data-active="true"]:hover {
+  background-color: #cc0000 !important;
+  transform: translateX(2px) !important;
+  box-shadow: 0 4px 12px rgba(255, 0, 0, 0.4) !important;
 }
 
 @keyframes spin {

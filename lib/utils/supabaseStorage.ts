@@ -59,19 +59,26 @@ export async function uploadRifaImage(
       return { success: false, error: validation.error }
     }
 
-    // Generar nombre único
+    // Generar nombre único con estructura de carpetas
     const timestamp = Date.now()
     const randomString = Math.random().toString(36).substring(2, 15)
     const extension = file.name.split('.').pop()
     const fileName = `rifa-${rifaId}_${timestamp}_${randomString}.${extension}`
     const filePath = `rifas/${rifaId}/${fileName}`
 
-    // Subir archivo
+    console.log('🔍 [uploadRifaImage] Intentando subir:', {
+      bucket: 'imagenes-rifas',
+      filePath,
+      fileName,
+      rifaId
+    })
+
+    // Subir archivo - Supabase creará las carpetas automáticamente
     const { data, error } = await supabaseAdmin.storage
       .from('imagenes-rifas')
       .upload(filePath, file, {
         cacheControl: '3600',
-        upsert: false
+        upsert: false // No sobrescribir si existe
       })
 
     if (error) {
@@ -83,6 +90,8 @@ export async function uploadRifaImage(
     const { data: urlData } = supabaseAdmin.storage
       .from('imagenes-rifas')
       .getPublicUrl(filePath)
+
+    console.log('✅ [uploadRifaImage] Imagen subida exitosamente:', urlData.publicUrl)
 
     return {
       success: true,

@@ -113,15 +113,43 @@ export function DuplicateTicketModal({
   if (!ticket) return null
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+    <Dialog 
+      open={isOpen} 
+      onOpenChange={(open) => {
+        // Solo permitir cerrar si NO se está enviando
+        if (!isLoading) {
+          onClose()
+        }
+      }}
+    >
+      <DialogContent 
+        className="max-w-2xl max-h-[90vh] overflow-y-auto"
+        // Prevenir cierre con ESC durante envío
+        onEscapeKeyDown={(e) => {
+          if (isLoading) {
+            e.preventDefault()
+          }
+        }}
+        // Prevenir cierre con click fuera durante envío
+        onPointerDownOutside={(e) => {
+          if (isLoading) {
+            e.preventDefault()
+          }
+        }}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Copy className="h-5 w-5" />
-            Duplicar Ticket #{ticket.numero_ticket}
+            {isLoading ? 'Duplicando Ticket...' : `Duplicar Ticket #${ticket.numero_ticket}`}
           </DialogTitle>
           <DialogDescription>
-            Complete la información para crear una copia del ticket. Los campos se han pre-llenado con valores por defecto.
+            {isLoading ? (
+              <span className="text-amber-600 font-medium">
+                ⏳ Procesando... Por favor espera, no cierres este modal
+              </span>
+            ) : (
+              'Complete la información para crear una copia del ticket. Los campos se han pre-llenado con valores por defecto.'
+            )}
           </DialogDescription>
         </DialogHeader>
 
@@ -364,6 +392,7 @@ export function DuplicateTicketModal({
     </Dialog>
   )
 }
+
 
 
 

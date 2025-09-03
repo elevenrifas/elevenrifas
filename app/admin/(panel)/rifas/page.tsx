@@ -35,8 +35,7 @@ export default function AdminRifasPage() {
         'Descripción',
         'Precio Ticket',
         'Estado',
-        'Total Tickets',
-        'Tickets Disponibles',
+                'Total Tickets',
         'Fecha Creación',
         'Fecha Cierre',
         'Categoría ID'
@@ -51,8 +50,7 @@ export default function AdminRifasPage() {
           `"${rifa.descripcion}"`,
           rifa.precio_ticket,
           rifa.estado,
-          rifa.total_tickets,
-          rifa.tickets_disponibles,
+                    rifa.total_tickets,
           rifa.fecha_creacion,
           rifa.fecha_cierre,
           rifa.categoria_id
