@@ -92,6 +92,7 @@ export interface DataTableEnhancedProps<TData, TValue> {
   enableColumnFilters?: boolean
   enableRowSelection?: boolean
   enableGlobalFilter?: boolean
+  globalFilterFn?: (row: any, columnId: string, filterValue: any, addMeta: (meta: any) => void) => boolean | string
 }
 
 export function DataTableEnhanced<TData, TValue>({
@@ -145,6 +146,7 @@ export function DataTableEnhanced<TData, TValue>({
   enableColumnFilters = true,
   enableRowSelection = false,
   enableGlobalFilter = true,
+  globalFilterFn,
 }: DataTableEnhancedProps<TData, TValue>) {
   const [rowSelection, setRowSelection] = React.useState({})
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
@@ -188,7 +190,7 @@ export function DataTableEnhanced<TData, TValue>({
     onGlobalFilterChange: setGlobalFilter,
     getFacetedRowModel: getFacetedRowModel(),
     getFacetedUniqueValues: getFacetedUniqueValues(),
-    globalFilterFn: "includesString",
+    globalFilterFn: globalFilterFn || "includesString",
     state: {
       sorting,
       columnFilters,

@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { User, Key, Shield } from "lucide-react"
+import { showCreateSuccessToast, showUpdateSuccessToast, showCreateErrorToast, showUpdateErrorToast } from "@/components/ui/toast-notifications"
 import type { AdminUsuarioVerificacion } from "@/lib/database/admin_database/usuarios_verificacion"
 
 // =====================================================
@@ -118,6 +119,12 @@ export function UsuarioVerificacionFormModal({
       const result = await onSubmit(submitData)
 
       if (result.success) {
+        // Mostrar toast de éxito y cerrar modal
+        if (isEditing) {
+          showUpdateSuccessToast('usuario')
+        } else {
+          showCreateSuccessToast('usuario')
+        }
         onClose()
         // Reset form
         setFormData({
@@ -127,10 +134,22 @@ export function UsuarioVerificacionFormModal({
         })
       } else {
         // Mostrar error del servidor
-        setErrors({ submit: result.error || 'Error al guardar el usuario' })
+        const errorMessage = result.error || 'Error al guardar el usuario'
+        if (isEditing) {
+          showUpdateErrorToast('usuario', errorMessage)
+        } else {
+          showCreateErrorToast('usuario', errorMessage)
+        }
+        setErrors({ submit: errorMessage })
       }
     } catch (error) {
-      setErrors({ submit: 'Error inesperado al guardar el usuario' })
+      const errorMessage = 'Error inesperado al guardar el usuario'
+      if (isEditing) {
+        showUpdateErrorToast('usuario', errorMessage)
+      } else {
+        showCreateErrorToast('usuario', errorMessage)
+      }
+      setErrors({ submit: errorMessage })
     } finally {
       setIsSubmittingLocal(false)
     }
@@ -188,13 +207,6 @@ export function UsuarioVerificacionFormModal({
               isEditing ? 'Editar Usuario de Verificación' : 'Crear Usuario de Verificación'
             )}
           </DialogTitle>
-          {isSubmittingState && (
-            <DialogDescription>
-              <span className="text-amber-600 font-medium">
-                ⏳ Procesando... Por favor espera, no cierres este modal
-              </span>
-            </DialogDescription>
-          )}
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">

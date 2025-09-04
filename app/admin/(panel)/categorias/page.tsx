@@ -1,176 +1,52 @@
 "use client"
 
 import { CategoriasRifasTable } from "@/app/admin/components/tables/CategoriasRifasTable"
-import { CategoriaFormModal } from "@/app/admin/components/modals/CategoriaFormModal"
-import { CategoriaViewModal } from "@/app/admin/components/modals/CategoriaViewModal"
-import { DeleteConfirmModal } from "@/app/admin/components/modals/DeleteConfirmModal"
-import { useCrudCategorias } from "@/hooks/use-crud-categorias"
-import { useState } from "react"
-import type { AdminCategoria } from "@/lib/database/admin_database/categorias"
 
 // =====================================================
 // 🎯 PÁGINA CATEGORÍAS - ELEVEN RIFAS
 // =====================================================
 // Página principal para gestionar categorías de rifas
-// Implementa funcionalidad completa de CRUD
+// El refresh automático se maneja en el hook CRUD
 // =====================================================
 
 export default function CategoriasPage() {
-  const [showCreateModal, setShowCreateModal] = useState(false)
-  const [showEditModal, setShowEditModal] = useState(false)
-  const [showViewModal, setShowViewModal] = useState(false)
-  const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [selectedCategoria, setSelectedCategoria] = useState<AdminCategoria | null>(null)
-
-  const {
-    categorias,
-    isLoading,
-    error,
-    isCreating,
-    isUpdating,
-    isDeleting,
-    createCategoria,
-    updateCategoria,
-    deleteCategoria,
-    deleteMultipleCategorias,
-    refreshCategorias
-  } = useCrudCategorias()
-
-  // =====================================================
-  // 🔧 FUNCIONES DE MANEJO
-  // =====================================================
-
-  const handleCreate = async (data: any) => {
-    try {
-      const result = await createCategoria(data)
-      if (result.success) {
-        setShowCreateModal(false)
-        await refreshCategorias()
-      }
-      return result
-    } catch (error) {
-      console.error('Error en handleCreate:', error)
-      return { success: false, error: 'Error inesperado al crear' }
-    }
+  const handleCreate = () => {
+    console.log("Crear nueva categoría")
+    // La tabla maneja la creación internamente
   }
 
-  const handleEdit = async (data: any) => {
-    if (selectedCategoria) {
-      try {
-        const result = await updateCategoria(selectedCategoria.id, data)
-        if (result.success) {
-          setShowEditModal(false)
-          setSelectedCategoria(null)
-          await refreshCategorias()
-        }
-        return result
-      } catch (error) {
-        console.error('Error en handleEdit:', error)
-        return { success: false, error: 'Error inesperado al editar' }
-      }
-    }
-    return { success: false, error: 'No hay categoría seleccionada' }
+  const handleEdit = (categoria: any) => {
+    console.log("Editar categoría:", categoria)
+    // La tabla maneja la edición internamente
   }
 
-  const handleDelete = async () => {
-    if (selectedCategoria) {
-      const result = await deleteCategoria(selectedCategoria.id)
-      if (result.success) {
-        setShowDeleteModal(false)
-        setSelectedCategoria(null)
-        await refreshCategorias()
-      }
-      return result
-    }
-    return { success: false, error: 'No hay categoría seleccionada' }
+  const handleDelete = (categorias: any[]) => {
+    console.log("Eliminar categorías:", categorias)
+    // La tabla maneja la eliminación internamente
   }
 
-  const handleDeleteMultiple = async (categorias: AdminCategoria[]) => {
-    try {
-      const ids = categorias.map(cat => cat.id)
-      const result = await deleteMultipleCategorias(ids)
-      if (result.success) {
-        await refreshCategorias()
-      }
-      return result
-    } catch (error) {
-      console.error('Error en handleDeleteMultiple:', error)
-      return { success: false, error: 'Error inesperado al eliminar' }
-    }
+  const handleExport = (categorias: any[]) => {
+    console.log("Exportar categorías:", categorias)
+    // La tabla maneja la exportación internamente
   }
-
-  // =====================================================
-  // 🎨 RENDERIZADO
-  // =====================================================
 
   return (
     <div className="px-4 lg:px-6">
+      {/* Header de la página */}
+      <div className="flex flex-col space-y-2 mb-6">
+        <h1 className="text-3xl font-bold tracking-tight">Categorías</h1>
+        <p className="text-muted-foreground">
+          Gestiona las categorías de rifas del sistema. 
+          Las categorías ayudan a organizar y clasificar las rifas.
+        </p>
+      </div>
+
       {/* Tabla de categorías */}
       <CategoriasRifasTable
-        onCreate={() => setShowCreateModal(true)}
-        onEdit={(categoria) => {
-          setSelectedCategoria(categoria)
-          setShowEditModal(true)
-        }}
-        onView={(categoria) => {
-          setSelectedCategoria(categoria)
-          setShowViewModal(true)
-        }}
-        onDelete={handleDeleteMultiple}
-      />
-
-      {/* Modal de Crear Categoría */}
-      <CategoriaFormModal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        onSubmit={handleCreate}
-        isLoading={isCreating}
-      />
-
-      {/* Modal de Editar Categoría */}
-      <CategoriaFormModal
-        isOpen={showEditModal}
-        onClose={() => {
-          setShowEditModal(false)
-          setSelectedCategoria(null)
-        }}
-        onSubmit={handleEdit}
-        categoria={selectedCategoria}
-        isLoading={isUpdating}
-      />
-
-      {/* Modal de Ver Categoría */}
-      <CategoriaViewModal
-        isOpen={showViewModal}
-        onClose={() => {
-          setShowViewModal(false)
-          setSelectedCategoria(null)
-        }}
-        categoria={selectedCategoria}
-        onEdit={(categoria) => {
-          setSelectedCategoria(categoria)
-          setShowViewModal(false)
-          setShowEditModal(true)
-        }}
-        onDelete={(categoria) => {
-          setSelectedCategoria(categoria)
-          setShowViewModal(false)
-          setShowDeleteModal(true)
-        }}
-      />
-
-      {/* Modal de Confirmación de Eliminación */}
-      <DeleteConfirmModal
-        isOpen={showDeleteModal}
-        onClose={() => {
-          setShowDeleteModal(false)
-          setSelectedCategoria(null)
-        }}
-        onConfirm={handleDelete}
-        title="Eliminar Categoría"
-        description={`¿Estás seguro de que quieres eliminar la categoría "${selectedCategoria?.nombre}"? Esta acción no se puede deshacer.`}
-        entityName="categoría"
-        isDeleting={isDeleting}
+        onCreate={handleCreate}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        onExport={handleExport}
       />
     </div>
   )

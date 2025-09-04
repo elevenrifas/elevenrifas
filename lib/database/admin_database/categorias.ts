@@ -36,7 +36,7 @@ export async function adminListCategorias(params?: {
   offset?: number
 }): Promise<{ success: boolean; data?: AdminCategoria[]; error?: string; total?: number }> {
   const {
-    ordenarPor = 'nombre', // Cambiado de 'orden' a 'nombre' que sí existe
+    ordenarPor = 'nombre', // Usar 'nombre' que sí existe en el esquema
     orden = 'asc',
     limite = 1000,
     offset = 0
@@ -44,23 +44,15 @@ export async function adminListCategorias(params?: {
 
   return safeAdminQuery(
     async () => {
-      console.log('🔍 [DEBUG] Iniciando consulta de categorías...')
-      console.log('🔍 [DEBUG] Parámetros:', { ordenarPor, orden, limite, offset })
-      
       let query = createAdminQuery('categorias_rifas').select('*')
-      console.log('🔍 [DEBUG] Query base creada')
       
       // Aplicar ordenamiento usando helper
       query = applyOrdering(query, ordenarPor, orden)
-      console.log('🔍 [DEBUG] Ordenamiento aplicado')
       
       // Aplicar paginación usando helper
       query = applyPagination(query, limite, offset)
-      console.log('🔍 [DEBUG] Paginación aplicada')
 
-      console.log('🔍 [DEBUG] Ejecutando query...')
       const result = await query
-      console.log('🔍 [DEBUG] Resultado obtenido:', result)
       
       return { 
         success: true,
@@ -88,7 +80,7 @@ export async function adminGetCategoria(id: string): Promise<{ success: boolean;
 }
 
 // 3. CREAR CATEGORIA
-export async function adminCreateCategoria(categoriaData: CategoriaInsert): Promise<{ success: boolean; data?: AdminCategoria; error?: string }> {
+export async function adminCreateCategoria(categoriaData: CategoriaInsert): Promise<{ success: boolean; data?: AdminCategoria; id?: string; error?: string }> {
   return safeAdminQuery(
     async () => {
       const { data, error } = await createAdminQuery('categorias_rifas')
@@ -97,7 +89,7 @@ export async function adminCreateCategoria(categoriaData: CategoriaInsert): Prom
         .single()
       
       if (error) throw error
-      return { success: true, data }
+      return { success: true, data, id: data?.id }
     },
     'Error al crear categoría'
   )
@@ -122,15 +114,83 @@ export async function adminUpdateCategoria(id: string, categoriaData: CategoriaU
 
 // 5. ELIMINAR CATEGORIA
 export async function adminDeleteCategoria(id: string): Promise<{ success: boolean; error?: string }> {
-  return safeAdminQuery(
-    async () => {
-      const { error } = await createAdminQuery('categorias_rifas')
+  try {
+    const { data, error } = await createAdminQuery('categorias_rifas')
+      .delete()
+      .eq('id', id)
+      .select()
+    
+    if (error) {
+      // Detectar error de restricción de clave foránea
+      const isForeignKeyError = error.code === '23503' || 
+          error.message?.includes('foreign key constraint') || 
+          error.message?.includes('violates foreign key constraint') ||
+          error.details?.includes('foreign key constraint') ||
+          error.hint?.includes('foreign key constraint')
+      
+      if (isForeignKeyError) {
+        return { 
+          success: false, 
+          error: 'No se puede eliminar esta categoría porque está siendo utilizada por una o más rifas. Primero elimine o cambie la categoría de las rifas asociadas.' 
+        }
+      }
+      
+      // Para otros errores, retornar error genérico
+      return {
+        success: false,
+        error: 'Error inesperado al eliminar categoría'
+      }
+    }
+    
+    return { success: true, data: data }
+  } catch (err) {
+    return { 
+      success: false, 
+      error: 'Error inesperado al eliminar categoría' 
+    }
+  }
+}
+
+// 6. ELIMINAR MÚLTIPLES CATEGORIAS
+export async function adminDeleteMultipleCategorias(ids: string[]): Promise<{ success: boolean; error?: string }> {
+  try {
+    const results = []
+    for (const id of ids) {
+      const { data, error } = await createAdminQuery('categorias_rifas')
         .delete()
         .eq('id', id)
+        .select()
       
-      if (error) throw error
-      return { success: true }
-    },
-    'Error al eliminar categoría'
-  )
+      if (error) {
+        // Detectar error de restricción de clave foránea
+        const isForeignKeyError = error.code === '23503' || 
+            error.message?.includes('foreign key constraint') || 
+            error.message?.includes('violates foreign key constraint') ||
+            error.details?.includes('foreign key constraint') ||
+            error.hint?.includes('foreign key constraint')
+        
+        if (isForeignKeyError) {
+          return { 
+            success: false, 
+            error: 'No se pueden eliminar algunas categorías porque están siendo utilizadas por una o más rifas. Primero elimine o cambie la categoría de las rifas asociadas.' 
+          }
+        }
+        
+        // Para otros errores, retornar error genérico
+        return {
+          success: false,
+          error: 'Error inesperado al eliminar categorías'
+        }
+      }
+      
+      results.push(data)
+    }
+    
+    return { success: true, data: results }
+  } catch (err) {
+    return { 
+      success: false, 
+      error: 'Error inesperado al eliminar categorías' 
+    }
+  }
 }

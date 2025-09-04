@@ -115,6 +115,24 @@ export async function adminListPagos(params?: {
         tickets: pago.tickets || []
       }))
 
+      // Ordenar: pendientes primero, luego verificados y rechazados.
+      // Dentro de cada grupo, ordenar por fecha de pago descendente.
+      const estadoPeso: Record<string, number> = {
+        pendiente: 0,
+        verificado: 1,
+        aprobado: 1, // por compatibilidad si existiera
+        rechazado: 2,
+      }
+
+      pagosTransformados.sort((a: any, b: any) => {
+        const pa = estadoPeso[(a.estado || '').toLowerCase()] ?? 99
+        const pb = estadoPeso[(b.estado || '').toLowerCase()] ?? 99
+        if (pa !== pb) return pa - pb
+        const da = a.fecha_pago ? new Date(a.fecha_pago).getTime() : 0
+        const db = b.fecha_pago ? new Date(b.fecha_pago).getTime() : 0
+        return db - da
+      })
+
       return { 
         data: pagosTransformados as AdminPago[],
         error: null,

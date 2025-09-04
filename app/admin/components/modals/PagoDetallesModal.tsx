@@ -160,22 +160,57 @@ export function PagoDetallesModal({
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">
+                <div className="text-xl font-bold text-green-600">
                   {formatCurrency(pago.monto_usd)}
                 </div>
                 <p className="text-sm text-gray-600">Monto USD</p>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">
+                <div className="text-xl font-bold text-blue-600">
                   {formatCurrency(pago.monto_bs, 'BS')}
                 </div>
                 <p className="text-sm text-gray-600">Monto Bs</p>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-purple-600">
+                <div className="text-xl font-bold text-purple-600">
                   {pago.tasa_cambio}
                 </div>
                 <p className="text-sm text-gray-600">Tasa de Cambio</p>
+              </div>
+            </div>
+
+            {/* Resumen Cliente y Rifa */}
+            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Cliente */}
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-white/70 rounded-lg border border-blue-200">
+                  <User className="h-5 w-5 text-blue-700" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">
+                    {pago.tickets?.[0]?.nombre || 'Cliente no disponible'}
+                  </p>
+                  <p className="text-xs text-gray-600 truncate">
+                    {pago.tickets?.[0]?.cedula || 'Cédula no disponible'}
+                  </p>
+                  <p className="text-xs text-gray-600 truncate">
+                    {pago.tickets?.[0]?.telefono || 'Teléfono no disponible'}
+                  </p>
+                </div>
+              </div>
+              {/* Rifa */}
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-white/70 rounded-lg border border-blue-200">
+                  <Ticket className="h-5 w-5 text-purple-700" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">
+                    {pago.tickets?.[0]?.rifas?.titulo || 'Rifa no disponible'}
+                  </p>
+                  <p className="text-xs text-gray-600 truncate">
+                    {pago.tickets?.[0]?.rifas?.precio_ticket ? `Precio ticket: ${formatCurrency(pago.tickets?.[0]?.rifas?.precio_ticket)}` : ' '} 
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -309,63 +344,20 @@ export function PagoDetallesModal({
                     <div key={ticket.id} className="bg-gray-50 rounded-lg p-3 border border-gray-200">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-xs font-medium text-gray-500">Ticket #{index + 1}</span>
-                        <span className="text-xs text-gray-400">ID: {ticket.id.slice(0, 8)}...</span>
                       </div>
-                      <div className="space-y-1">
+                      <div>
                         <p className="text-sm font-medium text-gray-900">{ticket.numero_ticket}</p>
-                        <p className="text-xs text-gray-600">Número</p>
                       </div>
                     </div>
                   ))}
                 </div>
                 
-                {/* Información del Cliente */}
-                {pago.tickets[0] && (
-                  <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                    <h4 className="font-medium text-gray-900 text-sm mb-3">Información del Cliente</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div>
-                        <p className="text-xs text-gray-500">Nombre</p>
-                        <p className="text-sm font-medium text-gray-900">{pago.tickets[0].nombre}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500">Cédula</p>
-                        <p className="text-sm font-medium text-gray-900">{pago.tickets[0].cedula}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500">Teléfono</p>
-                        <p className="text-sm font-medium text-gray-900">{pago.tickets[0].telefono}</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                {/* Información del Cliente eliminada - consolidada en el encabezado */}
               </div>
             </div>
           )}
 
-          {/* Información de la Rifa */}
-          {rifa && (
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 bg-purple-100 rounded-lg">
-                  <Ticket className="h-5 w-5 text-purple-600" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900">Información de la Rifa</h3>
-              </div>
-              
-              <div className="space-y-4">
-                <div>
-                  <h4 className="text-lg font-medium text-gray-900 mb-2">{rifa.titulo}</h4>
-                  <div className="flex items-center gap-4 text-sm text-gray-600">
-                    <span className="flex items-center gap-2">
-                      <DollarSign className="h-4 w-4" />
-                      Precio por ticket: {formatCurrency(rifa.precio_ticket)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+          {/* Información de la Rifa eliminada por solicitud */}
 
           {/* Notas */}
           {pago.notas && (

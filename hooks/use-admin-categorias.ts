@@ -7,6 +7,7 @@ import {
   adminCreateCategoria, 
   adminUpdateCategoria, 
   adminDeleteCategoria,
+  adminDeleteMultipleCategorias,
   type AdminCategoria 
 } from '@/lib/database/admin_database/categorias'
 
@@ -40,31 +41,22 @@ export function useAdminCategorias() {
     offset?: number
   }) => {
     try {
-      console.log('🔄 [HOOK] Iniciando carga de categorías...')
-      console.log('🔄 [HOOK] Parámetros recibidos:', params)
-      
       setLoading(true)
       setError(null)
       
-      console.log('🔄 [HOOK] Llamando a adminListCategorias...')
       const result = await adminListCategorias(params)
-      console.log('🔄 [HOOK] Resultado de adminListCategorias:', result)
       
       if (result.success) {
-        console.log('🔄 [HOOK] Éxito, estableciendo categorías:', result.data)
         setCategorias(result.data || [])
       } else {
-        console.log('🔄 [HOOK] Error en resultado:', result.error)
         setError(result.error || 'Error al cargar categorías')
         setCategorias([])
       }
     } catch (err) {
-      console.error('🔄 [HOOK] Error inesperado:', err)
       setError('Error inesperado al cargar categorías')
       setCategorias([])
     } finally {
       setLoading(false)
-      console.log('🔄 [HOOK] Carga completada, loading: false')
     }
   }, [])
 
@@ -148,7 +140,8 @@ export function useAdminCategorias() {
         await loadCategorias()
         return { success: true }
       } else {
-        setError(result.error || 'Error al eliminar categoría')
+        // No establecer error global para errores controlados (como restricción de clave foránea)
+        // Solo retornar el error para que se muestre en el modal
         return { success: false, error: result.error }
       }
     } catch (err) {
@@ -165,26 +158,16 @@ export function useAdminCategorias() {
       setDeleting(true)
       setError(null)
       
-      let successCount = 0
-      let errorCount = 0
+      const result = await adminDeleteMultipleCategorias(ids)
       
-      for (const id of ids) {
-        const result = await adminDeleteCategoria(id)
-        if (result.success) {
-          successCount++
-        } else {
-          errorCount++
-        }
-      }
-      
-      // Recargar la lista después de eliminar
-      await loadCategorias()
-      
-      if (errorCount === 0) {
-        return { success: true, deleted: successCount }
+      if (result.success) {
+        // Recargar la lista después de eliminar
+        await loadCategorias()
+        return { success: true }
       } else {
-        setError(`${successCount} eliminadas, ${errorCount} con errores`)
-        return { success: false, deleted: successCount, errors: errorCount }
+        // No establecer error global para errores controlados (como restricción de clave foránea)
+        // Solo retornar el error para que se muestre en el modal
+        return { success: false, error: result.error }
       }
     } catch (err) {
       setError('Error inesperado al eliminar categorías')

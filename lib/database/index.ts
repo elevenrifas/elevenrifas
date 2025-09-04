@@ -35,19 +35,28 @@ export async function safeAdminQuery<T>(
   errorMessage: string = 'Error en consulta admin'
 ): Promise<{ success: boolean; data?: T; error?: string }> {
   try {
-    const { data, error } = await queryFn()
+    const result = await queryFn()
+    console.log('🔍 [safeAdminQuery] Resultado de query:', result)
     
-    if (error) {
-      console.error(`❌ [safeAdminQuery] ${errorMessage}:`, error)
-      return { success: false, error: error.message || errorMessage }
+    if (result.error) {
+      console.error(`❌ [safeAdminQuery] ${errorMessage}:`, result.error)
+      return { 
+        success: false, 
+        error: result.error?.message || result.error?.toString() || errorMessage 
+      }
     }
     
-    return { success: true, data: data as T }
+    return { success: true, data: result.data as T }
   } catch (error) {
     console.error(`❌ [safeAdminQuery] Error inesperado:`, error)
+    console.error(`❌ [safeAdminQuery] Tipo de error:`, typeof error)
+    console.error(`❌ [safeAdminQuery] Error details:`, JSON.stringify(error, null, 2))
+    
     return { 
       success: false, 
-      error: error instanceof Error ? error.message : 'Error desconocido' 
+      error: error instanceof Error ? error.message : 
+             typeof error === 'string' ? error : 
+             'Error desconocido en la consulta' 
     }
   }
 }

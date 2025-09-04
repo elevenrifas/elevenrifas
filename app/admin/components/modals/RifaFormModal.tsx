@@ -32,6 +32,7 @@ import type { AdminRifa } from "@/lib/database/admin_database/rifas"
 import type { CrudRifaData } from "@/hooks/use-crud-rifas"
 import { ImageUpload } from '../ui/image-upload'
 import { useCategorias } from '@/hooks/use-categorias'
+import { showCreateSuccessToast, showUpdateSuccessToast, showCreateErrorToast, showUpdateErrorToast } from "@/components/ui/toast-notifications"
 
 // Función simple para obtener iconos de Lucide React (igual que en la tabla)
 const getCategoryIcon = (iconName: string) => {
@@ -262,18 +263,33 @@ export function RifaFormModal({
         fecha_cierre: data.fecha_cierre === "" ? null : data.fecha_cierre
       };
       
-      console.log('🔍 Datos del formulario a enviar:', data)
-      console.log('🔍 Datos limpios a enviar:', datosLimpios)
-      
       const result = await onSubmit(datosLimpios)
       if (result.success) {
+        // Mostrar toast de éxito y cerrar modal
+        if (isEditing) {
+          showUpdateSuccessToast('rifa')
+        } else {
+          showCreateSuccessToast('rifa')
+        }
         onClose()
         form.reset()
+      } else {
+        // Mostrar toast de error
+        if (isEditing) {
+          showUpdateErrorToast('rifa', result.error)
+        } else {
+          showCreateErrorToast('rifa', result.error)
+        }
       }
       return result
     } catch (error) {
-      console.error('Error en handleSubmit:', error)
-      return { success: false, error: 'Error inesperado al procesar el formulario' }
+      const errorMessage = 'Error inesperado al procesar el formulario'
+      if (isEditing) {
+        showUpdateErrorToast('rifa', errorMessage)
+      } else {
+        showCreateErrorToast('rifa', errorMessage)
+      }
+      return { success: false, error: errorMessage }
     }
   }
 
@@ -430,7 +446,6 @@ export function RifaFormModal({
                         <Select onValueChange={(value) => {
                           // Convertir "none" a null para la base de datos
                           const categoriaValue = value === "none" ? null : value;
-                          console.log('🔍 Categoría seleccionada:', { value, categoriaValue });
                           field.onChange(categoriaValue);
                         }} defaultValue={field.value || "none"}>
                           <SelectTrigger className="h-11 border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200">

@@ -11,9 +11,10 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu"
-import { MoreHorizontal, User, Mail, Phone, CreditCard, Calendar, Eye, Ticket, Gift } from "lucide-react"
+import { MoreHorizontal, User, Mail, Phone, CreditCard, Calendar, Eye, Ticket, Gift, Download } from "lucide-react"
 import type { AdminCliente } from "@/types"
 import { useAdminClientes } from "@/hooks/use-admin-clientes"
+import { exportClientesToExcel } from "@/lib/utils/excel-export"
 
 // =====================================================
 // 👥 TABLA CLIENTES - ELEVEN RIFAS
@@ -101,9 +102,9 @@ export function ClientesTable({
         onExport(dataToExport)
         console.log(`🔄 Exportando ${dataToExport.length} clientes (callback personalizado)`)
       } else {
-        // Exportación automática a CSV si no hay callback
-        exportToCSV(dataToExport, 'clientes')
-        console.log(`📊 Exportando ${dataToExport.length} clientes a CSV`)
+        // Exportación automática a Excel
+        exportClientesToExcel(dataToExport, 'clientes')
+        console.log(`📊 Exportando ${dataToExport.length} clientes a Excel`)
       }
     } catch (error) {
       console.error('Error al exportar:', error)
@@ -331,8 +332,36 @@ export function ClientesTable({
       {createCRUDTable({
         columns: clientesColumns,
         data: clientes as AdminCliente[],
-        searchKey: "nombre",
-        searchPlaceholder: "Buscar por nombre, cédula, correo o teléfono...",
+        // Búsqueda global en cualquier columna relevante
+        enableGlobalFilter: true,
+        searchPlaceholder: "Buscar por cédula, nombre, correo, teléfono, tickets o rifas...",
+        globalFilterFn: (row: any, _columnId: string, filterValue: any) => {
+          try {
+            const value = String(filterValue || '').toLowerCase().trim()
+            if (!value) return true
+            const c = row.original as AdminCliente
+            const cedula = (c.cedula || '').toLowerCase()
+            const nombre = (c.nombre || '').toLowerCase()
+            const correo = (c.correo || '').toLowerCase()
+            const telefono = (c.telefono || '').toLowerCase()
+            const totalTickets = String(c.total_tickets ?? '').toLowerCase()
+            const totalRifas = String(c.total_rifas ?? '').toLowerCase()
+            const primer = c.primer_compra ? new Date(c.primer_compra).toLocaleDateString('es-ES').toLowerCase() : ''
+            const ultima = c.ultima_compra ? new Date(c.ultima_compra).toLocaleDateString('es-ES').toLowerCase() : ''
+            return (
+              cedula.includes(value) ||
+              nombre.includes(value) ||
+              correo.includes(value) ||
+              telefono.includes(value) ||
+              totalTickets.includes(value) ||
+              totalRifas.includes(value) ||
+              primer.includes(value) ||
+              ultima.includes(value)
+            )
+          } catch {
+            return true
+          }
+        },
         loading: isLoading || isRefreshing,
         error: error,
         onRefresh: handleRefresh,

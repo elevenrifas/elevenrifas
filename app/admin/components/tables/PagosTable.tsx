@@ -101,33 +101,47 @@ export function PagosTable({
       accessorKey: "estado",
       header: "Estado",
       cell: ({ row }) => {
-        const estado = row.original.estado
-        const getEstadoConfig = (estado: string) => {
-          switch (estado) {
-            case 'pendiente':
-              return { label: 'Pendiente', variant: 'secondary', icon: Clock }
-            case 'aprobado':
-              return { label: 'Aprobado', variant: 'default', icon: CheckCircle }
+        const estado = (row.original.estado || '').toLowerCase()
+
+        const getEstadoColorClasses = (value: string) => {
+          switch (value) {
+            case 'verificado':
+              return 'bg-green-100 text-green-800 border-green-200'
             case 'rechazado':
-              return { label: 'Rechazado', variant: 'destructive', icon: XCircle }
+              return 'bg-red-100 text-red-800 border-red-200'
+            case 'pendiente':
+              return 'bg-amber-100 text-amber-800 border-amber-200'
             default:
-              return { label: estado, variant: 'outline', icon: AlertTriangle }
+              return 'bg-gray-100 text-gray-800 border-gray-200'
           }
         }
-        
-        const config = getEstadoConfig(estado)
-        const IconComponent = config.icon
-        
+
+        const getDotColorClasses = (value: string) => {
+          switch (value) {
+            case 'verificado':
+              return 'bg-green-500'
+            case 'rechazado':
+              return 'bg-red-500'
+            case 'pendiente':
+              return 'bg-amber-500'
+            default:
+              return 'bg-gray-500'
+          }
+        }
+
+        const colorClasses = getEstadoColorClasses(estado)
+        const dotClasses = getDotColorClasses(estado)
+
         return (
           <div className="flex items-center justify-center">
-            <Badge variant={config.variant as any} className="text-xs">
-              <IconComponent className="mr-1 h-3 w-3" />
-              {config.label}
+            <Badge variant="outline" className={`flex items-center gap-2 px-3 py-1 w-28 ${colorClasses}`}>
+              <div className={`w-2 h-2 rounded-full ${dotClasses}`} />
+              <span className="font-medium capitalize">{estado || 'N/A'}</span>
             </Badge>
           </div>
         )
       },
-      size: 120,
+      size: 140,
     },
     {
       accessorKey: "tipo_pago",

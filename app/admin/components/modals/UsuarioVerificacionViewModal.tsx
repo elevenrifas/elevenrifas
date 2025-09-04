@@ -16,7 +16,7 @@ import {
   Copy
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { toast } from "sonner"
+import { showSuccessToast, showErrorToast } from "@/components/ui/toast-notifications"
 import type { AdminUsuarioVerificacion } from "@/lib/database/admin_database/usuarios_verificacion"
 
 // =====================================================
@@ -43,9 +43,9 @@ export function UsuarioVerificacionViewModal({
   const copyIdToClipboard = async () => {
     try {
       await navigator.clipboard.writeText(usuario.id)
-      toast.success('ID copiado al portapapeles')
+      showSuccessToast('ID copiado al portapapeles')
     } catch (error) {
-      toast.error('Error al copiar ID')
+      showErrorToast('Error al copiar el ID')
     }
   }
 

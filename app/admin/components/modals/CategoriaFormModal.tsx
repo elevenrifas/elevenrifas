@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Loader2, Tag } from "lucide-react"
 import { IconPicker } from "@/app/admin/components/ui/icon-picker"
+import { showCreateSuccessToast, showUpdateSuccessToast, showCreateErrorToast, showUpdateErrorToast } from "@/components/ui/toast-notifications"
 import type { AdminCategoria } from "@/lib/database/admin_database/categorias"
 
 // =====================================================
@@ -110,18 +111,42 @@ export function CategoriaFormModal({
     setIsSubmitting(true)
     
     try {
-      const result = await onSubmit(formData)
+      // Preparar datos para envío - solo campos requeridos
+      const submitData = {
+        nombre: formData.nombre?.trim(),
+        icono: formData.icono || 'tag',
+        descripcion: formData.descripcion?.trim() || null
+      }
+      
+      const result = await onSubmit(submitData)
       
       if (result.success) {
+        // Mostrar toast de éxito y cerrar modal
+        if (isEditing) {
+          showUpdateSuccessToast('categoría')
+        } else {
+          showCreateSuccessToast('categoría')
+        }
         onClose()
       } else {
         // Mostrar error general si existe
         if (result.error) {
+          if (isEditing) {
+            showUpdateErrorToast('categoría', result.error)
+          } else {
+            showCreateErrorToast('categoría', result.error)
+          }
           setErrors({ general: result.error })
         }
       }
     } catch (error) {
-      setErrors({ general: 'Error inesperado al guardar' })
+      const errorMessage = 'Error inesperado al guardar'
+      if (isEditing) {
+        showUpdateErrorToast('categoría', errorMessage)
+      } else {
+        showCreateErrorToast('categoría', errorMessage)
+      }
+      setErrors({ general: errorMessage })
     } finally {
       setIsSubmitting(false)
     }
@@ -173,13 +198,7 @@ export function CategoriaFormModal({
             )}
           </DialogTitle>
           <DialogDescription>
-            {isSubmitting ? (
-              <span className="text-amber-600 font-medium">
-                ⏳ Procesando... Por favor espera, no cierres este modal
-              </span>
-            ) : (
-              description
-            )}
+            {description}
           </DialogDescription>
         </DialogHeader>
 

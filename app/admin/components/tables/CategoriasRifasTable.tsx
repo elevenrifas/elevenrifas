@@ -11,10 +11,12 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu"
-import { MoreHorizontal, Edit, Trash2, Eye, Tag } from "lucide-react"
+import { MoreHorizontal, Edit, Trash2, Tag } from "lucide-react"
 import * as LucideIcons from "lucide-react"
 import type { AdminCategoria } from "@/lib/database/admin_database/categorias"
-import { useAdminCategorias } from "@/hooks/use-admin-categorias"
+import { useCrudCategorias } from "@/hooks/use-crud-categorias"
+import { DeleteConfirmModal } from "../modals/DeleteConfirmModal"
+import { CategoriaFormModal } from "../modals/CategoriaFormModal"
 
 // =====================================================
 // 🎯 TABLA CATEGORIAS RIFAS - ELEVEN RIFAS
@@ -33,7 +35,6 @@ interface CategoriasRifasTableProps {
   onCreate?: () => void
   onEdit?: (categoria: Categoria) => void
   onDelete?: (categorias: Categoria[]) => void
-  onView?: (categoria: Categoria) => void
   onExport?: (categorias: Categoria[]) => void
 }
 
@@ -42,23 +43,45 @@ export function CategoriasRifasTable({
   onCreate,
   onEdit,
   onDelete,
-  onView,
   onExport,
 }: CategoriasRifasTableProps) {
-  // Hook para obtener categorías de la base de datos
-  const { categorias, loading, error, loadCategorias } = useAdminCategorias()
-  const [selectedRows, setSelectedRows] = React.useState<Categoria[]>([])
+  // Hook CRUD para categorías
+  const {
+    categorias,
+    isLoading,
+    error,
+    isCreating,
+    isUpdating,
+    isDeleting,
+    showCreateModal,
+    showEditModal,
+    showDeleteModal,
+    selectedCategoria,
+    selectedCategorias,
+    createCategoria,
+    updateCategoria,
+    deleteCategoria,
+    deleteMultipleCategorias,
+    openCreateModal,
+    closeCreateModal,
+    openEditModal,
+    closeEditModal,
+    openDeleteModal,
+    closeDeleteModal,
+    selectMultipleCategorias,
+    loadCategorias,
+    refreshCategorias
+  } = useCrudCategorias()
 
-  // Cargar categorías al montar el componente
+  // Forzar carga inicial de categorías
   React.useEffect(() => {
-    console.log('🔄 [TABLA] Cargando categorías...')
-    console.log('🔄 [TABLA] Hook disponible:', !!loadCategorias)
+    console.log('🔄 [TABLA] Forzando carga inicial de categorías...')
     loadCategorias()
-  }, [loadCategorias]) // Agregado loadCategorias como dependencia
+  }, []) // Solo ejecutar una vez al montar
 
   // Debug: mostrar estado de los datos
   React.useEffect(() => {
-    console.log('📊 Estado de categorías:', { categorias, loading, error })
+    console.log('📊 Estado de categorías:', { categorias, isLoading, error })
     console.log('📊 Categorías array:', categorias)
     console.log('📊 Tipo de categorías:', typeof categorias)
     console.log('📊 Es array?', Array.isArray(categorias))
@@ -66,19 +89,14 @@ export function CategoriasRifasTable({
       console.log('📊 Longitud del array:', categorias.length)
       console.log('📊 Primer elemento:', categorias[0])
     }
-  }, [categorias, loading, error])
-
-  // Función para manejar la selección de filas
-  const handleRowSelectionChange = React.useCallback((rows: Categoria[]) => {
-    setSelectedRows(rows)
-  }, [])
+  }, [categorias, isLoading, error])
 
   // Función para manejar la exportación
   const handleExport = () => {
     try {
       // Si hay elementos seleccionados, exportar solo esos
       // Si no hay selección, exportar todos
-      const dataToExport = selectedRows.length > 0 ? selectedRows : (categorias as Categoria[])
+      const dataToExport = selectedCategorias.length > 0 ? selectedCategorias : (categorias as Categoria[])
       
       if (onExport) {
         // Si hay callback personalizado, usarlo
@@ -138,8 +156,9 @@ export function CategoriasRifasTable({
 
   // Función para manejar el refresh
   const handleRefresh = () => {
-    loadCategorias()
+    refreshCategorias()
   }
+
 
   // Columnas de la tabla
   const categoriasColumns: ColumnDef<Categoria>[] = [
@@ -186,16 +205,12 @@ export function CategoriasRifasTable({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onView?.(categoria)}>
-                <Eye className="mr-2 h-4 w-4" />
-                Ver
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onEdit?.(categoria)}>
+              <DropdownMenuItem onClick={() => openEditModal(categoria)}>
                 <Edit className="mr-2 h-4 w-4" />
                 Editar
               </DropdownMenuItem>
               <DropdownMenuItem 
-                onClick={() => onDelete?.([categoria])}
+                onClick={() => openDeleteModal(categoria)}
                 className="text-red-600"
               >
                 <Trash2 className="mr-2 h-4 w-4" />
@@ -208,6 +223,50 @@ export function CategoriasRifasTable({
     },
   ]
 
+  // =====================================================
+  // 🔧 FUNCIONES DE MANEJO CRUD
+  // =====================================================
+
+  const handleCreate = async (data: any) => {
+    try {
+      const result = await createCategoria(data)
+      return result
+    } catch (error) {
+      console.error('Error en handleCreate:', error)
+      return { success: false, error: 'Error inesperado al crear' }
+    }
+  }
+
+  const handleEdit = async (data: any) => {
+    if (selectedCategoria) {
+      try {
+        const result = await updateCategoria(selectedCategoria.id, data)
+        return result
+      } catch (error) {
+        console.error('Error en handleEdit:', error)
+        return { success: false, error: 'Error inesperado al editar' }
+      }
+    }
+    return { success: false, error: 'No hay categoría seleccionada' }
+  }
+
+  const handleDelete = async () => {
+    if (selectedCategoria) {
+      const result = await deleteCategoria(selectedCategoria.id)
+      return result
+    }
+    return { success: false, error: 'No hay categoría seleccionada' }
+  }
+
+  const handleDeleteMultiple = async () => {
+    if (selectedCategorias.length > 0) {
+      const ids = selectedCategorias.map(cat => cat.id)
+      const result = await deleteMultipleCategorias(ids)
+      return result
+    }
+    return { success: false, error: 'No hay categorías seleccionadas' }
+  }
+
   return (
     <div className="space-y-4">
       {/* Tabla estandarizada usando createCRUDTable */}
@@ -218,13 +277,37 @@ export function CategoriasRifasTable({
         description: "Gestiona las categorías para organizar las rifas",
         searchKey: "nombre",
         searchPlaceholder: "Buscar categorías...",
-        loading: loading,
+        loading: isLoading,
         error: error,
-        onRowSelectionChange: handleRowSelectionChange,
+        onRowSelectionChange: selectMultipleCategorias,
         onRefresh: handleRefresh,
         onExport: handleExport,
-        onCreate: onCreate || (() => {})
+        onCreate: openCreateModal
       })}
+
+      {/* Modal de Crear/Editar Categoría */}
+      <CategoriaFormModal
+        isOpen={showCreateModal || showEditModal}
+        onClose={showCreateModal ? closeCreateModal : closeEditModal}
+        onSubmit={showCreateModal ? handleCreate : handleEdit}
+        categoria={showEditModal ? selectedCategoria : null}
+        isLoading={isCreating || isUpdating}
+      />
+
+      {/* Modal de Confirmación de Eliminación */}
+      <DeleteConfirmModal
+        isOpen={showDeleteModal}
+        onClose={closeDeleteModal}
+        onConfirm={selectedCategorias.length > 1 ? handleDeleteMultiple : handleDelete}
+        title={selectedCategorias.length > 1 ? "Eliminar Múltiples Categorías" : "Eliminar Categoría"}
+        description={
+          selectedCategorias.length > 1 
+            ? `¿Estás seguro de que quieres eliminar ${selectedCategorias.length} categorías seleccionadas? Esta acción no se puede deshacer.`
+            : `¿Estás seguro de que quieres eliminar la categoría "${selectedCategoria?.nombre}"? Esta acción no se puede deshacer.`
+        }
+        entityName="categoría"
+        isDeleting={isDeleting}
+      />
     </div>
   )
 }

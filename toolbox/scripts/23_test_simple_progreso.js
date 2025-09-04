@@ -104,3 +104,4 @@ console.log('\n🔧 VERIFICACIONES:');
 console.log('   - Componente RifaCard actualizado ✓');
 console.log('   - Campo progreso_manual en tipo Rifa ✓');
 console.log('   - Lógica de priorización implementada ✓');
+

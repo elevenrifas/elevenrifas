@@ -5,13 +5,7 @@ import { ColumnDef } from "@tanstack/react-table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { createCRUDTable } from "../data-table"
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
-} from "@/components/ui/dropdown-menu"
-import { MoreHorizontal, Trash2, Receipt, Ticket, User, CreditCard } from "lucide-react"
+import { Receipt, Ticket, User } from "lucide-react"
 import type { AdminTicket } from "@/types"
 import { useCrudTickets } from "@/hooks/use-crud-tickets"
 import { PagoDetallesModal } from "../modals/PagoDetallesModal"
@@ -184,7 +178,29 @@ export function TicketsTable({
     console.log('🔍 Mostrando detalles del pago para ticket:', ticket)
     
     if (ticket.pagos) {
-      setSelectedPago(ticket.pagos)
+      // En tickets, la relación pagos no incluye los tickets asociados.
+      // Construimos un objeto compatible con PagoDetallesModal agregando el ticket actual.
+      const pagoConTickets = {
+        ...ticket.pagos,
+        tickets: [
+          {
+            id: ticket.id,
+            numero_ticket: ticket.numero_ticket,
+            nombre: ticket.nombre,
+            cedula: ticket.cedula,
+            telefono: ticket.telefono || '',
+            correo: ticket.correo,
+            fecha_compra: ticket.fecha_compra,
+            rifa_id: ticket.rifa_id,
+            rifas: ticket.rifas ? {
+              id: ticket.rifas.id,
+              titulo: ticket.rifas.titulo,
+              precio_ticket: ticket.rifas.precio_ticket,
+            } : undefined,
+          }
+        ]
+      }
+      setSelectedPago(pagoConTickets)
       setShowPagoModal(true)
     } else {
       console.warn('⚠️ Este ticket no tiene información de pago asociada')
@@ -336,29 +352,18 @@ export function TicketsTable({
         const tienePago = ticket.pago_id && ticket.pagos
 
         return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">Abrir menú</span>
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {tienePago && (
-                <DropdownMenuItem onClick={() => handleShowPagoDetails(ticket)}>
-                  <Receipt className="mr-2 h-4 w-4" />
-                  Ver Detalles del Pago
-                </DropdownMenuItem>
-              )}
-              <DropdownMenuItem 
-                onClick={() => onDelete?.([ticket])}
-                className="text-red-600"
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Eliminar
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex items-center justify-center">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => tienePago && handleShowPagoDetails(ticket)}
+              disabled={!tienePago}
+              className="h-8"
+            >
+              <Receipt className="mr-2 h-4 w-4" />
+              Detalles
+            </Button>
+          </div>
         )
       },
     },
@@ -372,8 +377,30 @@ export function TicketsTable({
         data: tickets as AdminTicket[],
         title: "Tickets",
         description: "Gestiona todos los tickets del sistema de rifas",
-        searchKey: "nombre",
-        searchPlaceholder: "Buscar por nombre de cliente...",
+        // Búsqueda global en múltiples campos: ticket, nombre, cédula, rifa y teléfono
+        enableGlobalFilter: true,
+        searchPlaceholder: "Buscar por ticket, nombre, cédula, rifa o teléfono...",
+        globalFilterFn: (row: any, _columnId: string, filterValue: any) => {
+          try {
+            const value = String(filterValue || '').toLowerCase().trim()
+            if (!value) return true
+            const t = row.original as AdminTicket
+            const numero = (t.numero_ticket || '').toString().toLowerCase()
+            const nombre = (t.nombre || '').toLowerCase()
+            const cedula = (t.cedula || '').toLowerCase()
+            const telefono = (t.telefono || '').toLowerCase()
+            const rifaTitulo = (t.rifas?.titulo || '').toLowerCase()
+            return (
+              numero.includes(value) ||
+              nombre.includes(value) ||
+              cedula.includes(value) ||
+              telefono.includes(value) ||
+              rifaTitulo.includes(value)
+            )
+          } catch {
+            return true
+          }
+        },
         loading: isLoading || isRefreshing,
         error: error,
         onRowSelectionChange: handleRowSelectionChange,

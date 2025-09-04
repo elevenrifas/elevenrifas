@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { ClientesTable } from '@/app/admin/components/tables/ClientesTable'
 import { ClienteViewModal } from '@/app/admin/components/modals/ClienteViewModal'
+import { exportClientesToExcel } from '@/lib/utils/excel-export'
 import type { AdminCliente } from '@/types'
 
 // =====================================================
@@ -31,8 +32,12 @@ export default function AdminClientesPage() {
 
   // Función para exportar clientes
   const handleExportClientes = (clientes: AdminCliente[]) => {
-    console.log('📊 Exportando clientes:', clientes.length)
-    // Aquí podrías implementar lógica adicional de exportación si es necesario
+    try {
+      console.log('📊 Exportando clientes a Excel:', clientes.length)
+      exportClientesToExcel(clientes, 'clientes_eleven_rifas')
+    } catch (error) {
+      console.error('Error al exportar clientes:', error)
+    }
   }
 
   return (

@@ -64,19 +64,19 @@ export function ClienteViewModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <User className="h-5 w-5" />
-            Cliente: {cliente.nombre}
+            Datos del Cliente
           </DialogTitle>
           <DialogDescription>
-            Información detallada del cliente y su historial de compras
+            Historial de compras y estadísticas
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Información Personal */}
+          {/* Datos del Cliente */}
           <div className="space-y-4">
             <h3 className="text-lg font-medium flex items-center gap-2">
               <User className="h-4 w-4" />
-              Información Personal
+              Datos del Cliente
             </h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

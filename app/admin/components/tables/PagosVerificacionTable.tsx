@@ -447,24 +447,11 @@ export function PagosVerificacionTable({
           )
         }
 
-        // Mostrar máximo 5 tickets visibles
-        const maxVisibleTickets = 5
-        const visibleTickets = tickets.slice(0, maxVisibleTickets)
-        const hiddenTicketsCount = tickets.length - maxVisibleTickets
-        
         return (
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <Ticket className="h-4 w-4 text-blue-600" />
               <span className="font-medium text-sm">{tickets.length} ticket(s)</span>
-            </div>
-            <div className="text-xs text-muted-foreground">
-              {visibleTickets.map(t => t.numero_ticket).join(', ')}
-              {hiddenTicketsCount > 0 && (
-                <span className="text-blue-600 font-medium">
-                  {' '}+{hiddenTicketsCount} más
-                </span>
-              )}
             </div>
           </div>
         )
@@ -514,6 +501,29 @@ export function PagosVerificacionTable({
     {
       accessorKey: "referencia",
       header: "Referencia",
+      // Permite buscar por cédula, cliente, referencia y rifa usando el buscador
+      filterFn: (row, _id, value) => {
+        try {
+          const searchTerm = String(value || '').toLowerCase().trim()
+          if (!searchTerm) return true
+
+          const pago = row.original as AdminPago
+          const primerTicket = pago.tickets?.[0]
+          const clienteNombre = primerTicket?.nombre?.toLowerCase() || ''
+          const clienteCedula = primerTicket?.cedula?.toLowerCase() || ''
+          const referencia = (pago.referencia || '').toLowerCase()
+          const rifaTitulo = primerTicket?.rifas?.titulo?.toLowerCase() || ''
+
+          return (
+            clienteNombre.includes(searchTerm) ||
+            clienteCedula.includes(searchTerm) ||
+            referencia.includes(searchTerm) ||
+            rifaTitulo.includes(searchTerm)
+          )
+        } catch {
+          return true
+        }
+      },
       cell: ({ row }) => {
         const referencia = row.getValue("referencia") as string
         const telefono = row.original.telefono_pago
@@ -552,14 +562,41 @@ export function PagosVerificacionTable({
       accessorKey: "estado",
       header: "Estado",
       cell: ({ row }) => {
-        const estado = row.getValue("estado") as string
-        const variant = getEstadoVariant(estado)
-        const icon = getEstadoIcon(estado)
-        
+        const estado = (row.getValue("estado") as string) || ''
+
+        const getEstadoColorClasses = (value: string) => {
+          switch (value) {
+            case 'verificado':
+              return 'bg-green-100 text-green-800 border-green-200'
+            case 'rechazado':
+              return 'bg-red-100 text-red-800 border-red-200'
+            case 'pendiente':
+              return 'bg-amber-100 text-amber-800 border-amber-200'
+            default:
+              return 'bg-gray-100 text-gray-800 border-gray-200'
+          }
+        }
+
+        const getDotColorClasses = (value: string) => {
+          switch (value) {
+            case 'verificado':
+              return 'bg-green-500'
+            case 'rechazado':
+              return 'bg-red-500'
+            case 'pendiente':
+              return 'bg-amber-500'
+            default:
+              return 'bg-gray-500'
+          }
+        }
+
+        const colorClasses = getEstadoColorClasses(estado)
+        const dotClasses = getDotColorClasses(estado)
+
         return (
-          <Badge variant={variant} className="flex items-center gap-1">
-            {icon}
-            {estado.charAt(0).toUpperCase() + estado.slice(1)}
+          <Badge variant="outline" className={`flex items-center justify-center gap-2 px-3 py-1 w-28 ${colorClasses}`}>
+            <div className={`w-2 h-2 rounded-full ${dotClasses}`} />
+            <span className="font-medium capitalize">{estado}</span>
           </Badge>
         )
       },
@@ -680,8 +717,29 @@ export function PagosVerificacionTable({
         data: pagos,
         title: "Verificación de Pagos",
         description: "Gestiona y verifica todos los pagos del sistema",
-        searchKey: "referencia",
-        searchPlaceholder: "Buscar por referencia, cliente o rifa...",
+        // Usar filtro global personalizado para buscar en múltiples campos
+        searchPlaceholder: "Buscar por cédula, cliente, referencia o rifa...",
+        enableGlobalFilter: true,
+        globalFilterFn: (row: any, _columnId: string, filterValue: any) => {
+          try {
+            const value = String(filterValue || '').toLowerCase().trim()
+            if (!value) return true
+            const pago = row.original as AdminPago
+            const primerTicket = pago.tickets?.[0]
+            const clienteNombre = primerTicket?.nombre?.toLowerCase() || ''
+            const clienteCedula = primerTicket?.cedula?.toLowerCase() || ''
+            const referencia = (pago.referencia || '').toLowerCase()
+            const rifaTitulo = primerTicket?.rifas?.titulo?.toLowerCase() || ''
+            return (
+              clienteNombre.includes(value) ||
+              clienteCedula.includes(value) ||
+              referencia.includes(value) ||
+              rifaTitulo.includes(value)
+            )
+          } catch {
+            return true
+          }
+        },
         loading: isLoading || isRefreshing,
         error: error,
         onRowSelectionChange: selectMultiplePagos,

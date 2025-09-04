@@ -6,7 +6,6 @@
 
 // Modales de Categorías
 export { CategoriaFormModal } from './CategoriaFormModal'
-export { CategoriaViewModal } from './CategoriaViewModal'
 export { DeleteCategoriaModal } from './DeleteCategoriaModal'
 
 // Modales de Rifas

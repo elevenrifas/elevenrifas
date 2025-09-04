@@ -6,18 +6,11 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandList } from "@/components/ui/command"
 import { Badge } from "@/components/ui/badge"
 import { Search, Grid3X3, Check } from "lucide-react"
 import * as LucideIcons from "lucide-react"
 import { cn } from "@/lib/utils"
-
-// =====================================================
-// 🎯 ICON PICKER - ELEVEN RIFAS
-// =====================================================
-// Selector visual de iconos de Lucide React
-// Permite buscar y seleccionar iconos de manera intuitiva
-// =====================================================
 
 interface IconPickerProps {
   value?: string
@@ -26,17 +19,6 @@ interface IconPickerProps {
   disabled?: boolean
   className?: string
 }
-
-// Lista de iconos populares y útiles para categorías
-const POPULAR_ICONS = [
-  'tag', 'car', 'home', 'gift', 'star', 'heart', 'dollar-sign', 'shopping-cart',
-  'smartphone', 'laptop', 'camera', 'headphones', 'gamepad2', 'book-open',
-  'palette', 'music', 'film', 'coffee', 'utensils', 'shirt', 'shoe',
-  'carrot', 'leaf', 'tree', 'sun', 'moon', 'cloud', 'umbrella',
-  'bicycle', 'motorcycle', 'truck', 'plane', 'ship', 'train',
-  'building', 'store', 'bank', 'hospital', 'school', 'graduation-cap',
-  'briefcase', 'wrench', 'hammer', 'screwdriver', 'paintbrush', 'scissors'
-]
 
 export function IconPicker({
   value = '',
@@ -47,6 +29,13 @@ export function IconPicker({
 }: IconPickerProps) {
   const [open, setOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
+
+  // Función para convertir PascalCase a kebab-case
+  const toKebabCase = (str: string) => {
+    return str
+      .replace(/([a-z])([A-Z])/g, '$1-$2')
+      .toLowerCase()
+  }
 
   // Obtener el icono seleccionado actualmente
   const SelectedIcon = useMemo(() => {
@@ -61,60 +50,41 @@ export function IconPicker({
     return (LucideIcons as any)[pascalCaseName] || null
   }, [value])
 
+  // Lista enfocada en casa, autos, dinero y motos (35 iconos en total)
+  const specificIcons = [
+    // 🚗 Vehículos y transporte (10 iconos)
+    'Car', 'Truck', 'Bus', 'Bike', 'Ship', 'Plane', 'Train', 'CarFront', 'TruckIcon', 'BusIcon',
+    
+    // 💰 Dinero y finanzas (14 iconos)
+    'DollarSign', 'Euro', 'PoundSterling', 'Banknote', 'Coins', 'CreditCard', 'Wallet', 
+    'PiggyBank', 'Receipt', 'Calculator', 'TrendingUp', 'TrendingDown', 'BarChart', 'PieChart',
+    
+    // 🏠 Casa y hogar (11 iconos)
+    'Home', 'Building', 'Store', 'Bed', 'Table', 'Lamp', 'Flower', 'Leaf', 'Sun', 'Moon', 'Cloud'
+  ]
+
+  // Obtener solo los iconos específicos que existen en Lucide
+  const allIcons = useMemo(() => {
+    return specificIcons.filter(iconName => {
+      const icon = (LucideIcons as any)[iconName]
+      return icon && typeof icon === 'object' && icon.$$typeof
+    })
+  }, [])
+
   // Filtrar iconos basado en la búsqueda
   const filteredIcons = useMemo(() => {
-    const allIcons = Object.keys(LucideIcons).filter(key => 
-      typeof (LucideIcons as any)[key] === 'function' && 
-      key !== 'createLucideIcon'
-    )
-
     if (!searchQuery) {
-      // Si no hay búsqueda, mostrar iconos populares primero
-      const popularIcons = POPULAR_ICONS.filter(icon => {
-        const pascalCaseName = icon
-          .split('-')
-          .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-          .join('')
-        return allIcons.includes(pascalCaseName)
-      })
-      
-      const otherIcons = allIcons.filter(icon => 
-        !popularIcons.some(popular => {
-          const pascalCaseName = popular
-            .split('-')
-            .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-            .join('')
-          return icon === pascalCaseName
-        })
-      )
-      
-      return [...popularIcons, ...otherIcons.slice(0, 100)] // Limitar a 100 iconos adicionales
+      return allIcons
     }
 
-    // Filtrar por búsqueda
-    return allIcons
-      .filter(icon => 
-        icon.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-      .slice(0, 200) // Limitar resultados de búsqueda
-  }, [searchQuery])
-
-  // Función para obtener el icono de Lucide
-  const getLucideIcon = (iconName: string) => {
-    const pascalCaseName = iconName
-      .split('-')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      .join('')
-    
-    return (LucideIcons as any)[pascalCaseName] || null
-  }
-
-  // Función para convertir PascalCase a kebab-case
-  const toKebabCase = (str: string) => {
-    return str
-      .replace(/([a-z])([A-Z])/g, '$1-$2')
-      .toLowerCase()
-  }
+    return allIcons.filter(icon => {
+      const pascalCaseName = icon.toLowerCase()
+      const kebabCaseName = toKebabCase(icon).toLowerCase()
+      const searchLower = searchQuery.toLowerCase()
+      
+      return pascalCaseName.includes(searchLower) || kebabCaseName.includes(searchLower)
+    }).slice(0, 500)
+  }, [allIcons, searchQuery])
 
   const handleSelectIcon = (iconName: string) => {
     const kebabCaseName = toKebabCase(iconName)
@@ -164,41 +134,13 @@ export function IconPicker({
               />
             </div>
             
-            <CommandList className="max-h-[300px]">
+            <CommandList className="max-h-[400px] overflow-y-auto">
               <CommandEmpty>No se encontraron iconos.</CommandEmpty>
               
-              {!searchQuery && (
-                <CommandGroup heading="Iconos Populares">
-                  <div className="grid grid-cols-8 gap-1 p-2">
-                    {POPULAR_ICONS.slice(0, 24).map((iconName) => {
-                      const IconComponent = getLucideIcon(iconName)
-                      if (!IconComponent) return null
-                      
-                      const isSelected = value === iconName
-                      
-                      return (
-                        <Button
-                          key={iconName}
-                          variant="ghost"
-                          size="sm"
-                          className={cn(
-                            "h-12 w-12 p-0 flex items-center justify-center",
-                            isSelected && "bg-primary text-primary-foreground"
-                          )}
-                          onClick={() => handleSelectIcon(iconName)}
-                        >
-                          <IconComponent className="h-5 w-5" />
-                        </Button>
-                      )
-                    })}
-                  </div>
-                </CommandGroup>
-              )}
-              
-              <CommandGroup heading={searchQuery ? "Resultados de búsqueda" : "Todos los iconos"}>
+              <CommandGroup heading={searchQuery ? "Resultados de búsqueda" : "Iconos disponibles"}>
                 <div className="grid grid-cols-8 gap-1 p-2">
                   {filteredIcons.map((iconName) => {
-                    const IconComponent = getLucideIcon(iconName)
+                    const IconComponent = (LucideIcons as any)[iconName]
                     if (!IconComponent) return null
                     
                     const kebabCaseName = toKebabCase(iconName)

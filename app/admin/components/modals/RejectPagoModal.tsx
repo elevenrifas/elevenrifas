@@ -13,6 +13,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { XCircle, AlertTriangle, User, Key, Shield, CheckCircle } from "lucide-react"
 import type { AdminPago } from "@/lib/database/admin_database/pagos"
 import { adminListUsuariosVerificacion, adminVerifyUsuarioPin } from "@/lib/database/admin_database/usuarios_verificacion"
@@ -253,12 +254,12 @@ export function RejectPagoModal({
 
           {/* Mensaje de error */}
           {error && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-md">
-              <p className="text-sm text-red-600 flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4" />
+            <Alert variant="destructive" className="border-destructive/20 bg-destructive/10">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription className="text-destructive">
                 {error}
-              </p>
-            </div>
+              </AlertDescription>
+            </Alert>
           )}
 
           {/* Mensaje de éxito */}
@@ -282,7 +283,7 @@ export function RejectPagoModal({
                   Acción irreversible
                 </p>
                 <p className="text-xs text-amber-700">
-                  Se eliminarán {tickets.length} ticket(s) permanentemente. Toda la información se guardará en logs de auditoría.
+                  Se eliminarán {tickets.length} ticket(s) permanentemente.
                 </p>
               </div>
             </div>

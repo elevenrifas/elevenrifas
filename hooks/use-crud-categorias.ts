@@ -9,19 +9,15 @@ import type { AdminCategoria } from '@/lib/database/admin_database/categorias'
 export interface CrudCategoriaData {
   nombre: string
   descripcion?: string
-  color: string
   icono: string
-  activa: boolean
-  orden: number
 }
 
 export interface CrudCategoriaFilters {
-  activa?: boolean
-  orden?: number
+  // No hay filtros específicos para el esquema actual
 }
 
 export interface CrudCategoriaSort {
-  field: keyof AdminCategoria
+  field: 'id' | 'nombre' | 'icono' | 'descripcion'
   direction: 'asc' | 'desc'
 }
 
@@ -45,13 +41,11 @@ export interface UseCrudCategoriasReturn {
   isCreating: boolean
   isUpdating: boolean
   isDeleting: boolean
-  isViewing: boolean
   
   // Estados de modales
   showCreateModal: boolean
   showEditModal: boolean
   showDeleteModal: boolean
-  showViewModal: boolean
   
   // Datos seleccionados
   selectedCategoria: AdminCategoria | null
@@ -75,8 +69,6 @@ export interface UseCrudCategoriasReturn {
   closeEditModal: () => void
   openDeleteModal: (categoria: AdminCategoria) => void
   closeDeleteModal: () => void
-  openViewModal: (categoria: AdminCategoria) => void
-  closeViewModal: () => void
   
   // Selección
   selectCategoria: (categoria: AdminCategoria) => void
@@ -96,7 +88,7 @@ export function useCrudCategorias(options: {
 } = {}): UseCrudCategoriasReturn {
   const {
     initialFilters = {},
-    initialSort = { field: 'orden', direction: 'asc' },
+    initialSort = { field: 'nombre', direction: 'asc' },
     initialPageSize = 10
   } = options
 
@@ -121,7 +113,6 @@ export function useCrudCategorias(options: {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [showViewModal, setShowViewModal] = useState(false)
   const [selectedCategoria, setSelectedCategoria] = useState<AdminCategoria | null>(null)
   const [selectedCategorias, setSelectedCategorias] = useState<AdminCategoria[]>([])
   const [filters, setFilters] = useState<CrudCategoriaFilters>(initialFilters)
@@ -230,15 +221,6 @@ export function useCrudCategorias(options: {
     setSelectedCategoria(null)
   }, [])
 
-  const openViewModal = useCallback((categoria: AdminCategoria) => {
-    setSelectedCategoria(categoria)
-    setShowViewModal(true)
-  }, [])
-
-  const closeViewModal = useCallback(() => {
-    setShowViewModal(false)
-    setSelectedCategoria(null)
-  }, [])
 
   // =====================================================
   // 🔧 FUNCIONES DE SELECCIÓN
@@ -323,13 +305,11 @@ export function useCrudCategorias(options: {
     isCreating: creating,
     isUpdating: updating,
     isDeleting: deleting,
-    isViewing: false,
     
     // Estados de modales
     showCreateModal,
     showEditModal,
     showDeleteModal,
-    showViewModal,
     
     // Datos seleccionados
     selectedCategoria,
@@ -353,8 +333,6 @@ export function useCrudCategorias(options: {
     closeEditModal,
     openDeleteModal,
     closeDeleteModal,
-    openViewModal,
-    closeViewModal,
     
     // Selección
     selectCategoria,
@@ -363,6 +341,7 @@ export function useCrudCategorias(options: {
     toggleCategoriaSelection,
     
     // Utilidades
+    loadCategorias,
     refreshCategorias,
     exportCategorias
   }
