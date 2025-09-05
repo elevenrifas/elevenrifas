@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   description: "Panel de administración de ElevenRifas - Súper Simple",
 };
 
-export default function AdminPanelLayout({ children }: { children: React.ReactNode }) {
+export default function AdminPanelLayoutSimple({ children }: { children: React.ReactNode }) {
   return (
     <AdminAuthProviderSimpleStorage>
       <ProtectedRouteSimple>
@@ -44,5 +44,3 @@ export default function AdminPanelLayout({ children }: { children: React.ReactNo
     </AdminAuthProviderSimpleStorage>
   );
 }
-
-

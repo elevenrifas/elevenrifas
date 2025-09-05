@@ -1,23 +1,23 @@
 import type { Metadata } from "next";
-import { ProtectedRouteSimple } from "../components/protected-route-simple";
+import { ProtectedRouteOptimized } from "../components/protected-route-optimized";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
 import {
   SidebarInset,
   SidebarProvider,
 } from "@/components/ui/sidebar";
-import { AdminAuthProviderSimpleStorage } from "@/lib/context/AdminAuthContextSimpleStorage";
+import { AdminAuthProviderOptimized } from "@/lib/context/AdminAuthContextOptimized";
 import "../styles/admin-theme.css";
 
 export const metadata: Metadata = {
   title: "Admin | ElevenRifas",
-  description: "Panel de administración de ElevenRifas - Súper Simple",
+  description: "Panel de administración de ElevenRifas - Optimizado",
 };
 
-export default function AdminPanelLayout({ children }: { children: React.ReactNode }) {
+export default function AdminPanelLayoutOptimized({ children }: { children: React.ReactNode }) {
   return (
-    <AdminAuthProviderSimpleStorage>
-      <ProtectedRouteSimple>
+    <AdminAuthProviderOptimized>
+      <ProtectedRouteOptimized>
         <div className="admin-theme dark">
           <SidebarProvider
             style={
@@ -40,9 +40,7 @@ export default function AdminPanelLayout({ children }: { children: React.ReactNo
             </SidebarInset>
           </SidebarProvider>
         </div>
-      </ProtectedRouteSimple>
-    </AdminAuthProviderSimpleStorage>
+      </ProtectedRouteOptimized>
+    </AdminAuthProviderOptimized>
   );
 }
-
-

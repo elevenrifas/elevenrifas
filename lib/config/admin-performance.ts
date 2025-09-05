@@ -5,10 +5,10 @@
 
 export const ADMIN_PERFORMANCE_CONFIG = {
   // Duración del cache de sesión (en milisegundos)
-  SESSION_CACHE_DURATION: 10 * 60 * 1000, // 10 minutos
+  SESSION_CACHE_DURATION: 15 * 60 * 1000, // 15 minutos (aumentado para mejor rendimiento)
   
   // Intervalo mínimo entre verificaciones de sesión (en milisegundos)
-  MIN_SESSION_CHECK_INTERVAL: 30 * 1000, // 30 segundos
+  MIN_SESSION_CHECK_INTERVAL: 60 * 1000, // 60 segundos (aumentado para reducir verificaciones)
   
   // Tiempo máximo de espera para operaciones de autenticación (en milisegundos)
   AUTH_TIMEOUT: 15 * 1000, // 15 segundos
@@ -43,9 +43,9 @@ export function getAdminPerformanceConfig() {
   
   return {
     ...ADMIN_PERFORMANCE_CONFIG,
-    // En desarrollo, reducir los tiempos para facilitar debugging
-    SESSION_CACHE_DURATION: isDevelopment ? 2 * 60 * 1000 : ADMIN_PERFORMANCE_CONFIG.SESSION_CACHE_DURATION,
-    MIN_SESSION_CHECK_INTERVAL: isDevelopment ? 10 * 1000 : ADMIN_PERFORMANCE_CONFIG.MIN_SESSION_CHECK_INTERVAL,
+    // En desarrollo, usar tiempos moderados para facilitar debugging
+    SESSION_CACHE_DURATION: isDevelopment ? 5 * 60 * 1000 : ADMIN_PERFORMANCE_CONFIG.SESSION_CACHE_DURATION,
+    MIN_SESSION_CHECK_INTERVAL: isDevelopment ? 30 * 1000 : ADMIN_PERFORMANCE_CONFIG.MIN_SESSION_CHECK_INTERVAL,
     ENABLE_PERFORMANCE_LOGS: isDevelopment,
   }
 }
