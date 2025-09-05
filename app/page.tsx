@@ -2,6 +2,7 @@
 import { Hero } from "@/components/Hero";
 import { RifaClientSection } from "@/components/RifaClientSection";
 import { Footer } from "@/components/Footer";
+import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { getRifasFull } from "@/lib/database/rifas";
 import WithRifasLayout from "@/app/with-rifas-layout";
 
@@ -26,6 +27,12 @@ export default async function Home() {
         
         {/* Footer */}
         <Footer />
+        
+        {/* Botón de WhatsApp flotante */}
+        <WhatsAppButton 
+          phoneNumber="584241876325"
+          message="Hola! estoy interesad@ en participar en la rifa 0km de Gana con E11even Me gustaría recibir más información para saber cómo puedo jugar y tener la oportunidad de ganar ¡Gracias!"
+        />
       </div>
     </WithRifasLayout>
   );

@@ -1,11 +1,11 @@
 import { LoginForm } from '../components/login-form'
-import { LoginGuard } from '../components/login-guard'
-import { AdminAuthProviderSimple } from '@/lib/context/AdminAuthContextSimple'
+import { LoginGuardSimple } from '../components/login-guard-simple'
+import { AdminAuthProviderSimpleStorage } from '@/lib/context/AdminAuthContextSimpleStorage'
 
 export default function AdminLoginPage() {
   return (
-    <AdminAuthProviderSimple>
-      <LoginGuard>
+    <AdminAuthProviderSimpleStorage>
+      <LoginGuardSimple>
         <div className="flex min-h-full w-full items-center justify-center bg-gradient-to-br from-background via-background to-muted/20 p-4 sm:p-6 md:p-10">
           <div className="w-full max-w-md">
             {/* Header con logo y título */}
@@ -29,7 +29,7 @@ export default function AdminLoginPage() {
             <LoginForm />
           </div>
         </div>
-      </LoginGuard>
-    </AdminAuthProviderSimple>
+      </LoginGuardSimple>
+    </AdminAuthProviderSimpleStorage>
   )
 }

@@ -1,4 +1,4 @@
-import { Heart, Mail, Phone, MapPin, Facebook, Instagram, Twitter } from "lucide-react";
+import { Heart, Mail, Phone, MapPin, Instagram, MessageCircle } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -44,11 +44,11 @@ export function Footer() {
         <div className="md:col-span-2 text-center mb-8">
           <div className="flex items-center justify-center gap-3 mb-6">
             <Image 
-              src="/E_LOGOb.png" 
+              src="/logoblancorojo.png" 
               alt="Eleven Motors Logo" 
-              width={200} 
-              height={80} 
-              className="h-16 w-auto"
+              width={400} 
+              height={160} 
+              className="h-32 w-auto"
             />
           </div>
         </div>
@@ -108,14 +108,16 @@ export function Footer() {
         <div className="border-t border-white/20 pt-8">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-6">
-              <Link href="#" className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-primary transition-colors">
-                <Facebook className="w-5 h-5" />
-              </Link>
-              <Link href="#" className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-primary transition-colors">
+              <Link href="https://www.instagram.com/ganacone11even/" target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-primary transition-colors">
                 <Instagram className="w-5 h-5" />
               </Link>
-              <Link href="#" className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-primary transition-colors">
-                <Twitter className="w-5 h-5" />
+              <Link href="https://t.me/GANACONE11EVEN" target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-primary transition-colors">
+                <MessageCircle className="w-5 h-5" />
+              </Link>
+              <Link href="https://www.tiktok.com/@ganacone11even" target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-primary transition-colors">
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
+                </svg>
               </Link>
             </div>
             
@@ -135,3 +137,4 @@ export function Footer() {
     </footer>
   );
 }
+
