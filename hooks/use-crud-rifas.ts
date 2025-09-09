@@ -3,6 +3,7 @@
 import * as React from 'react'
 import { useState, useCallback } from 'react'
 import { useAdminRifas } from './use-admin-rifas'
+import { useCacheInvalidation } from './use-cache-invalidation'
 import type { AdminRifa } from '@/lib/database/admin_database/rifas'
 
 // Tipos para el CRUD - Actualizado según el schema real de la BD
@@ -146,6 +147,9 @@ export function useCrudRifas(options: {
     refreshInterval
   })
 
+  // Hook para invalidación de caché
+  const { invalidateRifasCache } = useCacheInvalidation()
+
   // Estados del CRUD
   const [isCreating, setIsCreating] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
@@ -181,6 +185,8 @@ export function useCrudRifas(options: {
       if (result.success) {
         closeCreateModal()
         await refreshRifas()
+        // Invalidar caché de página home después de crear rifa
+        await invalidateRifasCache('created', { id: result.data?.id })
       }
       
       return result
@@ -190,7 +196,7 @@ export function useCrudRifas(options: {
     } finally {
       setIsCreating(false)
     }
-  }, [baseCreateRifa, refreshRifas])
+  }, [baseCreateRifa, refreshRifas, invalidateRifasCache])
 
   const updateRifa = useCallback(async (id: string, data: Partial<CrudRifaData>) => {
     try {
@@ -200,6 +206,8 @@ export function useCrudRifas(options: {
       if (result.success) {
         closeEditModal()
         await refreshRifas()
+        // Invalidar caché de página home después de actualizar rifa
+        await invalidateRifasCache('updated', { id, changes: data })
       }
       
       return result
@@ -209,7 +217,7 @@ export function useCrudRifas(options: {
     } finally {
       setIsUpdating(false)
     }
-  }, [baseUpdateRifa, refreshRifas])
+  }, [baseUpdateRifa, refreshRifas, invalidateRifasCache])
 
   const deleteRifa = useCallback(async (id: string) => {
     try {
@@ -224,6 +232,8 @@ export function useCrudRifas(options: {
       if (result.success) {
         closeDeleteModal()
         await refreshRifas()
+        // Invalidar caché de página home después de eliminar rifa
+        await invalidateRifasCache('deleted', { id })
         return result
       } else {
         // Mostrar error específico al usuario
@@ -240,7 +250,7 @@ export function useCrudRifas(options: {
     } finally {
       setIsDeleting(false)
     }
-  }, [refreshRifas])
+  }, [refreshRifas, invalidateRifasCache])
 
   const deleteMultipleRifas = useCallback(async (ids: string[]) => {
     try {
@@ -276,12 +286,18 @@ export function useCrudRifas(options: {
   const changeRifaState = useCallback(async (id: string, estado: 'activa' | 'cerrada') => {
     try {
       const result = await baseChangeRifaState(id, estado)
+      
+      if (result.success) {
+        // Invalidar caché de página home después de cambiar estado
+        await invalidateRifasCache('state_changed', { id, newState: estado })
+      }
+      
       return result
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error inesperado al cambiar estado'
       return { success: false, error: errorMessage }
     }
-  }, [baseChangeRifaState])
+  }, [baseChangeRifaState, invalidateRifasCache])
 
   // Operaciones de UI
   const openCreateModal = useCallback(() => setShowCreateModal(true), [])

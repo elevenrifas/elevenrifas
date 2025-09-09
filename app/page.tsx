@@ -6,6 +6,12 @@ import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { getRifasFull } from "@/lib/database/rifas";
 import WithRifasLayout from "@/app/with-rifas-layout";
 
+// 🚀 Configuración profesional para Vercel
+// Revalidación cada 5 minutos como fallback de seguridad
+export const revalidate = 300;
+// Forzar renderizado dinámico para evitar caché agresivo
+export const dynamic = 'force-dynamic';
+
 export default async function Home() {
   // Obtener rifas con estadísticas calculadas desde la base de datos
   const rifas = await getRifasFull();
