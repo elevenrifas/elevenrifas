@@ -763,7 +763,7 @@ export function PagosVerificacionTable({
       <RejectPagoModal
         isOpen={showRejectModal}
         onClose={closeRejectModal}
-        onConfirm={(verificadoPor) => rejectPago(selectedPago?.id || '', verificadoPor)}
+        onConfirm={(verificadoPor, rechazoNote) => rejectPago(selectedPago?.id || '', verificadoPor, rechazoNote)}
         pago={selectedPago}
         isSubmitting={isRejecting}
       />

@@ -260,6 +260,8 @@ export function PagoDetallesModal({
                     </div>
                   </div>
                 )}
+
+                {/* Nota de rechazo movida a sección separada abajo */}
                 
                 {pago.cedula_pago && (
                   <div className="flex items-center gap-3">
@@ -358,6 +360,21 @@ export function PagoDetallesModal({
           )}
 
           {/* Información de la Rifa eliminada por solicitud */}
+
+          {/* Motivo del Rechazo (sección separada) */}
+          {String(pago.estado).toLowerCase() === 'rechazado' && pago.rechazo_note && (
+            <div className="bg-white rounded-lg border border-red-200 p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-red-100 rounded-lg">
+                  <AlertTriangle className="h-5 w-5 text-red-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-red-800">Motivo del rechazo</h3>
+              </div>
+              <div className="bg-red-50 rounded-lg p-4 border border-red-200">
+                <p className="text-sm text-red-800 whitespace-pre-wrap">{pago.rechazo_note}</p>
+              </div>
+            </div>
+          )}
 
           {/* Notas */}
           {pago.notas && (

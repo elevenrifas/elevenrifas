@@ -14,9 +14,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { CheckCircle, AlertTriangle, User, Key, Shield } from "lucide-react"
+import { CheckCircle, AlertTriangle, User, Key, Shield, Search, CheckCircle2, XCircle } from "lucide-react"
 import type { AdminPago } from "@/lib/database/admin_database/pagos"
 import { adminListUsuariosVerificacion, adminVerifyUsuarioPin } from "@/lib/database/admin_database/usuarios_verificacion"
+import { adminValidateReferenciaDuplicada } from "@/lib/database/admin_database/pagos"
 
 // =====================================================
 // 🎯 MODAL VERIFICACIÓN PAGO - ELEVEN RIFAS
@@ -46,6 +47,13 @@ export function VerifyPagoModal({
   const [error, setError] = React.useState<string | null>(null)
   const [success, setSuccess] = React.useState(false)
   const [isValidating, setIsValidating] = React.useState(false)
+  
+  // Estados para validación de referencia
+  const [referencia, setReferencia] = React.useState("")
+  const [isValidatingReferencia, setIsValidatingReferencia] = React.useState(false)
+  const [referenciaValidada, setReferenciaValidada] = React.useState(false)
+  const [referenciaError, setReferenciaError] = React.useState<string | null>(null)
+  const [referenciaDuplicada, setReferenciaDuplicada] = React.useState(false)
 
   // Cargar usuarios de verificación cuando se abre el modal
   React.useEffect(() => {
@@ -55,8 +63,13 @@ export function VerifyPagoModal({
       setPin("")
       setError(null)
       setSuccess(false)
+      // Resetear estados de validación de referencia
+      setReferencia("")
+      setReferenciaValidada(false)
+      setReferenciaError(null)
+      setReferenciaDuplicada(false)
     }
-  }, [isOpen])
+  }, [isOpen, pago])
 
   // Función para cargar usuarios de verificación
   const loadUsuarios = async () => {
@@ -67,6 +80,67 @@ export function VerifyPagoModal({
       }
     } catch (error) {
       console.error('Error al cargar usuarios:', error)
+    }
+  }
+
+  // Función para validar referencia duplicada
+  const validateReferencia = async () => {
+    if (!referencia.trim()) {
+      setReferenciaError("La referencia es requerida")
+      return
+    }
+
+    if (!pago) {
+      setReferenciaError("No hay información del pago")
+      return
+    }
+
+    // Verificar que la referencia coincida exactamente con la del pago
+    if (referencia.trim() !== pago.referencia) {
+      setReferenciaError("La referencia debe coincidir exactamente con la referencia del pago")
+      setReferenciaDuplicada(false)
+      setReferenciaValidada(false)
+      return
+    }
+
+    try {
+      setIsValidatingReferencia(true)
+      setReferenciaError(null)
+      setReferenciaDuplicada(false)
+
+      const primerTicket = pago.tickets?.[0]
+      const rifaId = primerTicket?.rifa_id
+
+      if (!rifaId) {
+        setReferenciaError("No se pudo obtener la información de la rifa")
+        return
+      }
+
+      const result = await adminValidateReferenciaDuplicada(
+        referencia.trim(),
+        pago.tipo_pago,
+        rifaId,
+        pago.id
+      )
+
+      if (result.success && result.data) {
+        if (result.data.esDuplicada) {
+          setReferenciaDuplicada(true)
+          setReferenciaValidada(false)
+          setReferenciaError(`Ya existe un pago con la referencia "${referencia}" para el mismo tipo de pago y rifa`)
+        } else {
+          setReferenciaDuplicada(false)
+          setReferenciaValidada(true)
+          setReferenciaError(null)
+        }
+      } else {
+        setReferenciaError("Error al validar la referencia")
+      }
+    } catch (error) {
+      console.error('Error al validar referencia:', error)
+      setReferenciaError("Error inesperado al validar la referencia")
+    } finally {
+      setIsValidatingReferencia(false)
     }
   }
 
@@ -105,7 +179,13 @@ export function VerifyPagoModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    // Validar usuario y PIN primero
+    // Validar que la referencia esté validada primero
+    if (!referenciaValidada) {
+      setError("Debes validar la referencia antes de continuar")
+      return
+    }
+
+    // Validar usuario y PIN
     const isValid = await validateUsuarioPin()
     if (!isValid) {
       return
@@ -188,67 +268,165 @@ export function VerifyPagoModal({
                 <span className="text-gray-500">Referencia:</span>
                 <p className="font-medium">{pago.referencia || 'Sin referencia'}</p>
               </div>
+              {pago.comprobante_url && pago.comprobante_url.trim() !== '' && (
+                <div className="col-span-2">
+                  <span className="text-gray-500">Comprobante:</span>
+                  <div
+                    className="mt-2 h-20 bg-gray-100 rounded-lg border border-gray-200 overflow-hidden cursor-pointer hover:border-red-500 transition-colors"
+                    onClick={() => pago.comprobante_url && window.open(pago.comprobante_url, '_blank')}
+                  >
+                    <img
+                      src={pago.comprobante_url}
+                      alt="Comprobante de pago"
+                      className="w-full h-full object-cover"
+                      loading="eager"
+                      decoding="async"
+                      fetchPriority="high"
+                      onError={() => {
+                        console.log('Error cargando imagen:', pago.comprobante_url)
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
+          
+          
+          
+
           {/* Campos del formulario */}
           <div className="space-y-4">
-            {/* Selección de Usuario */}
+            {/* Validación de Referencia */}
             <div>
-              <Label htmlFor="usuario" className="text-sm font-medium flex items-center gap-2">
-                <User className="h-4 w-4" />
-                Usuario Verificador <span className="text-red-500">*</span>
+              <Label htmlFor="referencia" className="text-sm font-medium flex items-center gap-2">
+                <Search className="h-4 w-4" />
+                Referencia del Pago <span className="text-red-500">*</span>
               </Label>
-              <Select
-                value={usuarioSeleccionado}
-                onValueChange={setUsuarioSeleccionado}
-                disabled={isSubmitting || success}
-              >
-                <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Selecciona un usuario para verificar" />
-                </SelectTrigger>
-                <SelectContent>
-                  {usuarios.map((usuario) => (
-                    <SelectItem key={usuario.id} value={usuario.usuario}>
-                      <div className="flex items-center gap-2">
-                        <Shield className={`h-4 w-4 ${usuario.activo ? 'text-green-600' : 'text-gray-400'}`} />
-                        <span>{usuario.usuario}</span>
-                        {!usuario.activo && (
-                          <span className="text-xs text-gray-500">(Inactivo)</span>
-                        )}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {usuarios.length === 0 && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  No hay usuarios de verificación disponibles
-                </p>
+              <div className="flex gap-2 mt-1">
+                <Input
+                  id="referencia"
+                  type="text"
+                  value={referencia}
+                  onChange={(e) => {
+                    setReferencia(e.target.value)
+                    setReferenciaValidada(false)
+                    setReferenciaError(null)
+                    setReferenciaDuplicada(false)
+                  }}
+                  onPaste={(e) => {
+                    e.preventDefault()
+                    setReferenciaError("No se permite pegar texto en este campo")
+                  }}
+                  placeholder="Escribe la referencia aquí"
+                      disabled={isSubmitting || success || isValidatingReferencia || referenciaValidada}
+                  className="flex-1 border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 bg-gray-50"
+                />
+                <Button
+                  type="button"
+                  onClick={validateReferencia}
+                  disabled={!referencia.trim() || isSubmitting || success || isValidatingReferencia || referenciaValidada}
+                  variant="default"
+                  size="sm"
+                  className={`px-4 py-1.5 h-9 text-white shadow-sm flex items-center justify-center ${
+                    referenciaValidada 
+                      ? 'bg-green-600 hover:bg-green-700 border-green-600 hover:border-green-700' 
+                      : 'bg-red-600 hover:bg-red-700 border-red-600 hover:border-red-700'
+                  }`}
+                >
+                  {isValidatingReferencia ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                  ) : referenciaValidada ? (
+                    <CheckCircle2 className="h-4 w-4 text-white" />
+                  ) : (
+                    <Search className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+              
+              {/* Estado de validación de referencia */}
+              {referenciaValidada && (
+                <div className="flex items-center gap-2 mt-2 text-green-700 text-sm">
+                  <CheckCircle2 className="h-4 w-4" />
+                  <span>Referencia válida - No hay duplicados</span>
+                </div>
+              )}
+              
+              {referenciaDuplicada && (
+                <div className="flex items-center gap-2 mt-2 text-red-700 text-sm">
+                  <XCircle className="h-4 w-4" />
+                  <span>Referencia duplicada - Ya existe un pago con esta referencia</span>
+                </div>
+              )}
+              
+              {referenciaError && (
+                <div className="flex items-center gap-2 mt-2 text-red-700 text-sm">
+                  <AlertTriangle className="h-4 w-4" />
+                  <span>{referenciaError}</span>
+                </div>
               )}
             </div>
 
-            {/* Campo PIN */}
-            <div>
-              <Label htmlFor="pin" className="text-sm font-medium flex items-center gap-2">
-                <Key className="h-4 w-4" />
-                PIN de Verificación <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="pin"
-                type="text"
-                value={pin}
-                onChange={(e) => setPin(e.target.value)}
-                placeholder="1234"
-                disabled={isSubmitting || success}
-                className="mt-1"
-                maxLength={4}
-                pattern="[0-9]*"
-                inputMode="numeric"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Ingresa el PIN de 4 dígitos del usuario seleccionado
-              </p>
+            {/* Usuario y PIN lado a lado */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Selección de Usuario */}
+              <div>
+                <Label htmlFor="usuario" className="text-sm font-medium flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  Usuario Verificador <span className="text-red-500">*</span>
+                </Label>
+                <Select
+                  value={usuarioSeleccionado}
+                  onValueChange={setUsuarioSeleccionado}
+                  disabled={isSubmitting || success}
+                >
+                  <SelectTrigger className="mt-1 border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 bg-gray-50">
+                    <SelectValue placeholder="Selecciona un usuario" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {usuarios.map((usuario) => (
+                      <SelectItem key={usuario.id} value={usuario.usuario}>
+                        <div className="flex items-center gap-2">
+                          <Shield className={`h-4 w-4 ${usuario.activo ? 'text-green-600' : 'text-gray-400'}`} />
+                          <span>{usuario.usuario}</span>
+                          {!usuario.activo && (
+                            <span className="text-xs text-gray-500">(Inactivo)</span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {usuarios.length === 0 && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    No hay usuarios disponibles
+                  </p>
+                )}
+              </div>
+
+              {/* Campo PIN */}
+              <div>
+                <Label htmlFor="pin" className="text-sm font-medium flex items-center gap-2">
+                  <Key className="h-4 w-4" />
+                  PIN de Verificación <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="pin"
+                  type="text"
+                  value={pin}
+                  onChange={(e) => setPin(e.target.value)}
+                  placeholder="1234"
+                  disabled={isSubmitting || success}
+                  className="mt-1 border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 bg-gray-50"
+                  maxLength={4}
+                  pattern="[0-9]*"
+                  inputMode="numeric"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  PIN de 4 dígitos
+                </p>
+              </div>
             </div>
           </div>
 
@@ -293,7 +471,7 @@ export function VerifyPagoModal({
           <Button
             type="submit"
             onClick={handleSubmit}
-            disabled={isSubmitting || !usuarioSeleccionado || !pin || success || isValidating}
+            disabled={isSubmitting || !usuarioSeleccionado || !pin || success || isValidating || !referenciaValidada}
             className="bg-green-600 hover:bg-green-700 text-white"
           >
             {isSubmitting ? (

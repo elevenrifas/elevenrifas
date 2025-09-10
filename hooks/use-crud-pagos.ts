@@ -297,13 +297,13 @@ export function useCrudPagos(options: {
     }
   }, [refreshPagos])
 
-  const rejectPago = useCallback(async (id: string, verificadoPor: string) => {
+  const rejectPago = useCallback(async (id: string, verificadoPor: string, rechazoNote?: string) => {
     try {
       setIsRejecting(true)
       setError(null)
       
-      console.log('❌ Rechazando pago:', id, verificadoPor)
-      const result = await adminRejectPago(id, verificadoPor)
+      console.log('❌ Rechazando pago:', id, verificadoPor, rechazoNote)
+      const result = await adminRejectPago(id, verificadoPor, rechazoNote)
       
       if (result.success) {
         await refreshPagos()

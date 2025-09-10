@@ -19,6 +19,7 @@ type PagoUpdate = Database['public']['Tables']['pagos']['Update']
 // Tipo extendido para incluir tickets y rifas
 export interface AdminPago extends PagoRow {
   rifa_id?: string  // Agregar rifa_id que existe en el schema
+  comprobante_url?: string | null  // Agregar comprobante_url del schema
   tickets?: Array<{
     id: string
     numero_ticket: string
@@ -248,10 +249,10 @@ export async function adminVerifyPago(id: string, verificadoPor: string) {
   )
 }
 
-export async function adminRejectPago(id: string, verificadoPor: string) {
+export async function adminRejectPago(id: string, verificadoPor: string, rechazoNote?: string) {
   return safeAdminQuery(
     async () => {
-      console.log('🔍 Iniciando rechazo de pago:', { id, verificadoPor })
+      console.log('🔍 Iniciando rechazo de pago:', { id, verificadoPor, rechazoNote })
       
       // PASO 1: Obtener todos los tickets asociados al pago
       console.log('📋 Obteniendo tickets asociados...')
@@ -274,7 +275,7 @@ export async function adminRejectPago(id: string, verificadoPor: string) {
       const rechazoLogs = {
         fecha_rechazo: new Date().toISOString(),
         rechazado_por: verificadoPor,
-        motivo: 'Pago rechazado por administrador',
+        motivo: rechazoNote || 'Pago rechazado por administrador',
         tickets_eliminados: tickets?.map(ticket => ({
           id: ticket.id,
           numero_ticket: ticket.numero_ticket,
@@ -295,7 +296,8 @@ export async function adminRejectPago(id: string, verificadoPor: string) {
           estado: 'rechazado',
           fecha_verificacion: new Date().toISOString(),
           verificado_por: verificadoPor,
-          rechazo_logs: JSON.stringify(rechazoLogs)
+          rechazo_logs: JSON.stringify(rechazoLogs),
+          rechazo_note: rechazoNote || null
         })
         .eq('id', id)
       
@@ -330,6 +332,55 @@ export async function adminRejectPago(id: string, verificadoPor: string) {
       }
     },
     'Error al rechazar pago'
+  )
+}
+
+/**
+ * Validar si existe una referencia duplicada para el mismo tipo de pago y rifa
+ */
+export async function adminValidateReferenciaDuplicada(
+  referencia: string, 
+  tipoPago: string, 
+  rifaId: string, 
+  pagoIdExcluir?: string
+) {
+  return safeAdminQuery(
+    async () => {
+      if (!referencia || !tipoPago || !rifaId) {
+        return { data: { esDuplicada: false, pagoExistente: null }, error: null }
+      }
+
+      let query = createAdminQuery('pagos')
+        .select('id, referencia, tipo_pago, estado, fecha_pago')
+        .eq('referencia', referencia)
+        .eq('tipo_pago', tipoPago)
+        .eq('rifa_id', rifaId)
+        .in('estado', ['pendiente', 'verificado'])
+
+      // Excluir el pago actual si se está editando
+      if (pagoIdExcluir) {
+        query = query.neq('id', pagoIdExcluir)
+      }
+
+      const { data: pagosExistentes, error } = await query
+
+      if (error) {
+        throw error
+      }
+
+      const esDuplicada = pagosExistentes && pagosExistentes.length > 0
+      const pagoExistente = esDuplicada ? pagosExistentes[0] : null
+
+      return { 
+        data: { 
+          esDuplicada, 
+          pagoExistente,
+          totalEncontrados: pagosExistentes?.length || 0
+        }, 
+        error: null 
+      }
+    },
+    'Error al validar referencia duplicada'
   )
 }
 

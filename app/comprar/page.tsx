@@ -1858,7 +1858,7 @@ function ComprarPageContent() {
     // Al pasar del paso 3→4, reservar tickets 5 min
     if (pasoActual === 3) {
       // Mostrar loading overlay para evitar acciones del usuario
-      showLoading("Reservando tickets...", "Por favor espera mientras reservamos tus tickets por 5 minutos");
+      showLoading("Reservando tickets...", "Por favor espera mientras reservamos tus tickets por 10 minutos");
       
       try {
         const id = crypto.randomUUID();
@@ -1879,7 +1879,7 @@ function ComprarPageContent() {
           return;
         }
         
-        updateMessage("Reserva exitosa!", "Tickets reservados por 5 minutos");
+        updateMessage("Reserva exitosa!", "Tickets reservados por 10 minutos");
         
         setReservaId(id);
         setReservaExpiresAt(res.expires_at || null);

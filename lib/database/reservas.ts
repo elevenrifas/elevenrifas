@@ -10,7 +10,7 @@ export interface ReservaResultado {
   expires_at?: string;
 }
 
-const RESERVA_MINUTOS = 5;
+const RESERVA_MINUTOS = 10;
 
 export async function reservarTickets(
   rifa_id: string,
