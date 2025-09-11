@@ -12,12 +12,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu"
-import { MoreHorizontal, Edit, Trash2, Copy, Play, Square, CheckCircle, Tag, DollarSign, Calendar } from "lucide-react"
+import { MoreHorizontal, Edit, Trash2, Copy, Play, Square, CheckCircle, Tag, DollarSign, Calendar, Ticket, Eye } from "lucide-react"
 import * as LucideIcons from "lucide-react"
 import { formatCurrency } from "@/lib/formatters"
 import { useCrudRifas } from "@/hooks/use-crud-rifas"
 import type { AdminRifa } from "@/lib/database/admin_database/rifas"
 import { RifaFormModal } from "../modals/RifaFormModal"
+import { RifaTicketsModal } from "../modals/RifaTicketsModal"
 import { DeleteConfirmModal } from "../modals/DeleteConfirmModal"
 import { DuplicateRifaModal } from "../modals/DuplicateRifaModal"
 
@@ -119,7 +120,21 @@ export function RifasTable({
     initialPageSize: 10
   })
 
+  // Estado para el modal de tickets
+  const [showTicketsModal, setShowTicketsModal] = React.useState(false)
+  const [selectedRifaForTickets, setSelectedRifaForTickets] = React.useState<AdminRifa | null>(null)
 
+  // Función para abrir el modal de tickets
+  const handleViewTickets = (rifa: AdminRifa) => {
+    setSelectedRifaForTickets(rifa)
+    setShowTicketsModal(true)
+  }
+
+  // Función para cerrar el modal de tickets
+  const handleCloseTicketsModal = () => {
+    setShowTicketsModal(false)
+    setSelectedRifaForTickets(null)
+  }
 
   // Función para manejar la exportación
   const handleExport = () => {
@@ -593,6 +608,10 @@ export function RifasTable({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => handleViewTickets(rifa)}>
+                <Ticket className="mr-2 h-4 w-4" />
+                Ver Tickets
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleEditRifa(rifa)}>
                 <Edit className="mr-2 h-4 w-4" />
                 Editar
@@ -694,6 +713,13 @@ export function RifasTable({
         }
         entityName="rifa"
         isDeleting={isDeleting}
+      />
+
+      {/* Modal de Tickets de la Rifa */}
+      <RifaTicketsModal
+        isOpen={showTicketsModal}
+        onClose={handleCloseTicketsModal}
+        rifa={selectedRifaForTickets}
       />
     </div>
   )

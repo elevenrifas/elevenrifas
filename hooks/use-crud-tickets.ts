@@ -3,6 +3,7 @@
 import * as React from 'react'
 import { useState, useCallback } from 'react'
 import { useAdminTickets } from './use-admin-tickets'
+import { adminCreateTicketReservado } from '@/lib/database/admin_database/tickets'
 import type { AdminTicket, CreateTicketData, UpdateTicketData } from '@/types'
 
 // Tipos para el CRUD
@@ -76,6 +77,7 @@ export interface UseCrudTicketsReturn {
   changeTicketState: (id: string, estado: 'pendiente' | 'verificado' | 'rechazado') => Promise<{ success: boolean; error?: string }>
   changeTicketVerificationState: (id: string, estado_verificacion: 'pendiente' | 'verificado' | 'rechazado') => Promise<{ success: boolean; error?: string }>
   toggleTicketPaymentBlock: (id: string, bloqueado: boolean, pago_id?: string) => Promise<{ success: boolean; error?: string }>
+  reservarTicket: (data: { rifa_id: string; numero_ticket: string; nombre?: string; cedula?: string; telefono?: string; correo?: string }) => Promise<{ success: boolean; error?: string }>
   
   // Operaciones de UI
   openCreateModal: () => void
@@ -314,6 +316,27 @@ export function useCrudTickets(options: {
     }
   }, [])
 
+  const reservarTicket = useCallback(async (data: { rifa_id: string; numero_ticket: string; nombre?: string; cedula?: string; telefono?: string; correo?: string }) => {
+    try {
+      console.log('🎫 [useCrudTickets] reservarTicket iniciando:', data)
+      
+      const result = await adminCreateTicketReservado(data)
+      
+      if (result.success) {
+        console.log('✅ [useCrudTickets] Ticket reservado exitosamente')
+        await refreshTickets()
+      } else {
+        console.error('❌ [useCrudTickets] Error al reservar ticket:', result.error)
+      }
+      
+      return result
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Error inesperado al reservar ticket'
+      console.error('💥 [useCrudTickets] Error inesperado en reservarTicket:', err)
+      return { success: false, error: errorMessage }
+    }
+  }, [refreshTickets])
+
   // Operaciones de UI
   const openCreateModal = useCallback(() => setShowCreateModal(true), [])
   const closeCreateModal = useCallback(() => setShowCreateModal(false), [])
@@ -463,6 +486,7 @@ export function useCrudTickets(options: {
     changeTicketState,
     changeTicketVerificationState,
     toggleTicketPaymentBlock,
+    reservarTicket,
     
     // Operaciones de UI
     openCreateModal,

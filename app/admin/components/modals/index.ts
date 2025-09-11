@@ -11,6 +11,7 @@ export { DeleteCategoriaModal } from './DeleteCategoriaModal'
 // Modales de Rifas
 export { RifaFormModal } from './RifaFormModal'
 export { RifaViewModal } from './RifaViewModal'
+export { RifaTicketsModal } from './RifaTicketsModal'
 export { DuplicateRifaModal } from './DuplicateRifaModal'
 
 // Modales de Tickets

@@ -5,10 +5,11 @@ import { ColumnDef } from "@tanstack/react-table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { createCRUDTable } from "../data-table"
-import { Receipt, Ticket, User } from "lucide-react"
+import { Receipt, Ticket, User, Gift } from "lucide-react"
 import type { AdminTicket } from "@/types"
 import { useCrudTickets } from "@/hooks/use-crud-tickets"
 import { PagoDetallesModal } from "../modals/PagoDetallesModal"
+import { ReservarTicketModal } from "../modals/ReservarTicketModal"
 
 // =====================================================
 // 🎯 TABLA TICKETS - ELEVEN RIFAS
@@ -45,7 +46,8 @@ export function TicketsTable({
     selectTicket,
     selectMultipleTickets,
     clearSelection,
-    isRefreshing: localIsRefreshing
+    isRefreshing: localIsRefreshing,
+    reservarTicket
   } = useCrudTickets(
     sharedHook ? {} : {
       initialFilters: {},
@@ -64,6 +66,9 @@ export function TicketsTable({
   // Estado para el modal de detalles del pago
   const [showPagoModal, setShowPagoModal] = React.useState(false)
   const [selectedPago, setSelectedPago] = React.useState<any>(null)
+
+  // Estado para el modal de reservar ticket
+  const [showReservarModal, setShowReservarModal] = React.useState(false)
 
   // Cargar tickets al montar el componente (solo si no hay hook compartido)
   React.useEffect(() => {
@@ -212,6 +217,22 @@ export function TicketsTable({
   const handleClosePagoModal = () => {
     setShowPagoModal(false)
     setSelectedPago(null)
+  }
+
+  // Función para abrir el modal de reservar ticket
+  const handleOpenReservarModal = () => {
+    setShowReservarModal(true)
+  }
+
+  // Función para cerrar el modal de reservar ticket
+  const handleCloseReservarModal = () => {
+    setShowReservarModal(false)
+  }
+
+  // Función para manejar el éxito de reservar ticket
+  const handleReservarSuccess = () => {
+    console.log('✅ Ticket reservado exitosamente, refrescando tabla...')
+    refreshTickets()
   }
 
   // Columnas de la tabla
@@ -405,8 +426,10 @@ export function TicketsTable({
         error: error,
         onRowSelectionChange: handleRowSelectionChange,
         onRefresh: handleRefresh,
-        onExport: handleExport
-        // Removemos onCreate completamente para no mostrar el botón de crear
+        onExport: handleExport,
+        onCreate: handleOpenReservarModal,
+        createButtonText: "Reservar",
+        createButtonIcon: Gift
       })}
 
       {/* Modal de detalles del pago */}
@@ -414,6 +437,13 @@ export function TicketsTable({
         isOpen={showPagoModal}
         onClose={handleClosePagoModal}
         pago={selectedPago}
+      />
+
+      {/* Modal de reservar ticket */}
+      <ReservarTicketModal
+        isOpen={showReservarModal}
+        onClose={handleCloseReservarModal}
+        onSuccess={handleReservarSuccess}
       />
     </div>
   )

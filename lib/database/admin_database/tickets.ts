@@ -163,6 +163,111 @@ export async function adminGetTicketStats(): Promise<{ success: boolean; data?: 
   )
 }
 
+// Función optimizada para obtener tickets de una rifa específica con estadísticas
+export async function adminGetTicketsByRifa(rifa_id: string): Promise<{ 
+  success: boolean; 
+  data?: AdminTicket[]; 
+  stats?: {
+    total: number;
+    pagados: number;
+    reservados: number;
+    sinPago: number;
+    disponibles: number;
+  };
+  error?: string 
+}> {
+  return safeAdminQuery(
+    async () => {
+      console.log('🎫 [adminGetTicketsByRifa] Obteniendo tickets para rifa:', rifa_id)
+      
+      // Query optimizada para tickets de una rifa específica
+      const { data: tickets, error: ticketsError } = await createAdminQuery('tickets')
+        .select(`
+          *,
+          rifas!rifa_id (
+            id,
+            titulo,
+            descripcion,
+            estado,
+            precio_ticket,
+            total_tickets
+          ),
+          pagos!pago_id (
+            id,
+            tipo_pago,
+            monto_bs,
+            monto_usd,
+            tasa_cambio,
+            referencia,
+            fecha_pago,
+            fecha_verificacion,
+            telefono_pago,
+            banco_pago,
+            cedula_pago,
+            fecha_visita,
+            verificado_por,
+            estado
+          )
+        `)
+        .eq('rifa_id', rifa_id)
+        .order('fecha_compra', { ascending: false })
+      
+      if (ticketsError) throw ticketsError
+      
+      // Debug: mostrar información detallada
+      console.log('🎫 [adminGetTicketsByRifa] Tickets obtenidos:', tickets?.length || 0)
+      console.log('🎫 [adminGetTicketsByRifa] Primer ticket:', tickets?.[0])
+      console.log('🎫 [adminGetTicketsByRifa] Todos los tickets:', tickets)
+      
+      // Calcular estadísticas
+      const total = tickets?.length || 0
+      console.log('🎫 [adminGetTicketsByRifa] Total tickets:', total)
+      
+      const pagados = tickets?.filter(t => {
+        const estado = t.pagos?.estado
+        const isPagado = estado === 'pagado' || estado === 'verificado'
+        console.log(`🎫 Ticket ${t.numero_ticket}: estado=${estado}, isPagado=${isPagado}`)
+        return isPagado
+      }).length || 0
+      
+      const reservados = tickets?.filter(t => {
+        const estado = t.pagos?.estado
+        const isReservado = estado === 'reservado' || estado === 'pendiente'
+        console.log(`🎫 Ticket ${t.numero_ticket}: estado=${estado}, isReservado=${isReservado}`)
+        return isReservado
+      }).length || 0
+      
+      const sinPago = tickets?.filter(t => {
+        const hasPago = !!t.pago_id
+        console.log(`🎫 Ticket ${t.numero_ticket}: pago_id=${t.pago_id}, hasPago=${hasPago}`)
+        return !hasPago
+      }).length || 0
+      
+      // Obtener total de tickets de la rifa para calcular disponibles
+      const rifa = tickets?.[0]?.rifas
+      const totalTicketsRifa = rifa?.total_tickets || 0
+      const disponibles = Math.max(0, totalTicketsRifa - total)
+      
+      const stats = {
+        total,
+        pagados,
+        reservados,
+        sinPago,
+        disponibles
+      }
+      
+      console.log('🎫 [adminGetTicketsByRifa] Estadísticas calculadas:', stats)
+      
+      return { 
+        data: tickets || [], 
+        stats,
+        error: null 
+      }
+    },
+    'Error al obtener tickets de la rifa'
+  )
+}
+
 // Función de debug para verificar tickets en la base de datos
 export async function adminDebugTickets(): Promise<{ success: boolean; data?: any; error?: string }> {
   return safeAdminQuery(
@@ -383,5 +488,67 @@ export async function adminToggleTicketPaymentBlock(id: string): Promise<{ succe
       return { data: ticket, error: null }
     },
     'Error al alternar bloqueo de pago del ticket'
+  )
+}
+
+// Función para crear un ticket reservado (para premios)
+export async function adminCreateTicketReservado(data: {
+  rifa_id: string
+  numero_ticket: string
+  nombre?: string
+  cedula?: string
+  telefono?: string
+  correo?: string
+}): Promise<{ success: boolean; data?: AdminTicket; error?: string }> {
+  return safeAdminQuery(
+    async () => {
+      // Validar que el número de ticket no exista en la rifa
+      const { data: existingTicket, error: checkError } = await adminSupabase
+        .from('tickets')
+        .select('id')
+        .eq('rifa_id', data.rifa_id)
+        .eq('numero_ticket', data.numero_ticket)
+        .single()
+
+      if (checkError && checkError.code !== 'PGRST116') {
+        throw checkError
+      }
+
+      if (existingTicket) {
+        throw new Error(`El número de ticket ${data.numero_ticket} ya existe en esta rifa`)
+      }
+
+      // Crear el ticket reservado
+      const ticketData = {
+        rifa_id: data.rifa_id,
+        numero_ticket: data.numero_ticket,
+        nombre: data.nombre || 'TICKET RESERVADO',
+        cedula: data.cedula || '000000000',
+        telefono: data.telefono || '000000000',
+        correo: data.correo || 'N/A',
+        estado: 'reservado',
+        reserva_id: crypto.randomUUID(),
+        reservado_hasta: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() // 1 año
+      }
+
+      const { data: ticket, error } = await adminSupabase
+        .from('tickets')
+        .insert(ticketData)
+        .select(`
+          *,
+          rifas!rifa_id (
+            id,
+            titulo,
+            descripcion,
+            estado,
+            precio_ticket
+          )
+        `)
+        .single()
+
+      if (error) throw error
+      return { data: ticket, error: null }
+    },
+    'Error al crear ticket reservado'
   )
 }
