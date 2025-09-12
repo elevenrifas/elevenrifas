@@ -5,8 +5,18 @@ DECLARE
     numero_ticket VARCHAR(10);
     intentos INTEGER := 0;
     max_intentos INTEGER := 50;
+    total_tickets_rifa INTEGER;
     timestamp_actual BIGINT;
 BEGIN
+    -- Obtener total_tickets de la rifa
+    SELECT total_tickets INTO total_tickets_rifa
+    FROM rifas 
+    WHERE id = rifa_id_param;
+    
+    IF total_tickets_rifa IS NULL THEN
+        RAISE EXCEPTION 'No se pudo obtener total_tickets para la rifa %', rifa_id_param;
+    END IF;
+    
     -- Estrategia 1: Usar timestamp + random para mayor unicidad
     timestamp_actual := extract(epoch from now())::BIGINT;
     
@@ -15,17 +25,12 @@ BEGIN
         
         -- Si se exceden los intentos, usar timestamp como fallback
         IF intentos > max_intentos THEN
-            numero_ticket := (100000 + (timestamp_actual % 900000))::VARCHAR;
+            numero_ticket := (1 + (timestamp_actual % total_tickets_rifa))::VARCHAR;
             EXIT;
         END IF;
         
-        -- Generar número combinando timestamp, random y contador de intentos
-        numero_ticket := (
-            100000 + 
-            (timestamp_actual % 100000) + 
-            (random() * 1000)::INTEGER + 
-            intentos
-        )::VARCHAR;
+        -- Generar número aleatorio entre 1 y total_tickets_rifa
+        numero_ticket := (1 + floor(random() * total_tickets_rifa))::VARCHAR;
         
         -- Verificar que el número no exista en esta rifa
         EXIT WHEN NOT EXISTS (

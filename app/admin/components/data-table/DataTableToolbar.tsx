@@ -46,6 +46,7 @@ export interface DataTableToolbarProps<TData> {
     column: string
     title: string
     options: { label: string; value: string; icon?: React.ComponentType<{ className?: string }> }[]
+    multiple?: boolean
   }[]
   onRefresh?: () => void
   onExport?: () => void
@@ -161,6 +162,7 @@ export function DataTableToolbar<TData>({
               column={column}
               title={filter.title}
               options={filter.options}
+              multiple={filter.multiple ?? true}
             />
           )
         })}

@@ -28,7 +28,7 @@ export async function reservarTickets(
     }
     
     // Verificar disponibilidad antes de reservar
-    const stats = await getTicketAvailabilityStats(rifa_id, 5, 99999);
+    const stats = await getTicketAvailabilityStats(rifa_id, 4);
     if ((stats.available || 0) < cantidad) {
       return {
         success: false,
@@ -37,7 +37,7 @@ export async function reservarTickets(
     }
 
     // Generar números disponibles
-    const options: TicketNumberOptions = { rifa_id, minDigits: 5, maxNumber: 99999 };
+    const options: TicketNumberOptions = { rifa_id, minDigits: 4 };
     const numeros = await generateMultipleTicketNumbers(options, cantidad);
 
     // 🆕 INSERCIÓN CON VALIDACIÓN DE UNICIDAD EN TIEMPO REAL

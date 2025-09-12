@@ -491,6 +491,38 @@ export async function adminToggleTicketPaymentBlock(id: string): Promise<{ succe
   )
 }
 
+// Listar tickets especiales disponibles por rifa (sentinelas y sin pago asignado)
+export async function adminListSpecialTicketsByRifa(rifa_id: string): Promise<{ success: boolean; data?: Array<{ id: string; numero_ticket: string }>; error?: string }> {
+  return safeAdminQuery(
+    async () => {
+      if (!rifa_id) throw new Error('rifa_id es requerido')
+
+      const { data, error } = await adminSupabase
+        .from('tickets')
+        .select('id, numero_ticket, pago_id')
+        .eq('rifa_id', rifa_id)
+        .eq('estado', 'reservado')
+        .is('pago_id', null)
+        .eq('nombre', 'TICKET RESERVADO')
+        .eq('cedula', '000000000')
+        .order('numero_ticket', { ascending: true })
+
+      if (error) throw error
+      
+      // Filtrar solo los que realmente están disponibles (sin pago_id)
+      const ticketsDisponibles = (data || []).filter(t => !t.pago_id)
+      
+      console.log(`🎫 [adminListSpecialTicketsByRifa] Tickets especiales disponibles: ${ticketsDisponibles.length}`)
+      
+      return { 
+        data: ticketsDisponibles.map(t => ({ id: t.id, numero_ticket: t.numero_ticket })), 
+        error: null 
+      }
+    },
+    'Error al listar tickets especiales por rifa'
+  )
+}
+
 // Función para crear un ticket reservado (para premios)
 export async function adminCreateTicketReservado(data: {
   rifa_id: string

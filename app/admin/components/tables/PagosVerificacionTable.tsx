@@ -31,6 +31,7 @@ import {
 } from "lucide-react"
 import { formatCurrency } from "@/lib/formatters"
 import { useCrudPagos } from "@/hooks/use-crud-pagos"
+import { useRifasOptions } from "@/hooks/use-rifas-options"
 import type { AdminPago } from "@/lib/database/admin_database/pagos"
 import { DeleteConfirmModal } from "../modals/DeleteConfirmModal"
 import { VerifyPagoModal } from "../modals/VerifyPagoModal"
@@ -65,33 +66,6 @@ const getTipoPagoIcon = (tipo: string) => {
   }
 }
 
-// Función para obtener variante del badge de estado
-const getEstadoVariant = (estado: string) => {
-  switch (estado) {
-    case 'pendiente':
-      return 'secondary'
-    case 'verificado':
-      return 'default'
-    case 'rechazado':
-      return 'destructive'
-    default:
-      return 'outline'
-  }
-}
-
-// Función para obtener icono del estado
-const getEstadoIcon = (estado: string) => {
-  switch (estado) {
-    case 'pendiente':
-      return <Clock className="h-3 w-3" />
-    case 'verificado':
-      return <CheckCircle className="h-3 w-3" />
-    case 'rechazado':
-      return <XCircle className="h-3 w-3" />
-    default:
-      return <AlertTriangle className="h-3 w-3" />
-  }
-}
 
 // Props del componente
 interface PagosVerificacionTableProps {
@@ -114,6 +88,50 @@ export function PagosVerificacionTable({
   onVerify,
   onReject,
 }: PagosVerificacionTableProps) {
+  // Hook para obtener rifas para filtros
+  const { rifas } = useRifasOptions()
+
+  // Debug: mostrar qué rifas se están cargando
+  React.useEffect(() => {
+    console.log('🔍 [PagosVerificacionTable] Rifas cargadas:', rifas)
+    console.log('🔍 [PagosVerificacionTable] Cantidad de rifas:', rifas.length)
+    if (rifas.length > 0) {
+      console.log('🔍 [PagosVerificacionTable] Primera rifa:', rifas[0])
+      console.log('🔍 [PagosVerificacionTable] Última rifa:', rifas[rifas.length - 1])
+    }
+  }, [rifas])
+
+  // Preparar filtros facetados para la tabla
+  const facetedFilters = React.useMemo(() => {
+    const rifasOptions = rifas.map(rifa => ({
+      label: rifa.label,
+      value: rifa.value,
+      icon: undefined
+    }))
+
+    console.log('🔍 [PagosVerificacionTable] Opciones de rifa para filtro:', rifasOptions)
+    console.log('🔍 [PagosVerificacionTable] Cantidad de opciones:', rifasOptions.length)
+
+    const estadosOptions = [
+      { label: "Pendiente", value: "pendiente", icon: undefined },
+      { label: "Verificado", value: "verificado", icon: undefined },
+      { label: "Rechazado", value: "rechazado", icon: undefined }
+    ]
+
+    return [
+      {
+        column: "rifa_titulo",
+        title: "Rifa",
+        options: rifasOptions
+      },
+      {
+        column: "estado", 
+        title: "Estado",
+        options: estadosOptions
+      }
+    ]
+  }, [rifas])
+
   // Hook CRUD personalizado para gestionar pagos
   const {
     // Estado de los datos
@@ -352,46 +370,7 @@ export function PagosVerificacionTable({
   // Definir las columnas dentro del componente para tener acceso a las funciones
   const pagosColumns: ColumnDef<AdminPago>[] = [
     {
-      accessorKey: "cliente",
-      header: "Cliente",
-      cell: ({ row }) => {
-        const pago = row.original
-        
-        // Para pagos rechazados, usar información del pagador
-        if (pago.estado === 'rechazado') {
-          return (
-            <div className="space-y-1">
-              <div className="font-medium text-sm">
-                {pago.cedula_pago || 'Cliente no especificado'}
-              </div>
-            </div>
-          )
-        }
-        
-        // Para otros estados, usar información del primer ticket
-        const primerTicket = pago.tickets?.[0]
-        
-        if (!primerTicket) {
-          return (
-            <div className="flex items-center gap-2">
-              <User className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">Sin tickets</span>
-            </div>
-          )
-        }
-
-                 return (
-           <div className="space-y-1">
-             <div className="font-medium text-sm">{primerTicket.nombre}</div>
-             <div className="text-xs text-muted-foreground">
-               {primerTicket.cedula}
-             </div>
-           </div>
-         )
-      },
-    },
-    {
-      accessorKey: "rifa",
+      accessorKey: "rifa_titulo",
       header: "Rifa",
       cell: ({ row }) => {
         const pago = row.original
@@ -430,6 +409,105 @@ export function PagosVerificacionTable({
             </div>
           </div>
         )
+      },
+      enableColumnFilter: true,
+      filterFn: (row, id, value) => {
+        const pago = row.original
+        const primerTicket = pago.tickets?.[0]
+        const rifaId = primerTicket?.rifa_id
+        if (!rifaId || !value || value.length === 0) return true
+        return value.includes(rifaId)
+      },
+      size: 200,
+    },
+    {
+      accessorKey: "estado",
+      header: "Estado",
+      cell: ({ row }) => {
+        const estado = (row.original.estado || '').toLowerCase()
+
+        const getEstadoColorClasses = (value: string) => {
+          switch (value) {
+            case 'verificado':
+              return 'bg-green-100 text-green-800 border-green-200'
+            case 'rechazado':
+              return 'bg-red-100 text-red-800 border-red-200'
+            case 'pendiente':
+              return 'bg-amber-100 text-amber-800 border-amber-200'
+            default:
+              return 'bg-gray-100 text-gray-800 border-gray-200'
+          }
+        }
+
+        const getDotColorClasses = (value: string) => {
+          switch (value) {
+            case 'verificado':
+              return 'bg-green-500'
+            case 'rechazado':
+              return 'bg-red-500'
+            case 'pendiente':
+              return 'bg-amber-500'
+            default:
+              return 'bg-gray-500'
+          }
+        }
+
+        const colorClasses = getEstadoColorClasses(estado)
+        const dotClasses = getDotColorClasses(estado)
+
+        return (
+          <div className="flex items-center justify-center">
+            <Badge variant="outline" className={`flex items-center gap-2 px-3 py-1 w-28 ${colorClasses}`}>
+              <div className={`w-2 h-2 rounded-full ${dotClasses}`} />
+              <span className="font-medium capitalize">{estado || 'N/A'}</span>
+            </Badge>
+          </div>
+        )
+      },
+      enableColumnFilter: true,
+      filterFn: (row, id, value) => {
+        const pago = row.original
+        return value.includes(pago.estado)
+      },
+      size: 140,
+    },
+    {
+      accessorKey: "cliente",
+      header: "Cliente",
+      cell: ({ row }) => {
+        const pago = row.original
+        
+        // Para pagos rechazados, usar información del pagador
+        if (pago.estado === 'rechazado') {
+          return (
+            <div className="space-y-1">
+              <div className="font-medium text-sm">
+                {pago.cedula_pago || 'Cliente no especificado'}
+              </div>
+            </div>
+          )
+        }
+        
+        // Para otros estados, usar información del primer ticket
+        const primerTicket = pago.tickets?.[0]
+        
+        if (!primerTicket) {
+          return (
+            <div className="flex items-center gap-2">
+              <User className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">Sin tickets</span>
+            </div>
+          )
+        }
+
+                 return (
+           <div className="space-y-1">
+             <div className="font-medium text-sm">{primerTicket.nombre}</div>
+             <div className="text-xs text-muted-foreground">
+               {primerTicket.cedula}
+             </div>
+           </div>
+         )
       },
     },
     {
@@ -559,49 +637,6 @@ export function PagosVerificacionTable({
       },
     },
     {
-      accessorKey: "estado",
-      header: "Estado",
-      cell: ({ row }) => {
-        const estado = (row.getValue("estado") as string) || ''
-
-        const getEstadoColorClasses = (value: string) => {
-          switch (value) {
-            case 'verificado':
-              return 'bg-green-100 text-green-800 border-green-200'
-            case 'rechazado':
-              return 'bg-red-100 text-red-800 border-red-200'
-            case 'pendiente':
-              return 'bg-amber-100 text-amber-800 border-amber-200'
-            default:
-              return 'bg-gray-100 text-gray-800 border-gray-200'
-          }
-        }
-
-        const getDotColorClasses = (value: string) => {
-          switch (value) {
-            case 'verificado':
-              return 'bg-green-500'
-            case 'rechazado':
-              return 'bg-red-500'
-            case 'pendiente':
-              return 'bg-amber-500'
-            default:
-              return 'bg-gray-500'
-          }
-        }
-
-        const colorClasses = getEstadoColorClasses(estado)
-        const dotClasses = getDotColorClasses(estado)
-
-        return (
-          <Badge variant="outline" className={`flex items-center justify-center gap-2 px-3 py-1 w-28 ${colorClasses}`}>
-            <div className={`w-2 h-2 rounded-full ${dotClasses}`} />
-            <span className="font-medium capitalize">{estado}</span>
-          </Badge>
-        )
-      },
-    },
-    {
       accessorKey: "fecha_pago",
       header: "Fecha Pago",
       cell: ({ row }) => {
@@ -717,7 +752,9 @@ export function PagosVerificacionTable({
         data: pagos,
         title: "Verificación de Pagos",
         description: "Gestiona y verifica todos los pagos del sistema",
-        // Usar filtro global personalizado para buscar en múltiples campos
+        // Usar filtros facetados integrados
+        showFacetedFilters: true,
+        facetedFilters: facetedFilters,
         searchPlaceholder: "Buscar por cédula, cliente, referencia o rifa...",
         enableGlobalFilter: true,
         globalFilterFn: (row: any, _columnId: string, filterValue: any) => {
@@ -754,7 +791,7 @@ export function PagosVerificacionTable({
       <VerifyPagoModal
         isOpen={showVerifyModal}
         onClose={closeVerifyModal}
-        onConfirm={(verificadoPor) => verifyPago(selectedPago?.id || '', verificadoPor)}
+        onConfirm={(verificadoPor, options) => verifyPago(selectedPago?.id || '', verificadoPor, options)}
         pago={selectedPago}
         isSubmitting={isVerifying}
       />

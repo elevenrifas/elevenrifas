@@ -19,6 +19,57 @@ type RifasRow = Database['public']['Tables']['rifas']['Row']
 // =====================================================
 
 /**
+ * Obtener todas las rifas (activas e inactivas) con categorías
+ * Para uso en filtros y administración
+ */
+export async function obtenerTodasLasRifas(): Promise<Rifa[]> {
+  try {
+    const { data, error } = await supabase
+      .from('rifas')
+      .select(`
+        *,
+        categorias_rifas (
+          id,
+          nombre,
+          icono,
+          descripcion
+        )
+      `)
+      .order('fecha_creacion', { ascending: false })
+
+    if (error) {
+      console.error('❌ Error al obtener todas las rifas:', error.message)
+      return []
+    }
+
+    // Transformar y validar datos
+    const rifasTransformadas = (data || []).map((rifa: any) => ({
+        ...rifa,
+        tipo_rifa: rifa.tipo_rifa || 'vehiculo',
+        categoria: rifa.categoria || 'general',
+        destacada: rifa.destacada || false,
+        orden: rifa.orden || 0,
+        slug: rifa.slug || (rifa.titulo ? rifa.titulo.toLowerCase().replace(/\s+/g, '-') : 'rifa-sin-titulo'),
+        fecha_culminacion: rifa.fecha_culminacion || null,
+        premio_principal: rifa.premio_principal || rifa.titulo,
+        condiciones: rifa.condiciones || 'Ganador debe ser mayor de 18 años.',
+        marca: rifa.marca || null,
+        modelo: rifa.modelo || null,
+        ano: rifa.ano || null,
+        color: rifa.color || null,
+        valor_estimado_usd: rifa.valor_estimado_usd || null,
+        progreso_manual: rifa.progreso_manual || null
+      }))
+
+    return rifasTransformadas
+
+  } catch (error) {
+    console.error('💥 Error inesperado al obtener todas las rifas:', error)
+    return []
+  }
+}
+
+/**
  * Obtener todas las rifas activas con categorías
  * Query principal que se ejecuta al inicio de la aplicación
  */

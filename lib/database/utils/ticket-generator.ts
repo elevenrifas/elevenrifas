@@ -9,8 +9,8 @@ import { supabase } from '../supabase';
 
 export interface TicketNumberOptions {
   rifa_id: string;
-  minDigits?: number; // Número mínimo de dígitos (por defecto 5)
-  maxNumber?: number; // Número máximo de ticket (por defecto 99999)
+  minDigits?: number; // Número mínimo de dígitos (por defecto 4)
+  maxNumber?: number; // Número máximo de ticket (opcional, se obtiene de la rifa si no se proporciona)
 }
 
 /**
@@ -89,19 +89,38 @@ export async function getExistingTicketNumbers(rifa_id: string): Promise<string[
  * 
  * @param rifa_id - ID de la rifa
  * @param minDigits - Número mínimo de dígitos
- * @param maxNumber - Número máximo de ticket
+ * @param maxNumber - Número máximo de ticket (opcional, se obtiene de la rifa si no se proporciona)
  * @returns Array de números disponibles
  */
 export async function findAvailableTicketNumbers(
   rifa_id: string, 
-  minDigits: number = 5,
-  maxNumber: number = 99999
+  minDigits: number = 4,
+  maxNumber?: number
 ): Promise<string[]> {
   console.log('🔍 BUSCANDO NÚMEROS DISPONIBLES:', {
     rifa_id,
     minDigits,
-    maxNumber
+    maxNumber: maxNumber || 'obtener_de_rifa'
   });
+  
+  // 🆕 OBTENER TOTAL_TICKETS DE LA RIFA SI NO SE PROPORCIONA
+  let actualMaxNumber = maxNumber;
+  if (!actualMaxNumber) {
+    console.log('🔍 OBTENIENDO TOTAL_TICKETS DE LA RIFA...');
+    const { data: rifa, error: rifaError } = await supabase
+      .from('rifas')
+      .select('total_tickets')
+      .eq('id', rifa_id)
+      .single();
+    
+    if (rifaError || !rifa || !rifa.total_tickets) {
+      console.error('❌ Error obteniendo total_tickets de la rifa:', rifaError);
+      throw new Error(`Error obteniendo total_tickets de la rifa: ${rifaError?.message || 'Rifa no encontrada'}`);
+    }
+    
+    actualMaxNumber = rifa.total_tickets;
+    console.log(`📊 TOTAL_TICKETS DE LA RIFA: ${actualMaxNumber}`);
+  }
   
   const existingNumbers = await getExistingTicketNumbers(rifa_id);
   console.log('📊 TICKETS EXISTENTES ENCONTRADOS:', {
@@ -114,7 +133,7 @@ export async function findAvailableTicketNumbers(
   if (existingNumbers.length === 0) {
     console.log('✅ NO HAY TICKETS EXISTENTES, TODOS DISPONIBLES');
     const availableNumbers: string[] = [];
-    for (let i = 1; i <= maxNumber; i++) {
+    for (let i = 1; i <= actualMaxNumber; i++) {
       availableNumbers.push(i.toString().padStart(minDigits, '0'));
     }
     console.log('📋 NÚMEROS DISPONIBLES GENERADOS:', {
@@ -138,7 +157,7 @@ export async function findAvailableTicketNumbers(
   for (const existingNum of numericExisting) {
     // Agregar todos los números desde currentNumber hasta existingNum - 1
     while (currentNumber < existingNum) {
-      if (currentNumber <= maxNumber) {
+      if (currentNumber <= actualMaxNumber) {
         availableNumbers.push(currentNumber.toString().padStart(minDigits, '0'));
       }
       currentNumber++;
@@ -147,7 +166,7 @@ export async function findAvailableTicketNumbers(
   }
 
   // Agregar números restantes después del último existente
-  while (currentNumber <= maxNumber) {
+  while (currentNumber <= actualMaxNumber) {
     availableNumbers.push(currentNumber.toString().padStart(minDigits, '0'));
     currentNumber++;
   }
@@ -169,11 +188,11 @@ export async function findAvailableTicketNumbers(
  * @returns Número de ticket único como string
  */
 export async function generateUniqueTicketNumber(options: TicketNumberOptions): Promise<string> {
-  const { rifa_id, minDigits = 5, maxNumber = 99999 } = options;
+  const { rifa_id, minDigits = 4 } = options;
   
   try {
-    // Obtener números disponibles
-    const availableNumbers = await findAvailableTicketNumbers(rifa_id, minDigits, maxNumber);
+    // Obtener números disponibles (sin maxNumber, se obtiene de la rifa)
+    const availableNumbers = await findAvailableTicketNumbers(rifa_id, minDigits);
     
     if (availableNumbers.length === 0) {
       throw new Error('No hay números de ticket disponibles');
@@ -190,9 +209,9 @@ export async function generateUniqueTicketNumber(options: TicketNumberOptions): 
   } catch (error) {
     console.error('Error generando número único:', error);
     
-    // Fallback: usar timestamp + random
+    // Fallback: usar timestamp + random (ajustado para 4 dígitos)
     const timestamp = Math.floor(Date.now() / 1000);
-    const fallbackNumber = (100000 + (timestamp % 900000)).toString().padStart(minDigits, '0');
+    const fallbackNumber = (1000 + (timestamp % 9000)).toString().padStart(minDigits, '0');
     
     console.warn(`⚠️ Usando número de fallback: ${fallbackNumber}`);
     return fallbackNumber;
@@ -210,16 +229,31 @@ export async function generateMultipleTicketNumbers(
   options: TicketNumberOptions, 
   count: number
 ): Promise<string[]> {
-  const { rifa_id, minDigits = 5, maxNumber = 99999 } = options;
+  const { rifa_id, minDigits = 4 } = options;
   
   console.log('🎲 GENERANDO MÚLTIPLES NÚMEROS:', {
     rifa_id,
     cantidad: count,
-    minDigits,
-    maxNumber
+    minDigits
   });
   
   try {
+    // 🆕 OBTENER TOTAL_TICKETS DE LA RIFA
+    console.log('🔍 OBTENIENDO TOTAL_TICKETS DE LA RIFA...');
+    const { data: rifa, error: rifaError } = await supabase
+      .from('rifas')
+      .select('total_tickets')
+      .eq('id', rifa_id)
+      .single();
+    
+    if (rifaError || !rifa || !rifa.total_tickets) {
+      console.error('❌ Error obteniendo total_tickets de la rifa:', rifaError);
+      throw new Error(`Error obteniendo total_tickets de la rifa: ${rifaError?.message || 'Rifa no encontrada'}`);
+    }
+    
+    const maxNumber = rifa.total_tickets;
+    console.log(`📊 TOTAL_TICKETS DE LA RIFA: ${maxNumber}`);
+    
     // 🎲 GENERACIÓN ALEATORIA INTELIGENTE: Obtener números disponibles y seleccionar aleatoriamente
     console.log('🔍 OBTENIENDO NÚMEROS DISPONIBLES PARA SELECCIÓN ALEATORIA...');
     
@@ -238,7 +272,7 @@ export async function generateMultipleTicketNumbers(
     const numerosOcupadosSet = new Set((numerosOcupados || []).map(t => t.numero_ticket));
     console.log(`📊 NÚMEROS OCUPADOS ENCONTRADOS: ${numerosOcupadosSet.size}`);
     
-    // 🎯 GENERAR LISTA COMPLETA DE NÚMEROS DISPONIBLES
+    // 🎯 GENERAR LISTA COMPLETA DE NÚMEROS DISPONIBLES (1 a total_tickets)
     const numerosDisponibles: string[] = [];
     for (let i = 1; i <= maxNumber; i++) {
       const numeroFormateado = i.toString().padStart(minDigits, '0');
@@ -302,13 +336,13 @@ export async function generateMultipleTicketNumbers(
  * 
  * @param rifa_id - ID de la rifa
  * @param minDigits - Número mínimo de dígitos
- * @param maxNumber - Número máximo de ticket
+ * @param maxNumber - Número máximo de ticket (opcional, se obtiene de la rifa si no se proporciona)
  * @returns Estadísticas de disponibilidad
  */
 export async function getTicketAvailabilityStats(
   rifa_id: string, 
-  minDigits: number = 5,
-  maxNumber: number = 99999
+  minDigits: number = 4,
+  maxNumber?: number
 ): Promise<{
   total: number;
   existing: number;
@@ -385,7 +419,7 @@ export async function getAvailableTicketRange(
   rifa_id: string,
   start: number,
   end: number,
-  minDigits: number = 5
+  minDigits: number = 4
 ): Promise<string[]> {
   const availableNumbers = await findAvailableTicketNumbers(rifa_id, minDigits, end);
   

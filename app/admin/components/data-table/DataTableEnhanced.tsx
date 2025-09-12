@@ -81,6 +81,7 @@ export interface DataTableEnhancedProps<TData, TValue> {
     column: string
     title: string
     options: { label: string; value: string; icon?: React.ComponentType<{ className?: string }> }[]
+    multiple?: boolean
   }[]
   
   // Estados personalizados

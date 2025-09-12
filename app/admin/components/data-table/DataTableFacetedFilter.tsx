@@ -45,7 +45,27 @@ export function DataTableFacetedFilter<TData, TValue>({
   multiple = true,
 }: DataTableFacetedFilterProps<TData, TValue>) {
   const facets = column?.getFacetedUniqueValues()
-  const selectedValues = new Set(column?.getFilterValue() as string[])
+  const rawFilterValue = column?.getFilterValue()
+  const selectedValues = new Set<string>(
+    multiple
+      ? (Array.isArray(rawFilterValue) ? (rawFilterValue as string[]) : [])
+      : rawFilterValue
+        ? [String(rawFilterValue)]
+        : []
+  )
+
+  // Dedupe options by value to prevent duplicated selections
+  const uniqueOptions = React.useMemo(() => {
+    const seen = new Set<string>()
+    const result: { label: string; value: string; icon?: React.ComponentType<{ className?: string }> }[] = []
+    for (const opt of options) {
+      if (!seen.has(opt.value)) {
+        seen.add(opt.value)
+        result.push(opt)
+      }
+    }
+    return result
+  }, [options])
 
   const handleSelect = (value: string) => {
     if (multiple) {
@@ -80,12 +100,12 @@ export function DataTableFacetedFilter<TData, TValue>({
               </Badge>
               <div className="hidden space-x-1 lg:flex">
                 {selectedValues.size <= 3 ? (
-                  options
+                  uniqueOptions
                     .filter((option) => selectedValues.has(option.value))
-                    .map((option) => (
+                    .map((option, idx) => (
                       <Badge
                         variant="secondary"
-                        key={option.value}
+                        key={`${option.value}-${idx}`}
                         className="rounded-sm px-1 font-normal"
                       >
                         {option.label}
@@ -112,11 +132,11 @@ export function DataTableFacetedFilter<TData, TValue>({
           <CommandList>
             <CommandEmpty>No se encontraron resultados.</CommandEmpty>
             <CommandGroup>
-              {options.map((option) => {
+              {uniqueOptions.map((option, idx) => {
                 const isSelected = selectedValues.has(option.value)
                 return (
                   <CommandItem
-                    key={option.value}
+                    key={`${option.value}-${idx}`}
                     onSelect={() => handleSelect(option.value)}
                   >
                     <div
@@ -127,7 +147,7 @@ export function DataTableFacetedFilter<TData, TValue>({
                           : "opacity-50 [&_svg]:invisible"
                       )}
                     >
-                      <Check className={cn("h-4 w-4")} />
+                      <Check className={cn("h-4 w-4", isSelected ? "text-white" : undefined)} />
                     </div>
                     {option.icon && (
                       <option.icon className="mr-2 h-4 w-4 text-muted-foreground" />

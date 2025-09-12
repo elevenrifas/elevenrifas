@@ -23,6 +23,7 @@ export interface CrudPagoFilters {
   estado?: AdminPagoEstado
   tipo_pago?: string
   rifa_id?: string
+  search?: string
 }
 
 export interface CrudPagoSort {
@@ -62,7 +63,7 @@ export interface UseCrudPagosReturn {
   updatePago: (id: string, data: any) => Promise<{ success: boolean; error?: string }>
   deletePago: (id: string) => Promise<{ success: boolean; error?: string }>
   deleteMultiplePagos: (ids: string[]) => Promise<{ success: boolean; error?: string }>
-  verifyPago: (id: string, verificadoPor: string) => Promise<{ success: boolean; error?: string }>
+  verifyPago: (id: string, verificadoPor: string, options?: { especialesCantidad?: number; modo?: 'agregar' | 'reemplazar'; selectedIds?: string[] }) => Promise<{ success: boolean; error?: string }>
   rejectPago: (id: string, verificadoPor: string) => Promise<{ success: boolean; error?: string }>
   
   // Operaciones de UI
@@ -84,6 +85,13 @@ export interface UseCrudPagosReturn {
   selectMultiplePagos: (pagos: AdminPago[]) => void
   clearSelection: () => void
   togglePagoSelection: (pago: AdminPago) => void
+  
+  // Filtros y ordenamiento
+  filters: CrudPagoFilters
+  sort: CrudPagoSort
+  setFilters: (filters: Partial<CrudPagoFilters>) => void
+  setSort: (sort: CrudPagoSort) => void
+  clearFilters: () => void
   
   // Utilidades
   refreshPagos: () => Promise<void>
@@ -141,17 +149,39 @@ export function useCrudPagos(options: {
       setIsLoading(true)
       setError(null)
       
-      console.log('🔄 Cargando pagos...')
+      console.log('🔄 Cargando pagos con filtros:', filters)
       const result = await adminListPagos({
         estado: filters.estado,
+        rifa_id: filters.rifa_id,
         ordenarPor: sort.field,
         orden: sort.direction
       })
       
       if (result.success) {
-        setPagos(result.data || [])
-        setTotalPagos(result.total || 0)
-        console.log(`✅ Pagos cargados: ${result.data?.length || 0}`)
+        let pagosData = result.data || []
+        
+        // Aplicar filtro de búsqueda si existe
+        if (filters.search) {
+          const searchTerm = filters.search.toLowerCase().trim()
+          pagosData = pagosData.filter(pago => {
+            const primerTicket = pago.tickets?.[0]
+            const clienteNombre = primerTicket?.nombre?.toLowerCase() || ''
+            const clienteCedula = primerTicket?.cedula?.toLowerCase() || ''
+            const referencia = (pago.referencia || '').toLowerCase()
+            const rifaTitulo = primerTicket?.rifas?.titulo?.toLowerCase() || ''
+            
+            return (
+              clienteNombre.includes(searchTerm) ||
+              clienteCedula.includes(searchTerm) ||
+              referencia.includes(searchTerm) ||
+              rifaTitulo.includes(searchTerm)
+            )
+          })
+        }
+        
+        setPagos(pagosData)
+        setTotalPagos(pagosData.length)
+        console.log(`✅ Pagos cargados: ${pagosData.length}`)
       } else {
         setError(result.error || 'Error desconocido al cargar pagos')
         console.error('❌ Error al cargar pagos:', result.error)
@@ -163,7 +193,7 @@ export function useCrudPagos(options: {
     } finally {
       setIsLoading(false)
     }
-  }, [filters.estado, sort.field, sort.direction])
+  }, [filters.estado, filters.rifa_id, filters.search, sort.field, sort.direction])
 
   // Función para refrescar pagos
   const refreshPagos = useCallback(async () => {
@@ -274,13 +304,13 @@ export function useCrudPagos(options: {
     }
   }, [refreshPagos])
 
-  const verifyPago = useCallback(async (id: string, verificadoPor: string) => {
+  const verifyPago = useCallback(async (id: string, verificadoPor: string, options?: { especialesCantidad?: number; modo?: 'agregar' | 'reemplazar'; selectedIds?: string[] }) => {
     try {
       setIsVerifying(true)
       setError(null)
       
-      console.log('✅ Verificando pago:', id, verificadoPor)
-      const result = await adminVerifyPago(id, verificadoPor)
+      console.log('✅ Verificando pago:', id, verificadoPor, options)
+      const result = await adminVerifyPago(id, verificadoPor, options)
       
       if (result.success) {
         await refreshPagos()
@@ -380,6 +410,19 @@ export function useCrudPagos(options: {
     })
   }, [])
 
+  // Funciones de filtros
+  const setFilters = useCallback((newFilters: Partial<CrudPagoFilters>) => {
+    setFiltersState(prev => ({ ...prev, ...newFilters }))
+  }, [])
+
+  const setSort = useCallback((newSort: CrudPagoSort) => {
+    setSortState(newSort)
+  }, [])
+
+  const clearFilters = useCallback(() => {
+    setFiltersState({})
+  }, [])
+
   // Utilidades
   const exportPagos = useCallback((pagosToExport?: AdminPago[]) => {
     const dataToExport = pagosToExport || pagos
@@ -446,6 +489,13 @@ export function useCrudPagos(options: {
     selectMultiplePagos,
     clearSelection,
     togglePagoSelection,
+    
+    // Filtros y ordenamiento
+    filters,
+    sort,
+    setFilters,
+    setSort,
+    clearFilters,
     
     // Utilidades
     refreshPagos,

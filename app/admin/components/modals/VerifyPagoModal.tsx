@@ -18,6 +18,7 @@ import { CheckCircle, AlertTriangle, User, Key, Shield, Search, CheckCircle2, XC
 import type { AdminPago } from "@/lib/database/admin_database/pagos"
 import { adminListUsuariosVerificacion, adminVerifyUsuarioPin } from "@/lib/database/admin_database/usuarios_verificacion"
 import { adminValidateReferenciaDuplicada } from "@/lib/database/admin_database/pagos"
+import { SelectTicketsEspecialesDialog } from "./SelectTicketsEspecialesDialog"
 
 // =====================================================
 // 🎯 MODAL VERIFICACIÓN PAGO - ELEVEN RIFAS
@@ -29,7 +30,10 @@ import { adminValidateReferenciaDuplicada } from "@/lib/database/admin_database/
 interface VerifyPagoModalProps {
   isOpen: boolean
   onClose: () => void
-  onConfirm: (verificadoPor: string) => Promise<{ success: boolean; error?: string }>
+  onConfirm: (
+    verificadoPor: string,
+    options?: { especialesCantidad?: number; modo?: 'agregar' | 'reemplazar'; selectedIds?: string[] }
+  ) => Promise<{ success: boolean; error?: string }>
   pago: AdminPago | null
   isSubmitting?: boolean
 }
@@ -48,12 +52,21 @@ export function VerifyPagoModal({
   const [success, setSuccess] = React.useState(false)
   const [isValidating, setIsValidating] = React.useState(false)
   
+  // Tickets especiales (UI)
+  const [especialesCantidad, setEspecialesCantidad] = React.useState<number>(0)
+  const [modoEspecial, setModoEspecial] = React.useState<'agregar' | 'reemplazar'>('agregar')
+  
   // Estados para validación de referencia
   const [referencia, setReferencia] = React.useState("")
   const [isValidatingReferencia, setIsValidatingReferencia] = React.useState(false)
   const [referenciaValidada, setReferenciaValidada] = React.useState(false)
   const [referenciaError, setReferenciaError] = React.useState<string | null>(null)
   const [referenciaDuplicada, setReferenciaDuplicada] = React.useState(false)
+
+  // Selector de especiales
+  const [showSelectEspeciales, setShowSelectEspeciales] = React.useState(false)
+  const [especialesSeleccionados, setEspecialesSeleccionados] = React.useState<string[]>([])
+  const [modoEspecialDialog, setModoEspecialDialog] = React.useState<'agregar' | 'reemplazar'>('agregar')
 
   // Cargar usuarios de verificación cuando se abre el modal
   React.useEffect(() => {
@@ -63,6 +76,9 @@ export function VerifyPagoModal({
       setPin("")
       setError(null)
       setSuccess(false)
+      // Reset selección de especiales
+      setEspecialesSeleccionados([])
+      setModoEspecialDialog('agregar')
       // Resetear estados de validación de referencia
       setReferencia("")
       setReferenciaValidada(false)
@@ -193,7 +209,16 @@ export function VerifyPagoModal({
 
     try {
       setError(null)
-      const result = await onConfirm(usuarioSeleccionado)
+      const result = await onConfirm(
+        usuarioSeleccionado,
+        especialesSeleccionados.length > 0
+          ? {
+              especialesCantidad: especialesSeleccionados.length,
+              modo: modoEspecialDialog,
+              selectedIds: especialesSeleccionados,
+            }
+          : undefined
+      )
       
       if (result.success) {
         // Mostrar mensaje de éxito
@@ -450,12 +475,15 @@ export function VerifyPagoModal({
             </div>
           )}
 
-          {/* Información de confirmación */}
-          <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
-            <p className="text-sm text-blue-700 flex items-center gap-2">
-              <CheckCircle className="h-4 w-4" />
-              Al verificar este pago, se desbloquearán {tickets.length} ticket(s) y se marcarán como pagados.
-            </p>
+
+          {/* Lanzador de diálogo de especiales */}
+          <div className="flex items-center justify-between p-3 bg-purple-50 border border-purple-200 rounded-lg">
+            <div className="text-sm text-purple-800">
+              Tickets especiales seleccionados: <span className="font-mono font-medium">{especialesSeleccionados.length}</span>
+            </div>
+            <Button type="button" variant="outline" onClick={() => setShowSelectEspeciales(true)}>
+              Gestionar especiales
+            </Button>
           </div>
         </form>
 
@@ -493,6 +521,16 @@ export function VerifyPagoModal({
           </Button>
         </DialogFooter>
       </DialogContent>
+      {/* Dialogo select especiales */}
+      <SelectTicketsEspecialesDialog
+        isOpen={showSelectEspeciales}
+        onClose={() => setShowSelectEspeciales(false)}
+        rifaId={primerTicket?.rifa_id || ''}
+        onConfirm={({ selectedIds, mode }) => {
+          setEspecialesSeleccionados(selectedIds)
+          setModoEspecialDialog(mode)
+        }}
+      />
     </Dialog>
   )
 }

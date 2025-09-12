@@ -40,6 +40,7 @@ export type AdminPagoEstado = 'pendiente' | 'verificado' | 'rechazado'
 
 export async function adminListPagos(params?: { 
   estado?: AdminPagoEstado
+  rifa_id?: string
   ordenarPor?: string
   orden?: 'asc' | 'desc'
   limite?: number
@@ -47,6 +48,7 @@ export async function adminListPagos(params?: {
 }) {
   const { 
     estado,
+    rifa_id,
     ordenarPor = 'fecha_pago',
     orden = 'desc',
     limite = 1000,
@@ -78,6 +80,11 @@ export async function adminListPagos(params?: {
       // Aplicar filtros
       if (estado) {
         query = query.eq('estado', estado)
+      }
+      
+      // Filtrar por rifa_id a través de los tickets asociados
+      if (rifa_id) {
+        query = query.eq('tickets.rifa_id', rifa_id)
       }
       
       // Aplicar ordenamiento usando helper
@@ -221,7 +228,11 @@ export async function adminDeletePago(id: string) {
   )
 }
 
-export async function adminVerifyPago(id: string, verificadoPor: string) {
+export async function adminVerifyPago(
+  id: string, 
+  verificadoPor: string,
+  options?: { especialesCantidad?: number; modo?: 'agregar' | 'reemplazar'; selectedIds?: string[] }
+) {
   return safeAdminQuery(
     async () => {
       console.log('🔍 Iniciando verificación de pago:', { id, verificadoPor })
@@ -242,8 +253,197 @@ export async function adminVerifyPago(id: string, verificadoPor: string) {
       }
       console.log('✅ Pago verificado correctamente')
 
+      // 🆕 Opcional: gestionar tickets especiales
+      const cantidad = Math.max(0, options?.especialesCantidad || (options?.selectedIds?.length || 0))
+      const modo = (options?.modo ?? (options as any)?.mode) as 'agregar' | 'reemplazar'
+      if (cantidad > 0 && modo) {
+        console.log('🎫 Gestionando tickets especiales:', { cantidad, modo })
+
+        // Obtener rifa_id desde algún ticket asociado
+        const { data: ticketsExistentes, error: ticketsReadError } = await createAdminQuery('tickets')
+          .select('id, rifa_id')
+          .eq('pago_id', id)
+          .limit(1)
+
+        if (ticketsReadError) throw ticketsReadError
+        const rifa_id = ticketsExistentes?.[0]?.rifa_id
+        if (!rifa_id) {
+          throw new Error('No se pudo determinar la rifa para generar tickets especiales')
+        }
+
+        // Determinar fuente de especiales: IDs seleccionados o generar
+        let especialesIds: string[] = []
+        let numerosEspeciales: string[] = []
+        if (options?.selectedIds && options.selectedIds.length > 0) {
+          // Validar que pertenecen a la rifa y que están libres (sin pago)
+          const { data: especialesValidos, error: valError } = await createAdminQuery('tickets')
+            .select('id, numero_ticket, pago_id')
+            .eq('rifa_id', rifa_id)
+            .in('id', options.selectedIds)
+            .is('pago_id', null)
+            .eq('estado', 'reservado')
+            .eq('nombre', 'TICKET RESERVADO')
+            .eq('cedula', '000000000')
+          if (valError) throw valError
+          
+          // Verificar que no estén ya asignados a otro pago
+          const ticketsDisponibles = (especialesValidos || []).filter(t => !t.pago_id)
+          if (ticketsDisponibles.length !== options.selectedIds.length) {
+            const asignados = options.selectedIds.length - ticketsDisponibles.length
+            throw new Error(`${asignados} ticket(s) especial(es) ya están asignados a otro pago`)
+          }
+          
+          especialesIds = ticketsDisponibles.map(t => t.id)
+          numerosEspeciales = ticketsDisponibles.map(t => (t as any).numero_ticket)
+        } else {
+          // Generar números disponibles
+          const { generateMultipleTicketNumbers } = await import('../utils/ticket-generator')
+          numerosEspeciales = await generateMultipleTicketNumbers({ rifa_id }, cantidad)
+        }
+
+        if (modo === 'agregar') {
+          // Agregar tickets especiales al pago (mantener tickets existentes)
+          if (especialesIds.length > 0) {
+            // Obtener datos del cliente desde el primer ticket existente del pago
+            const { data: ticketExistente, error: ticketError } = await createAdminQuery('tickets')
+              .select('nombre, cedula, telefono, correo')
+              .eq('pago_id', id)
+              .limit(1)
+            
+            if (ticketError) throw ticketError
+            
+            const datosCliente = ticketExistente?.[0] || {
+              nombre: 'TICKET RESERVADO',
+              cedula: '000000000',
+              telefono: '000000000',
+              correo: 'N/A'
+            }
+            
+            console.log(`🎫 Agregando tickets especiales con datos del cliente:`, datosCliente)
+            console.log(`🎫 IDs de tickets especiales:`, especialesIds)
+            
+            // Actualizar tickets especiales con datos del cliente
+            const { error: updError } = await createAdminQuery('tickets')
+              .update({ 
+                estado: 'pagado', 
+                pago_id: id, 
+                fecha_compra: new Date().toISOString() as any,
+                nombre: datosCliente.nombre,
+                cedula: datosCliente.cedula,
+                telefono: datosCliente.telefono,
+                correo: datosCliente.correo
+              })
+              .in('id', especialesIds)
+            if (updError) throw updError
+            console.log(`✅ Agregados ${especialesIds.length} ticket(s) especial(es) con datos del cliente`)
+          } else {
+            // Solo crear nuevos si no se seleccionaron tickets específicos
+            console.log(`🎫 Creando tickets especiales nuevos:`, numerosEspeciales)
+            for (let i = 0; i < cantidad; i++) {
+              const numero = numerosEspeciales[i]
+              const { error: insertError } = await createAdminQuery('tickets')
+                .insert({
+                  rifa_id,
+                  numero_ticket: numero,
+                  nombre: 'TICKET RESERVADO',
+                  cedula: '000000000',
+                  telefono: '000000000',
+                  correo: 'N/A',
+                  estado: 'pagado',
+                  pago_id: id,
+                  fecha_compra: new Date().toISOString() as any
+                } as any)
+              if (insertError) throw insertError
+            }
+            console.log(`✅ Creados ${cantidad} ticket(s) especial(es) nuevos para la compra`)
+          }
+        } else if (modo === 'reemplazar') {
+          // Reemplazar aleatoriamente tickets actuales por especiales
+          const { data: ticketsDelPago, error: listError } = await createAdminQuery('tickets')
+            .select('id, rifa_id')
+            .eq('pago_id', id)
+          if (listError) throw listError
+
+          const aReemplazar = Math.min(cantidad, ticketsDelPago?.length || 0)
+
+          // Elegir aleatoriamente IDs a reemplazar
+          const ids = (ticketsDelPago || []).map(t => t.id)
+          for (let i = ids.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1))
+            ;[ids[i], ids[j]] = [ids[j], ids[i]]
+          }
+          const idsSeleccionados = ids.slice(0, aReemplazar)
+
+          // Eliminar seleccionados
+          if (idsSeleccionados.length > 0) {
+            const { error: delError } = await createAdminQuery('tickets')
+              .delete()
+              .in('id', idsSeleccionados)
+            if (delError) throw delError
+          }
+
+          // Obtener datos reales del cliente desde un ticket del pago (si existe)
+          const datosCliente = ticketsDelPago?.[0]
+            ? {
+                nombre: (ticketsDelPago[0] as any).nombre,
+                cedula: (ticketsDelPago[0] as any).cedula,
+                telefono: (ticketsDelPago[0] as any).telefono,
+                correo: (ticketsDelPago[0] as any).correo,
+              }
+            : {
+                nombre: 'TICKET RESERVADO',
+                cedula: '000000000',
+                telefono: '000000000',
+                correo: 'N/A',
+              }
+          
+          // Reutilizar especiales existentes seleccionados o crear nuevos
+          const usarExistentes = Math.min(aReemplazar, especialesIds.length)
+          if (usarExistentes > 0) {
+            const idsUsar = especialesIds.slice(0, usarExistentes)
+            const { error: updError } = await createAdminQuery('tickets')
+              .update({ 
+                estado: 'pagado', 
+                pago_id: id, 
+                fecha_compra: new Date().toISOString() as any,
+                nombre: datosCliente.nombre,
+                cedula: datosCliente.cedula,
+                telefono: datosCliente.telefono,
+                correo: datosCliente.correo
+              })
+              .in('id', idsUsar)
+            if (updError) throw updError
+          }
+          const restantes = aReemplazar - usarExistentes
+          for (let i = 0; i < restantes; i++) {
+            const numero = numerosEspeciales[i]
+            const { error: insertError } = await createAdminQuery('tickets')
+              .insert({
+                rifa_id,
+                numero_ticket: numero,
+                nombre: 'TICKET RESERVADO',
+                cedula: '000000000',
+                telefono: '000000000',
+                correo: 'N/A',
+                estado: 'pagado',
+                pago_id: id,
+                fecha_compra: new Date().toISOString() as any
+              } as any)
+            if (insertError) throw insertError
+          }
+          console.log(`✅ Reemplazados ${aReemplazar} ticket(s) por especial(es) en la compra`)
+        }
+      }
+
+      // Consultar tickets finales asociados para depuración y retorno
+      const { data: ticketsFinales } = await createAdminQuery('tickets')
+        .select('id, numero_ticket, nombre, cedula, telefono, correo')
+        .eq('pago_id', id)
+        .order('numero_ticket', { ascending: true })
+
       console.log('🎉 Verificación de pago completada exitosamente')
-      return { data: null, error: null }
+      console.log('📋 Tickets asociados al pago tras verificación:', ticketsFinales?.map((t: any) => t.numero_ticket))
+      return { data: { tickets: ticketsFinales || [] }, error: null }
     },
     'Error al verificar pago'
   )

@@ -181,7 +181,7 @@ export async function reportarPagoConTicketsTS(
     
     if (!tieneReserva) {
       console.log('🔍 VERIFICANDO DISPONIBILIDAD (NO HAY RESERVA)...');
-    const statsPre = await getTicketAvailabilityStats(datos.rifa_id, 5, rifa.total_tickets || 0);
+    const statsPre = await getTicketAvailabilityStats(datos.rifa_id, 4);
     const disponiblesPre = statsPre.available;
     
     console.log('📊 DISPONIBILIDAD VERIFICADA:', {

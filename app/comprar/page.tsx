@@ -527,6 +527,18 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
     setDatosPago({ ...datosPago, [campo]: valor });
   };
 
+  const copiarPagoMovilTodo = async () => {
+    try {
+      const monto = (cantidad * precioTicket).toFixed(2);
+      const contenido = `0102\nJ12345678\n0412550123\n${monto}`;
+      await navigator.clipboard.writeText(contenido);
+      toast.success("¡Datos de Pago Móvil copiados!");
+    } catch (err) {
+      console.error('Error al copiar todo Pago Móvil:', err);
+      toast.error("Error al copiar los datos de Pago Móvil");
+    }
+  };
+
   const copiarAlPortapapeles = async (texto: string) => {
     try {
       await navigator.clipboard.writeText(texto);
@@ -544,7 +556,17 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
           <div className="space-y-6">
             <div className="rounded-lg border border-slate-300 p-4 bg-white/10 backdrop-blur-sm">
               <div className="text-sm text-white space-y-2">
-                <div className="font-medium">📱 Datos para Pago Móvil:</div>
+                <div className="flex items-center justify-between">
+                  <div className="font-medium">📱 Datos para Pago Móvil:</div>
+                  <button
+                    onClick={copiarPagoMovilTodo}
+                    className="ml-2 px-2 py-1 hover:bg-white/20 rounded transition-colors flex items-center gap-2"
+                    title="Copiar todo"
+                  >
+                    <Copy className="h-4 w-4 text-white hover:text-slate-200" />
+                    <span className="text-xs text-slate-200">Copiar todo</span>
+                  </button>
+                </div>
                 <div className="flex items-center justify-between">
                   <span>• <strong>Teléfono:</strong> 0412-555-0123</span>
                   <button
@@ -1620,6 +1642,7 @@ function ComprarPageContent() {
   const [reservaTicketIds, setReservaTicketIds] = useState<string[]>([]);
   const [remainingMs, setRemainingMs] = useState<number | null>(null);
   const [reservaExpirada, setReservaExpirada] = useState(false);
+  const backBlockRef = useRef<null | (() => void)>(null);
   
   // Cargar localStorage en cliente sin afectar SSR
   const [lsInfo, setLsInfo] = useState<string | null>(null);
@@ -1653,6 +1676,46 @@ function ComprarPageContent() {
     }
   }, [rifaActiva]);
   
+  // Bloquear navegación hacia atrás en el paso 4 (Datos de Pago) mientras el timer esté activo
+  useEffect(() => {
+    const shouldBlock = pasoActual === 4 && remainingMs !== null && remainingMs > 0;
+    if (!shouldBlock) {
+      // Restaurar comportamiento si previamente estaba bloqueado
+      if (backBlockRef.current) {
+        backBlockRef.current();
+        backBlockRef.current = null;
+      }
+      return;
+    }
+
+    // Empujar un nuevo estado al historial para interceptar back
+    const pushStateSafe = () => {
+      try { window.history.pushState(null, '', window.location.href); } catch {}
+    };
+    pushStateSafe();
+
+    const onPopState = (e: PopStateEvent) => {
+      // Re-push para anular el back mientras está activo el timer
+      pushStateSafe();
+      // Opcional: informar al usuario
+      toast.info('Completa el pago o espera que termine el tiempo para volver.');
+    };
+
+    window.addEventListener('popstate', onPopState);
+
+    // Guardar limpiador
+    backBlockRef.current = () => {
+      window.removeEventListener('popstate', onPopState);
+    };
+
+    return () => {
+      if (backBlockRef.current) {
+        backBlockRef.current();
+        backBlockRef.current = null;
+      }
+    };
+  }, [pasoActual, remainingMs]);
+
 
   
   // Si no hay rifa activa, mostrar mensaje de error
@@ -1715,7 +1778,7 @@ function ComprarPageContent() {
         console.log('⚠️ NO HAY TICKETS RESERVADOS - Validando disponibilidad...');
         
         // Solo validar disponibilidad si NO hay reserva previa
-        const statsRealtime = await getTicketAvailabilityStats(rifa.id, 5, rifa.total_tickets || 0);
+        const statsRealtime = await getTicketAvailabilityStats(rifa.id, 4);
         
         console.log('📊 DISPONIBILIDAD EN TIEMPO REAL:', {
           disponibles: statsRealtime.available,
@@ -1912,7 +1975,14 @@ function ComprarPageContent() {
     }
   };
   
-  const pasoAnterior = () => setPasoActual(pasoActual - 1);
+  const pasoAnterior = () => {
+    // Bloquear retroceso en paso 4 mientras el timer esté activo
+    if (pasoActual === 4 && remainingMs !== null && remainingMs > 0) {
+      toast.info('No puedes retroceder mientras cargas los datos de pago.');
+      return;
+    }
+    setPasoActual(pasoActual - 1);
+  };
   
   const confirmarTerminos = () => {
     setAceptadoTerminos(true);
@@ -2110,7 +2180,7 @@ function ComprarPageContent() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-gray-800 via-gray-600 to-slate-200">
-      <Navbar showBackButton={pasoActual < 5} onBack={pasoActual > 1 ? pasoAnterior : () => window.location.href = '/'} />
+      <Navbar showBackButton={pasoActual < 5 && !(pasoActual === 4 && remainingMs !== null && remainingMs > 0)} onBack={pasoActual > 1 ? pasoAnterior : () => window.location.href = '/'} />
       
       {/* Modal de Términos y Condiciones */}
       <Dialog open={showTerminosModal} onOpenChange={setShowTerminosModal}>

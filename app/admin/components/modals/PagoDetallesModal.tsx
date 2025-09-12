@@ -216,7 +216,7 @@ export function PagoDetallesModal({
           </div>
 
           {/* Información del Pago - Reorganizada en 2 columnas */}
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <div className="bg-gray-50 rounded-lg border border-gray-300 p-6">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2 bg-gray-100 rounded-lg">
                 <FileText className="h-5 w-5 text-gray-600" />
@@ -329,7 +329,7 @@ export function PagoDetallesModal({
 
           {/* Sección de Tickets - Nueva sección */}
           {pago.tickets && pago.tickets.length > 0 && (
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <div className="bg-gray-50 rounded-lg border border-gray-300 p-6">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 bg-green-100 rounded-lg">
                   <Ticket className="h-5 w-5 text-green-600" />
@@ -340,18 +340,29 @@ export function PagoDetallesModal({
                 </Badge>
               </div>
               
-              <div className="space-y-3">
+              <div className="space-y-3 p-4 bg-gray-100 rounded-lg">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {pago.tickets.map((ticket, index) => (
-                    <div key={ticket.id} className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-medium text-gray-500">Ticket #{index + 1}</span>
+                  {pago.tickets.map((ticket, index) => {
+                    const isEspecial = ticket.nombre === 'TICKET RESERVADO' && ticket.cedula === '000000000'
+                    return (
+                      <div key={ticket.id} className={`rounded-lg p-3 border ${isEspecial ? 'bg-purple-50 border-purple-200' : 'bg-gray-50 border-gray-200'}`}>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-medium text-gray-500">Ticket #{index + 1}</span>
+                          {isEspecial && (
+                            <span className="text-xs font-medium text-purple-600 bg-purple-100 px-2 py-1 rounded">
+                              ESPECIAL
+                            </span>
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{ticket.numero_ticket}</p>
+                          {isEspecial && (
+                            <p className="text-xs text-purple-600 mt-1">Ticket reservado para premio</p>
+                          )}
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{ticket.numero_ticket}</p>
-                      </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
                 
                 {/* Información del Cliente eliminada - consolidada en el encabezado */}
@@ -363,7 +374,7 @@ export function PagoDetallesModal({
 
           {/* Motivo del Rechazo (sección separada) */}
           {String(pago.estado).toLowerCase() === 'rechazado' && pago.rechazo_note && (
-            <div className="bg-white rounded-lg border border-red-200 p-6">
+            <div className="bg-gray-50 rounded-lg border border-red-300 p-6">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 bg-red-100 rounded-lg">
                   <AlertTriangle className="h-5 w-5 text-red-600" />
@@ -378,7 +389,7 @@ export function PagoDetallesModal({
 
           {/* Notas */}
           {pago.notas && (
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <div className="bg-gray-50 rounded-lg border border-gray-300 p-6">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 bg-yellow-100 rounded-lg">
                   <FileText className="h-5 w-5 text-yellow-600" />

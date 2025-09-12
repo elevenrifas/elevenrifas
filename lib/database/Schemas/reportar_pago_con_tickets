@@ -25,6 +25,7 @@ DECLARE
     tickets_array JSON[] := '{}';
     i INTEGER;
     precio_ticket_rifa DECIMAL(10,2);
+    total_tickets_rifa INTEGER;
     numero_ticket_actual VARCHAR(10);
     intentos_maximos INTEGER := 100; -- Límite de intentos para evitar bucle infinito
     intentos_actuales INTEGER;
@@ -32,13 +33,13 @@ DECLARE
 BEGIN
     -- Iniciar transacción
     BEGIN
-        -- PASO 1: Obtener el precio del ticket de la rifa
-        SELECT precio_ticket INTO precio_ticket_rifa
+        -- PASO 1: Obtener el precio del ticket y total_tickets de la rifa
+        SELECT precio_ticket, total_tickets INTO precio_ticket_rifa, total_tickets_rifa
         FROM rifas 
         WHERE id = p_rifa_id;
         
-        IF precio_ticket_rifa IS NULL THEN
-            RAISE EXCEPTION 'No se pudo obtener el precio del ticket para la rifa %', p_rifa_id;
+        IF precio_ticket_rifa IS NULL OR total_tickets_rifa IS NULL THEN
+            RAISE EXCEPTION 'No se pudo obtener el precio del ticket o total_tickets para la rifa %', p_rifa_id;
         END IF;
         
         -- PASO 2: Crear el pago con SOLO los campos que existen en el schema
@@ -76,21 +77,21 @@ BEGIN
 
         -- PASO 3: Crear múltiples tickets asociados al pago
         FOR i IN 1..p_cantidad_tickets LOOP
-            -- Generar número de ticket único con límite de intentos
+            -- Generar número de ticket único con límite de intentos (1 a total_tickets_rifa)
             intentos_actuales := 0;
-            numero_base := 100000 + (i * 1000) + floor(random() * 100); -- Estrategia más inteligente
+            numero_base := 1 + floor(random() * total_tickets_rifa); -- Número aleatorio entre 1 y total_tickets_rifa
             
             LOOP
                 intentos_actuales := intentos_actuales + 1;
                 
                 -- Si se exceden los intentos, usar timestamp como fallback
                 IF intentos_actuales > intentos_maximos THEN
-                    numero_ticket_actual := (100000 + extract(epoch from now())::INTEGER % 900000)::VARCHAR;
+                    numero_ticket_actual := (1 + extract(epoch from now())::INTEGER % total_tickets_rifa)::VARCHAR;
                     EXIT;
                 END IF;
                 
-                -- Generar número con base incremental + random
-                numero_ticket_actual := (numero_base + floor(random() * 999))::VARCHAR;
+                -- Generar número aleatorio entre 1 y total_tickets_rifa
+                numero_ticket_actual := (1 + floor(random() * total_tickets_rifa))::VARCHAR;
                 
                 -- Verificar que el número no exista
                 EXIT WHEN NOT EXISTS (

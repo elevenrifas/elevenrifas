@@ -16,7 +16,7 @@ export function useTicketAvailability(rifaId: string, refreshInterval: number = 
   const fetchAvailability = async () => {
     try {
       setError(null);
-      const stats = await getTicketAvailabilityStats(rifaId, 5, 99999);
+      const stats = await getTicketAvailabilityStats(rifaId, 4);
       setAvailability(stats);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al obtener disponibilidad');

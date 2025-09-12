@@ -26,7 +26,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
-import { Calendar, DollarSign, Edit, Plus } from "lucide-react"
+import { Calendar, DollarSign, Edit, Plus, X } from "lucide-react"
 import * as LucideIcons from "lucide-react"
 import type { AdminRifa } from "@/lib/database/admin_database/rifas"
 import type { CrudRifaData } from "@/hooks/use-crud-rifas"
@@ -244,6 +244,24 @@ export function RifaFormModal({
       })
     }
   }, [rifa, form])
+
+  // Referencia y apertura nativa del datepicker (solo una llamada, sin duplicados)
+  const fechaCierreInputRef = React.useRef<HTMLInputElement | null>(null)
+  const openFechaCierrePicker = React.useCallback(() => {
+    const el = fechaCierreInputRef.current
+    if (!el) return
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const anyEl: any = el
+      if (typeof anyEl.showPicker === 'function') {
+        anyEl.showPicker()
+      } else {
+        el.focus()
+      }
+    } catch {
+      el.focus()
+    }
+  }, [])
 
   const handleSubmit = async (data: RifaFormValues) => {
     try {
@@ -489,22 +507,36 @@ export function RifaFormModal({
                     <FormLabel className="text-base font-semibold text-gray-900">Fecha de Cierre</FormLabel>
                     <FormControl>
                       <div className="flex gap-2">
-                        <Input
-                          type="datetime-local"
-                          value={field.value ? new Date(field.value).toISOString().slice(0, 16) : ''}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            if (value) {
-                              // Convertir la fecha local a ISO string
-                              const date = new Date(value);
-                              field.onChange(date.toISOString());
-                            } else {
-                              field.onChange(null);
-                            }
-                          }}
-                          disabled={isSubmitting}
-                          className="h-11 border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 text-base"
-                        />
+                        <div 
+                          className="relative flex-1"
+                          onClick={openFechaCierrePicker}
+                          role="button"
+                          aria-label="Abrir selector de fecha"
+                        >
+                          <Input
+                            ref={fechaCierreInputRef}
+                            type="date"
+                            value={field.value ? new Date(field.value).toISOString().slice(0, 10) : ''}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              if (value) {
+                                // Convertir la fecha local a ISO string (solo fecha, sin hora)
+                                const date = new Date(value + 'T00:00:00');
+                                field.onChange(date.toISOString());
+                              } else {
+                                field.onChange(null);
+                              }
+                            }}
+                            disabled={isSubmitting}
+                            className="date-input h-11 w-full pr-10 border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 text-base cursor-pointer"
+                            style={{
+                              colorScheme: 'light'
+                            }}
+                          />
+                          <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+                            <Calendar className="h-4 w-4 text-gray-400" />
+                          </div>
+                        </div>
                         {field.value && (
                           <Button
                             type="button"
@@ -512,7 +544,7 @@ export function RifaFormModal({
                             size="sm"
                             onClick={() => field.onChange(null)}
                             disabled={isSubmitting}
-                            className="h-11 px-3"
+                            className="h-11 px-3 border-2 border-gray-300 hover:border-red-300 hover:bg-red-50 transition-all duration-200"
                           >
                             Limpiar
                           </Button>
@@ -526,19 +558,17 @@ export function RifaFormModal({
                         <div className="flex items-center gap-2 text-sm text-blue-800">
                           <Calendar className="h-4 w-4" />
                           <span className="font-medium">Fecha de cierre establecida:</span>
-                          <span>{new Date(field.value).toLocaleString('es-ES', {
+                          <span>{new Date(field.value).toLocaleDateString('es-ES', {
                             year: 'numeric',
                             month: 'long',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
+                            day: 'numeric'
                           })}</span>
                         </div>
                       </div>
                     )}
                     
                     <FormDescription className="text-sm text-gray-600">
-                      Fecha y hora cuando se cerrará la rifa. Deja vacío si no quieres establecer una fecha específica.
+                      Fecha cuando se cerrará la rifa. Deja vacío si no quieres establecer una fecha específica.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -719,8 +749,26 @@ export function RifaFormModal({
         </Form>
       </DialogContent>
       
+      {/* Estilos globales para el date input (ocultar icono nativo de forma confiable) */}
+      <style jsx global>{`
+        .date-input::-webkit-calendar-picker-indicator {
+          opacity: 0 !important;
+          pointer-events: none !important;
+          width: 0 !important;
+          margin: 0 !important;
+        }
+        .date-input::-webkit-inner-spin-button,
+        .date-input::-webkit-clear-button {
+          display: none !important;
+        }
+        .date-input {
+          background-image: none !important;
+        }
+      `}</style>
+
       {/* Estilos personalizados para el slider */}
       <style jsx>{`
+
         .slider::-webkit-slider-thumb {
           appearance: none;
           height: 20px;

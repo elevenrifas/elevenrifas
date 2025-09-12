@@ -10,6 +10,7 @@ import type { AdminTicket } from "@/types"
 import { useCrudTickets } from "@/hooks/use-crud-tickets"
 import { PagoDetallesModal } from "../modals/PagoDetallesModal"
 import { ReservarTicketModal } from "../modals/ReservarTicketModal"
+import { useRifasOptions } from "@/hooks/use-rifas-options"
 
 // =====================================================
 // 🎯 TABLA TICKETS - ELEVEN RIFAS
@@ -69,6 +70,18 @@ export function TicketsTable({
 
   // Estado para el modal de reservar ticket
   const [showReservarModal, setShowReservarModal] = React.useState(false)
+
+  // Opciones de rifa para filtros
+  const { rifas } = useRifasOptions()
+
+  // Construir opciones de filtro de rifa desde los tickets cargados (fallback a rifas globales)
+  const rifaFilterOptions = React.useMemo(() => {
+    // Mostrar SIEMPRE todas las rifas activas
+    const options = rifas.map(r => ({ label: r.label, value: r.value }))
+    // Ordenar alfabéticamente para UX
+    options.sort((a, b) => a.label.localeCompare(b.label))
+    return options
+  }, [rifas])
 
   // Cargar tickets al montar el componente (solo si no hay hook compartido)
   React.useEffect(() => {
@@ -200,7 +213,6 @@ export function TicketsTable({
             rifas: ticket.rifas ? {
               id: ticket.rifas.id,
               titulo: ticket.rifas.titulo,
-              precio_ticket: ticket.rifas.precio_ticket,
             } : undefined,
           }
         ]
@@ -257,15 +269,27 @@ export function TicketsTable({
       cell: ({ row }) => {
         const nombre = row.getValue("nombre") as string
         const cedula = row.original.cedula
+        const isEspecial = nombre === 'TICKET RESERVADO' && cedula === '000000000'
+        
         return (
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <User className="h-4 w-4 text-muted-foreground" />
               <span className="font-medium">{nombre}</span>
+              {isEspecial && (
+                <span className="text-xs font-medium text-purple-600 bg-purple-100 px-2 py-1 rounded">
+                  ESPECIAL
+                </span>
+              )}
             </div>
             <div className="text-sm text-muted-foreground font-mono">
               {cedula}
             </div>
+            {isEspecial && (
+              <div className="text-xs text-purple-600">
+                Ticket reservado para premio
+              </div>
+            )}
           </div>
         )
       },
@@ -300,6 +324,12 @@ export function TicketsTable({
     {
       accessorKey: "rifas.titulo",
       header: "Rifa",
+      filterFn: (row, _columnId, filterValue) => {
+        if (!filterValue || (Array.isArray(filterValue) && filterValue.length === 0)) return true
+        const selected = Array.isArray(filterValue) ? filterValue : [String(filterValue)]
+        const rifaId = (row.original as AdminTicket).rifa_id
+        return selected.includes(rifaId)
+      },
       cell: ({ row }) => {
         const titulo = row.original.rifas?.titulo || 'No especificada'
         return (
@@ -422,14 +452,21 @@ export function TicketsTable({
             return true
           }
         },
+        showFacetedFilters: true,
+        facetedFilters: [
+          {
+            column: "rifas.titulo",
+            title: "Rifa",
+            options: rifaFilterOptions,
+            multiple: false,
+          },
+        ],
         loading: isLoading || isRefreshing,
         error: error,
         onRowSelectionChange: handleRowSelectionChange,
         onRefresh: handleRefresh,
         onExport: handleExport,
-        onCreate: handleOpenReservarModal,
-        createButtonText: "Reservar",
-        createButtonIcon: Gift
+        onCreate: handleOpenReservarModal
       })}
 
       {/* Modal de detalles del pago */}
