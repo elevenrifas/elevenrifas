@@ -147,27 +147,39 @@ export function exportClientesToExcel(clientes: any[], filename: string = 'clien
  */
 export function exportRifasToExcel(rifas: any[], filename: string = 'rifas'): void {
   try {
+    console.log('📊 [exportRifasToExcel] Iniciando exportación...')
+    console.log('📊 [exportRifasToExcel] Rifas recibidas:', rifas.length)
+    console.log('📊 [exportRifasToExcel] Primer rifa:', rifas[0])
+    
     const excelData = rifas.map(rifa => ({
       'ID': rifa.id,
       'Título': rifa.titulo,
       'Descripción': rifa.descripcion || 'N/A',
-      'Categoría': rifa.categoria_nombre || 'N/A',
+      'Categoría': rifa.categorias_rifas?.nombre || 'N/A',
       'Precio Ticket': rifa.precio_ticket,
       'Total Tickets': rifa.total_tickets,
-      'Tickets Vendidos': rifa.tickets_vendidos,
-      'Tickets Disponibles': rifa.tickets_disponibles,
+      'Tickets Vendidos': rifa.vendidos || 0,
+      'Tickets Reservados': rifa.reservas_activas || 0,
+      'Tickets Disponibles': rifa.disponibles || 0,
+      'Progreso (%)': rifa.progreso || 0,
       'Estado': rifa.estado,
       'Fecha Creación': rifa.fecha_creacion ? new Date(rifa.fecha_creacion).toLocaleDateString('es-ES') : 'N/A',
-      'Fecha Cierre': rifa.fecha_cierre ? new Date(rifa.fecha_cierre).toLocaleDateString('es-ES') : 'N/A'
+      'Fecha Cierre': rifa.fecha_cierre ? new Date(rifa.fecha_cierre).toLocaleDateString('es-ES') : 'N/A',
+      'Opciones de Compra': rifa.numero_tickets_comprar ? rifa.numero_tickets_comprar.join(', ') : 'N/A'
     }))
+
+    console.log('📊 [exportRifasToExcel] Datos procesados:', excelData.length, 'filas')
+    console.log('📊 [exportRifasToExcel] Primera fila procesada:', excelData[0])
 
     exportToExcel(excelData, {
       filename,
       sheetName: 'Rifas',
       includeHeaders: true
     })
+    
+    console.log('✅ [exportRifasToExcel] Exportación completada exitosamente')
   } catch (error) {
-    console.error('Error al exportar rifas a Excel:', error)
+    console.error('❌ [exportRifasToExcel] Error al exportar rifas a Excel:', error)
     throw error
   }
 }
@@ -179,27 +191,46 @@ export function exportRifasToExcel(rifas: any[], filename: string = 'rifas'): vo
  */
 export function exportPagosToExcel(pagos: any[], filename: string = 'pagos'): void {
   try {
+    console.log('📊 [exportPagosToExcel] Iniciando exportación...')
+    console.log('📊 [exportPagosToExcel] Pagos recibidos:', pagos.length)
+    console.log('📊 [exportPagosToExcel] Primer pago:', pagos[0])
+    
     const excelData = pagos.map(pago => ({
       'ID': pago.id,
-      'Referencia': pago.referencia,
-      'Cliente': pago.nombre || 'N/A',
-      'Cédula': pago.cedula || 'N/A',
-      'Rifa': pago.rifa_titulo || 'N/A',
-      'Monto': pago.monto,
+      'Referencia': pago.referencia || 'N/A',
       'Tipo Pago': pago.tipo_pago,
       'Estado': pago.estado,
+      'Monto USD': pago.monto_usd,
+      'Monto Bs': pago.monto_bs,
+      'Tasa Cambio': pago.tasa_cambio,
+      'Nombre del Titular': pago.nombre_titular || 'N/A',
+      'Teléfono Pago': pago.telefono_pago || 'N/A',
+      'Banco Pago': pago.banco_pago || 'N/A',
+      'Cédula Pago': pago.cedula_pago || 'N/A',
       'Fecha Pago': pago.fecha_pago ? new Date(pago.fecha_pago).toLocaleDateString('es-ES') : 'N/A',
       'Fecha Verificación': pago.fecha_verificacion ? new Date(pago.fecha_verificacion).toLocaleDateString('es-ES') : 'N/A',
-      'Verificado Por': pago.verificado_por || 'N/A'
+      'Verificado Por': pago.verificado_por || 'N/A',
+      'Fecha Visita': pago.fecha_visita ? new Date(pago.fecha_visita).toLocaleDateString('es-ES') : 'N/A',
+      'Cliente': pago.tickets?.[0]?.nombre || 'N/A',
+      'Cédula Cliente': pago.tickets?.[0]?.cedula || 'N/A',
+      'Correo Cliente': pago.tickets?.[0]?.correo || 'N/A',
+      'Teléfono Cliente': pago.tickets?.[0]?.telefono || 'N/A',
+      'Rifa': pago.tickets?.[0]?.rifas?.titulo || 'N/A',
+      'Cantidad Tickets': pago.tickets?.length || 0
     }))
+
+    console.log('📊 [exportPagosToExcel] Datos procesados:', excelData.length, 'filas')
+    console.log('📊 [exportPagosToExcel] Primera fila procesada:', excelData[0])
 
     exportToExcel(excelData, {
       filename,
       sheetName: 'Pagos',
       includeHeaders: true
     })
+    
+    console.log('✅ [exportPagosToExcel] Exportación completada exitosamente')
   } catch (error) {
-    console.error('Error al exportar pagos a Excel:', error)
+    console.error('❌ [exportPagosToExcel] Error al exportar pagos a Excel:', error)
     throw error
   }
 }

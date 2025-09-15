@@ -184,9 +184,9 @@ export function useCrudRifas(options: {
       
       if (result.success) {
         closeCreateModal()
-        await refreshRifas()
-        // Invalidar caché de página home después de crear rifa
+        // Solo invalidar caché, no refrescar manualmente para evitar doble recarga
         await invalidateRifasCache('created', { id: result.data?.id })
+        // El refreshRifas se ejecutará automáticamente por el hook useAdminRifas
       }
       
       return result
@@ -196,7 +196,7 @@ export function useCrudRifas(options: {
     } finally {
       setIsCreating(false)
     }
-  }, [baseCreateRifa, refreshRifas, invalidateRifasCache])
+  }, [baseCreateRifa, invalidateRifasCache])
 
   const updateRifa = useCallback(async (id: string, data: Partial<CrudRifaData>) => {
     try {
@@ -205,9 +205,9 @@ export function useCrudRifas(options: {
       
       if (result.success) {
         closeEditModal()
-        await refreshRifas()
-        // Invalidar caché de página home después de actualizar rifa
+        // Solo invalidar caché, no refrescar manualmente para evitar doble recarga
         await invalidateRifasCache('updated', { id, changes: data })
+        // El refreshRifas se ejecutará automáticamente por el hook useAdminRifas
       }
       
       return result
@@ -217,7 +217,7 @@ export function useCrudRifas(options: {
     } finally {
       setIsUpdating(false)
     }
-  }, [baseUpdateRifa, refreshRifas, invalidateRifasCache])
+  }, [baseUpdateRifa, invalidateRifasCache])
 
   const deleteRifa = useCallback(async (id: string) => {
     try {

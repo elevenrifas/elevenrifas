@@ -146,7 +146,7 @@ export function DataTableToolbar<TData>({
               placeholder={searchPlaceholder}
               value={searchValue}
               onChange={(event) => setSearchValue(event.target.value)}
-              className="table-search-input pl-10"
+              className="table-search-input pl-10 !border-2 !border-gray-500 hover:!border-gray-700 focus:!border-gray-700 transition-all duration-200"
             />
           </div>
         )}
@@ -172,7 +172,7 @@ export function DataTableToolbar<TData>({
           <Button
             variant="ghost"
             onClick={handleClearFilters}
-            className="h-8 px-2 lg:px-3 hover:scale-105 transition-all duration-200"
+            className="h-8 px-2 lg:px-3 !border-2 !border-gray-500 hover:!border-gray-700 hover:scale-105 transition-all duration-200"
           >
             Limpiar
             <X className="ml-2 h-4 w-4" />
@@ -202,7 +202,7 @@ export function DataTableToolbar<TData>({
             size="sm"
             onClick={handleRefresh}
             disabled={loading || isRefreshing}
-            className="h-8 hover:scale-105 transition-all duration-200"
+            className="h-8 !border-2 !border-gray-500 hover:!border-gray-700 hover:scale-105 transition-all duration-200"
           >
             <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
             {isRefreshing ? 'Refrescando...' : 'Refrescar'}
@@ -216,7 +216,7 @@ export function DataTableToolbar<TData>({
             size="sm"
             onClick={handleExport}
             disabled={exportDisabled || loading || isExporting}
-            className="h-8 hover:scale-105 transition-all duration-200"
+            className="h-8 !border-2 !border-gray-500 hover:!border-gray-700 hover:scale-105 transition-all duration-200"
           >
             <Download className={`mr-2 h-4 w-4 ${isExporting ? 'animate-spin' : ''}`} />
             {isExporting ? 'Exportando...' : 'Exportar'}
@@ -227,9 +227,14 @@ export function DataTableToolbar<TData>({
         {showColumnToggle && (
           <DropdownMenu onOpenChange={setIsColumnToggleOpen}>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="ml-auto h-8 hover:scale-105 transition-all duration-200">
-                <Settings2 className={`mr-2 h-4 w-4 ${isColumnToggleOpen ? 'animate-pulse' : ''}`} />
-                {isColumnToggleOpen ? 'Columnas...' : 'Columnas'}
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="ml-auto h-8 w-8 p-0 !border-2 !border-gray-500 hover:!border-gray-700 hover:scale-105 transition-all duration-200"
+                title="Columnas"
+              >
+                <Settings2 className={`h-4 w-4 ${isColumnToggleOpen ? 'animate-pulse' : ''}`} />
+                <span className="sr-only">Columnas</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-[150px]">

@@ -1647,6 +1647,26 @@ function ComprarPageContent() {
   // Cargar localStorage en cliente sin afectar SSR
   const [lsInfo, setLsInfo] = useState<string | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
+
+  // Función para obtener el nombre del titular según el tipo de pago
+  const getNombreTitular = (metodoPago: string, datosPago: DatosPago): string | undefined => {
+    switch (metodoPago) {
+      case 'zinli':
+        return datosPago.usuarioZinli;
+      case 'zelle':
+        return datosPago.correoZelle;
+      case 'paypal':
+        return datosPago.correoPaypal;
+      case 'binance':
+        return datosPago.idBinance;
+      case 'pago_movil':
+        return datosPago.telefonoPago;
+      case 'efectivo':
+        return undefined; // Efectivo no requiere nombre del titular
+      default:
+        return undefined;
+    }
+  };
   
   useEffect(() => {
     setIsHydrated(true);
@@ -1870,6 +1890,7 @@ function ComprarPageContent() {
         fecha_visita: datosPago.fechaVisita,
         estado: 'pendiente',
         comprobante_url: comprobanteUrl || undefined,
+        nombre_titular: getNombreTitular(metodoPago, datosPago),
         cantidad_tickets: cantidad,
         rifa_id: rifa.id,
         nombre: datosPersona.nombre,

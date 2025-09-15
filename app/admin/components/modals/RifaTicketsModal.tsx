@@ -85,7 +85,7 @@ export function RifaTicketsModal({
           console.log(`🎫 [RifaTicketsModal] Ticket ${numero}: estado_pago=${estadoPago}, nombre=${nombre}, cedula=${cedula}`)
           
           // Detectar tickets especiales (creados con adminCreateTicketReservado)
-          const isEspecial = nombre === 'TICKET RESERVADO' && cedula === '000000000'
+          const isEspecial = ticket.es_ticket_especial === true
           
           if (isEspecial) {
             especiales.add(numero)

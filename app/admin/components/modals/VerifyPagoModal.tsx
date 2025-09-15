@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { CheckCircle, AlertTriangle, User, Key, Shield, Search, CheckCircle2, XCircle } from "lucide-react"
+import { CheckCircle, AlertTriangle, User, Key, Shield, Search, CheckCircle2, XCircle, Phone, Hash, Mail, Calendar, DollarSign, IdCard, Building, Ticket, Gift } from "lucide-react"
 import type { AdminPago } from "@/lib/database/admin_database/pagos"
 import { adminListUsuariosVerificacion, adminVerifyUsuarioPin } from "@/lib/database/admin_database/usuarios_verificacion"
 import { adminValidateReferenciaDuplicada } from "@/lib/database/admin_database/pagos"
@@ -265,56 +265,178 @@ export function VerifyPagoModal({
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Información del pago */}
-          <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
-            <h4 className="font-medium text-sm text-gray-700">Detalles del Pago</h4>
+          <div className="bg-gray-50 rounded-lg border border-gray-300 p-6">
             
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <span className="text-gray-500">Cliente:</span>
-                <p className="font-medium">{primerTicket?.nombre || 'N/A'}</p>
-              </div>
-              <div>
-                <span className="text-gray-500">Rifa:</span>
-                <p className="font-medium">{rifa?.titulo || 'N/A'}</p>
-              </div>
-              <div>
-                <span className="text-gray-500">Monto USD:</span>
-                <p className="font-medium text-green-600">${pago.monto_usd.toFixed(2)}</p>
-              </div>
-              <div>
-                <span className="text-gray-500">Tickets:</span>
-                <p className="font-medium">{tickets.length} ticket(s)</p>
-              </div>
-              <div>
-                <span className="text-gray-500">Tipo:</span>
-                <p className="font-medium capitalize">{pago.tipo_pago.replace('_', ' ')}</p>
-              </div>
-              <div>
-                <span className="text-gray-500">Referencia:</span>
-                <p className="font-medium">{pago.referencia || 'Sin referencia'}</p>
-              </div>
-              {pago.comprobante_url && pago.comprobante_url.trim() !== '' && (
-                <div className="col-span-2">
-                  <span className="text-gray-500">Comprobante:</span>
-                  <div
-                    className="mt-2 h-20 bg-gray-100 rounded-lg border border-gray-200 overflow-hidden cursor-pointer hover:border-red-500 transition-colors"
-                    onClick={() => pago.comprobante_url && window.open(pago.comprobante_url, '_blank')}
-                  >
-                    <img
-                      src={pago.comprobante_url}
-                      alt="Comprobante de pago"
-                      className="w-full h-full object-cover"
-                      loading="eager"
-                      decoding="async"
-                      fetchPriority="high"
-                      onError={() => {
-                        console.log('Error cargando imagen:', pago.comprobante_url)
-                      }}
-                    />
+            {/* Información del Cliente - Arriba */}
+            <div className="mb-6">
+              <h4 className="font-medium text-gray-900 text-sm uppercase tracking-wide border-b border-gray-200 pb-2 mb-4">
+                Información del Cliente
+              </h4>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Columna Izquierda */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <User className="h-4 w-4 text-gray-500" />
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{primerTicket?.nombre || 'N/A'}</p>
+                      <p className="text-xs text-gray-500">Nombre</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    <Phone className="h-4 w-4 text-gray-500" />
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{primerTicket?.telefono || 'N/A'}</p>
+                      <p className="text-xs text-gray-500">Teléfono</p>
+                    </div>
                   </div>
                 </div>
-              )}
+                
+                {/* Columna Derecha */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <Hash className="h-4 w-4 text-gray-500" />
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{primerTicket?.cedula || 'N/A'}</p>
+                      <p className="text-xs text-gray-500">Cédula</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start gap-3">
+                    <Mail className="h-4 w-4 text-gray-500 mt-0.5" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-gray-900 break-words break-all">{primerTicket?.correo || 'N/A'}</p>
+                      <p className="text-xs text-gray-500">Correo</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
+
+            {/* Detalles del Pago - Sección separada */}
+            <div className="mb-6">
+              <h4 className="font-medium text-gray-900 text-sm uppercase tracking-wide border-b border-gray-200 pb-2 mb-4">
+                Detalles del Pago - <span className="capitalize text-blue-600">{pago.tipo_pago.replace('_', ' ')}</span>
+              </h4>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Columna Izquierda */}
+                <div className="space-y-4">
+                  {pago.referencia && (
+                    <div className="flex items-center gap-3">
+                      <Hash className="h-4 w-4 text-gray-500" />
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{pago.referencia}</p>
+                        <p className="text-xs text-gray-500">Referencia</p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {pago.telefono_pago && (
+                    <div className="flex items-center gap-3">
+                      <Phone className="h-4 w-4 text-gray-500" />
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{pago.telefono_pago}</p>
+                        <p className="text-xs text-gray-500">Teléfono de Pago</p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="flex items-center gap-3">
+                    <Calendar className="h-4 w-4 text-gray-500" />
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">
+                        {pago.fecha_pago ? new Date(pago.fecha_pago).toLocaleDateString('es-ES') : 'N/A'}
+                      </p>
+                      <p className="text-xs text-gray-500">Fecha de Pago</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    <DollarSign className="h-4 w-4 text-gray-500" />
+                    <div>
+                      <p className="text-sm font-medium text-gray-900 text-green-600">${pago.monto_usd.toFixed(2)}</p>
+                      <p className="text-xs text-gray-500">Monto USD</p>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Columna Derecha */}
+                <div className="space-y-4">
+                  {pago.nombre_titular && (
+                    <div className="flex items-center gap-3">
+                      <User className="h-4 w-4 text-gray-500" />
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{pago.nombre_titular}</p>
+                        <p className="text-xs text-gray-500">Nombre del Titular</p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {pago.cedula_pago && (
+                    <div className="flex items-center gap-3">
+                      <IdCard className="h-4 w-4 text-gray-500" />
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{pago.cedula_pago}</p>
+                        <p className="text-xs text-gray-500">Cédula de Pago</p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {pago.banco_pago && (
+                    <div className="flex items-center gap-3">
+                      <Building className="h-4 w-4 text-gray-500" />
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{pago.banco_pago}</p>
+                        <p className="text-xs text-gray-500">Banco</p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="flex items-center gap-3">
+                    <Ticket className="h-4 w-4 text-gray-500" />
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{tickets.length} ticket(s)</p>
+                      <p className="text-xs text-gray-500">Cantidad</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    <Gift className="h-4 w-4 text-gray-500" />
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{rifa?.titulo || 'N/A'}</p>
+                      <p className="text-xs text-gray-500">Rifa</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Comprobante */}
+            {pago.comprobante_url && pago.comprobante_url.trim() !== '' && (
+              <div>
+                <h4 className="font-medium text-gray-900 text-sm uppercase tracking-wide border-b border-gray-200 pb-2 mb-4">
+                  Comprobante
+                </h4>
+                <div
+                  className="h-20 bg-gray-100 rounded-lg border border-gray-200 overflow-hidden cursor-pointer hover:border-blue-500 transition-colors"
+                  onClick={() => pago.comprobante_url && window.open(pago.comprobante_url, '_blank')}
+                >
+                  <img
+                    src={pago.comprobante_url}
+                    alt="Comprobante de pago"
+                    className="w-full h-full object-cover"
+                    loading="eager"
+                    decoding="async"
+                    fetchPriority="high"
+                    onError={() => {
+                      console.log('Error cargando imagen:', pago.comprobante_url)
+                    }}
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           
@@ -479,7 +601,7 @@ export function VerifyPagoModal({
           {/* Lanzador de diálogo de especiales */}
           <div className="flex items-center justify-between p-3 bg-purple-50 border border-purple-200 rounded-lg">
             <div className="text-sm text-purple-800">
-              Tickets especiales seleccionados: <span className="font-mono font-medium">{especialesSeleccionados.length}</span>
+              Tickets especiales: <span className="font-mono font-medium">{especialesSeleccionados.length}</span>
             </div>
             <Button type="button" variant="outline" onClick={() => setShowSelectEspeciales(true)}>
               Gestionar especiales

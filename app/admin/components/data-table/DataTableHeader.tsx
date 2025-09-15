@@ -93,14 +93,15 @@ export function DataTableHeader({
           {visibleActions.map((action) => (
             <Button
               key={action.key}
-              variant={action.variant || "default"}
-              size={action.size || "default"}
+              variant={action.variant || "outline"}
+              size="sm"
               onClick={action.onClick}
               disabled={action.disabled}
-              className="h-9"
+              className="h-8 w-8 p-0 border-2 border-gray-400 hover:border-gray-600 hover:bg-gray-50 transition-all duration-200"
+              title={action.label}
             >
-              <action.icon className="h-4 w-4 mr-2" />
-              {action.label}
+              <action.icon className="h-4 w-4" />
+              <span className="sr-only">{action.label}</span>
             </Button>
           ))}
         </div>

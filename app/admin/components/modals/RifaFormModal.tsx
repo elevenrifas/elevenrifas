@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
@@ -56,12 +57,32 @@ const rifaFormSchema = z.object({
   precio_ticket: z.number().min(0.01, "El precio del ticket debe ser mayor a 0"),
   imagen_url: z.string().optional(),
   estado: z.enum(["activa", "cerrada"]),
-  total_tickets: z.number().min(1, "Debe haber al menos 1 ticket"),
+  total_tickets: z.number()
+    .min(1000, "El total de tickets debe ser mínimo 1000")
+    .max(10000, "El total de tickets debe ser máximo 10000"),
   tickets_disponibles: z.number().optional(), // Opcional ya que es un campo calculado
   categoria_id: z.string().optional(),
   numero_tickets_comprar: z.array(z.number()).optional(),
   progreso_manual: z.number().min(0).max(100).optional().nullable(),
-  fecha_cierre: z.string().optional().nullable(), // Se establece automáticamente según el estado
+  fecha_cierre: z.string()
+    .optional()
+    .nullable()
+    .refine((date) => {
+      if (!date || date === '') return true; // Opcional
+      const selectedDate = new Date(date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Resetear horas para comparar solo fechas
+      selectedDate.setHours(0, 0, 0, 0); // Resetear horas de la fecha seleccionada
+      return selectedDate >= today;
+    }, "La fecha de cierre debe ser desde hoy en adelante"),
+}).refine((data) => {
+  // Validar que las opciones de compra no excedan el total de tickets
+  const totalTickets = data.total_tickets;
+  const opcionesComprar = data.numero_tickets_comprar || [];
+  return opcionesComprar.every(opcion => opcion <= totalTickets);
+}, {
+  message: "Las opciones de compra no pueden ser mayores al total de tickets",
+  path: ["numero_tickets_comprar"]
 })
 
 type RifaFormValues = z.infer<typeof rifaFormSchema>
@@ -75,42 +96,20 @@ interface RifaFormModalProps {
 }
 
 // Componente personalizado para los 9 inputs de opciones de compra
-const TicketOptionsInput = ({ value, onChange }: { value: number[] | undefined, onChange: (value: number[]) => void }) => {
+const TicketOptionsInput = ({ value, onChange, totalTickets }: { value: number[] | undefined, onChange: (value: number[]) => void, totalTickets: number }) => {
   const handleInputChange = (index: number, newValue: number) => {
     const currentArray = [...(value || [1, 2, 3, 5, 10, 15, 20, 25, 50])];
     
-    // Validar que el valor no esté duplicado en otras posiciones
-    if (newValue > 0) {
-      // Verificar si el valor ya existe en otra posición
-      const isDuplicate = currentArray.some((val, i) => i !== index && val === newValue);
-      
-      if (isDuplicate) {
-        // Si es duplicado, limpiar la posición actual
-        currentArray[index] = 0;
-      } else {
-        // Si no es duplicado, asignar el valor
-        currentArray[index] = newValue;
-      }
-    } else {
-      currentArray[index] = 0;
-    }
+    // Permitir cualquier valor sin restricciones - completamente libre
+    currentArray[index] = newValue;
     
-    // NO ordenar automáticamente - solo filtrar duplicados y valores 0
-    const filteredArray = [...new Set(currentArray)]
-      .filter(val => val > 0);
-    
-    onChange(filteredArray);
+    // Actualizar directamente sin filtros ni validaciones
+    onChange(currentArray);
   };
 
   const handleInputBlur = () => {
-    // Al perder el foco, NO ordenar - solo limpiar duplicados y valores 0
-    const currentArray = value || [1, 2, 3, 5, 10, 15, 20, 25, 50];
-    const cleanArray = [...new Set(currentArray)]
-      .filter(val => val > 0);
-    
-    if (JSON.stringify(cleanArray) !== JSON.stringify(currentArray)) {
-      onChange(cleanArray);
-    }
+    // Al perder el foco, NO hacer nada - mantener los valores como están
+    // Las validaciones se harán solo al enviar el formulario
   };
 
   const resetToDefaults = () => {
@@ -123,11 +122,9 @@ const TicketOptionsInput = ({ value, onChange }: { value: number[] | undefined, 
     return currentArray[index] || '';
   };
 
-  // Verificar si un valor está duplicado
-  const isValueDuplicate = (index: number, inputValue: number) => {
-    if (inputValue === 0) return false;
-    const currentArray = (value || [1, 2, 3, 5, 10, 15, 20, 25, 50]) as number[];
-    return currentArray.some((val: number, i: number) => i !== index && val === inputValue);
+  // No validar en tiempo real para mejorar la experiencia de usuario
+  const isValueInvalid = (index: number, inputValue: number) => {
+    return false; // Deshabilitar validaciones en tiempo real
   };
 
   return (
@@ -135,7 +132,6 @@ const TicketOptionsInput = ({ value, onChange }: { value: number[] | undefined, 
       <div className="grid grid-cols-3 gap-4">
         {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((index) => {
           const currentValue = getCurrentValue(index);
-          const isDuplicate = isValueDuplicate(index, currentValue as number);
           
           return (
             <div key={index} className="space-y-2">
@@ -146,20 +142,11 @@ const TicketOptionsInput = ({ value, onChange }: { value: number[] | undefined, 
                 type="number"
                 min="1"
                 placeholder="0"
-                className={`text-center h-11 border-2 transition-all duration-200 ${
-                  isDuplicate 
-                    ? 'border-red-500 bg-red-50 focus:border-red-500 focus:ring-2 focus:ring-red-200' 
-                    : 'border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200'
-                }`}
+                className="text-center h-11 border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
                 value={currentValue}
                 onChange={(e) => handleInputChange(index, parseInt(e.target.value) || 0)}
                 onBlur={handleInputBlur}
               />
-              {isDuplicate && (
-                <p className="text-xs text-red-500 text-center">
-                  Número duplicado
-                </p>
-              )}
             </div>
           );
         })}
@@ -203,7 +190,7 @@ export function RifaFormModal({
       precio_ticket: rifa?.precio_ticket || 0,
       imagen_url: rifa?.imagen_url || "",
       estado: (rifa?.estado as "activa" | "cerrada") || "activa",
-      total_tickets: rifa?.total_tickets || 100,
+      total_tickets: rifa?.total_tickets || 1000,
       tickets_disponibles: rifa?.tickets_disponibles || 100,
       categoria_id: rifa?.categoria_id || "none",
       numero_tickets_comprar: rifa?.numero_tickets_comprar || [1, 2, 3, 5, 10, 15, 20, 25, 50],
@@ -221,7 +208,7 @@ export function RifaFormModal({
         precio_ticket: rifa?.precio_ticket || 0,
         imagen_url: rifa?.imagen_url || "",
         estado: (rifa?.estado as "activa" | "cerrada") || "activa",
-        total_tickets: rifa?.total_tickets || 100,
+        total_tickets: rifa?.total_tickets || 1000,
         tickets_disponibles: rifa?.tickets_disponibles || 100,
         categoria_id: rifa?.categoria_id || "none",
         numero_tickets_comprar: rifa?.numero_tickets_comprar || [1, 2, 3, 5, 10, 15, 20, 25, 50],
@@ -310,6 +297,70 @@ export function RifaFormModal({
       return { success: false, error: errorMessage }
     }
   }
+
+  // Función para manejar errores de validación y hacer scroll al campo
+  const handleValidationError = (errors: any) => {
+    const firstErrorField = Object.keys(errors)[0]
+    
+    if (firstErrorField) {
+      let fieldElement = null
+      
+      // Buscar el elemento del campo con error
+      if (firstErrorField === 'numero_tickets_comprar') {
+        // Para campos de opciones de compra, buscar el primer input
+        fieldElement = document.querySelector(`[name="${firstErrorField}"]`) || 
+                      document.querySelector('input[type="number"][placeholder="0"]')
+      } else {
+        fieldElement = document.querySelector(`[name="${firstErrorField}"]`)
+      }
+      
+      if (fieldElement) {
+        // Hacer scroll al campo con error
+        fieldElement.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center' 
+        })
+        
+        // Enfocar el campo después de un pequeño delay
+        setTimeout(() => {
+          if (fieldElement instanceof HTMLElement) {
+            fieldElement.focus()
+          }
+        }, 300)
+      }
+    }
+  }
+
+  // Detectar errores de validación y hacer scroll al campo con error
+  useEffect(() => {
+    const errors = form.formState.errors
+    if (Object.keys(errors).length > 0) {
+      handleValidationError(errors)
+      
+      // Agregar indicador visual de error
+      const firstErrorField = Object.keys(errors)[0]
+      if (firstErrorField) {
+        let fieldElement = null
+        
+        if (firstErrorField === 'numero_tickets_comprar') {
+          fieldElement = document.querySelector(`[name="${firstErrorField}"]`) || 
+                        document.querySelector('input[type="number"][placeholder="0"]')
+        } else {
+          fieldElement = document.querySelector(`[name="${firstErrorField}"]`)
+        }
+        
+        if (fieldElement) {
+          // Agregar clase de error temporal
+          fieldElement.classList.add('border-red-500', 'bg-red-50')
+          
+          // Remover la clase después de 3 segundos
+          setTimeout(() => {
+            fieldElement.classList.remove('border-red-500', 'bg-red-50')
+          }, 3000)
+        }
+      }
+    }
+  }, [form.formState.errors])
 
   return (
     <Dialog 
@@ -516,6 +567,7 @@ export function RifaFormModal({
                           <Input
                             ref={fechaCierreInputRef}
                             type="date"
+                            min={new Date().toISOString().slice(0, 10)}
                             value={field.value ? new Date(field.value).toISOString().slice(0, 10) : ''}
                             onChange={(e) => {
                               const value = e.target.value;
@@ -568,7 +620,7 @@ export function RifaFormModal({
                     )}
                     
                     <FormDescription className="text-sm text-gray-600">
-                      Fecha cuando se cerrará la rifa. Deja vacío si no quieres establecer una fecha específica.
+                      Fecha cuando se cerrará la rifa. <strong>Debe ser desde hoy en adelante.</strong> Deja vacío si no quieres establecer una fecha específica.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -640,11 +692,12 @@ export function RifaFormModal({
                       <FormControl>
                         <Input
                           type="number"
-                          min="1"
-                          placeholder="100"
+                          min="1000"
+                          max="10000"
+                          placeholder="1000"
                           className="h-11 border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 text-base"
                           {...field}
-                          onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                          onChange={(e) => field.onChange(parseInt(e.target.value) || 1000)}
                         />
                       </FormControl>
                       <FormMessage />
@@ -706,11 +759,9 @@ export function RifaFormModal({
                       <TicketOptionsInput
                         value={field.value || [1, 2, 3, 5, 10, 15, 20, 25, 50]}
                         onChange={field.onChange}
+                        totalTickets={form.watch('total_tickets') || 1000}
                       />
                     </FormControl>
-                    <FormDescription className="text-sm text-gray-600">
-                      Configura las cantidades de tickets que los usuarios pueden comprar. Los números se ordenarán automáticamente al guardar.
-                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}

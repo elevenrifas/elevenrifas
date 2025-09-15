@@ -1,82 +1,30 @@
 "use client"
 
 import { RifasTable } from "@/app/admin/components/tables"
+// import * as XLSX from 'xlsx' // Temporalmente deshabilitado para el build
 // El layout del grupo `(panel)` ya incluye Sidebar y Header
 
 export default function AdminRifasPage() {
+  // Los callbacks están manejados directamente por la tabla RifasTable
+  // que usa el hook useCrudRifas para toda la funcionalidad CRUD
   const handleCreate = () => {
-    console.log("Crear nueva rifa")
-    // Aquí implementarías la lógica para abrir modal de creación
+    // La tabla maneja la creación automáticamente
+    console.log("Crear nueva rifa - manejado por la tabla")
   }
 
   const handleEdit = (rifa: any) => {
-    console.log("Editar rifa:", rifa)
-    // Aquí implementarías la lógica para abrir modal de edición
+    // La tabla maneja la edición automáticamente
+    console.log("Editar rifa - manejado por la tabla:", rifa)
   }
 
   const handleDelete = (rifas: any[]) => {
-    console.log("Eliminar rifas:", rifas)
-    // Aquí implementarías la lógica para confirmar eliminación
+    // La tabla maneja la eliminación automáticamente
+    console.log("Eliminar rifas - manejado por la tabla:", rifas)
   }
 
   const handleView = (rifa: any) => {
-    console.log("Ver rifa:", rifa)
-    // Aquí implementarías la lógica para ver detalles
-  }
-
-  const handleExport = (rifas: any[]) => {
-    console.log("Exportar rifas:", rifas)
-    
-    try {
-      // Crear headers del CSV
-      const headers = [
-        'ID',
-        'Título',
-        'Descripción',
-        'Precio Ticket',
-        'Estado',
-                'Total Tickets',
-        'Fecha Creación',
-        'Fecha Cierre',
-        'Categoría ID'
-      ]
-      
-      // Convertir datos a filas CSV
-      const csvRows = [
-        headers.join(','), // Primera fila: headers
-        ...rifas.map(rifa => [
-          rifa.id,
-          `"${rifa.titulo}"`, // Comillas para evitar problemas con comas
-          `"${rifa.descripcion}"`,
-          rifa.precio_ticket,
-          rifa.estado,
-                    rifa.total_tickets,
-          rifa.fecha_creacion,
-          rifa.fecha_cierre,
-          rifa.categoria_id
-        ].join(','))
-      ]
-      
-      // Crear contenido CSV
-      const csvContent = csvRows.join('\n')
-      
-      // Crear blob y descargar
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-      const link = document.createElement('a')
-      const url = URL.createObjectURL(blob)
-      
-      link.setAttribute('href', url)
-      link.setAttribute('download', `rifas_${new Date().toISOString().split('T')[0]}.csv`)
-      link.style.visibility = 'hidden'
-      
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      
-      console.log('✅ Archivo CSV descargado exitosamente')
-    } catch (error) {
-      console.error('Error al exportar a CSV:', error)
-    }
+    // La tabla maneja la visualización automáticamente
+    console.log("Ver rifa - manejado por la tabla:", rifa)
   }
 
   return (
@@ -86,7 +34,7 @@ export default function AdminRifasPage() {
         onEdit={handleEdit}
         onDelete={handleDelete}
         onView={handleView}
-        onExport={handleExport}
+        // No pasar onExport para que la tabla use su lógica interna
       />
     </div>
   )

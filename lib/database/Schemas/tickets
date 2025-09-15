@@ -11,6 +11,7 @@ create table public.tickets (
   estado character varying not null default 'pendiente'::character varying,
   reserva_id uuid null,
   reservado_hasta timestamp without time zone null,
+  es_ticket_especial boolean null default false,
   constraint tickets_pkey primary key (id),
   constraint tickets_rifa_id_numero_ticket_key unique (rifa_id, numero_ticket),
   constraint tickets_pago_id_fkey foreign KEY (pago_id) references pagos (id),

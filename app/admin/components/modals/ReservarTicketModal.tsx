@@ -59,7 +59,8 @@ export function ReservarTicketModal({
     nombre: 'TICKET RESERVADO',
     cedula: '000000000',
     telefono: '000000000',
-    correo: 'N/A'
+    correo: 'N/A',
+    es_ticket_especial: true
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -200,7 +201,8 @@ export function ReservarTicketModal({
         nombre: formData.nombre,
         cedula: formData.cedula,
         telefono: formData.telefono || undefined,
-        correo: formData.correo
+        correo: formData.correo,
+        es_ticket_especial: formData.es_ticket_especial
       })
 
       if (result.success) {
@@ -213,7 +215,8 @@ export function ReservarTicketModal({
           nombre: 'TICKET RESERVADO',
           cedula: '000000000',
           telefono: '000000000',
-          correo: 'N/A'
+          correo: 'N/A',
+          es_ticket_especial: true
         })
       } else {
         setError(result.error || 'Error al crear ticket reservado')

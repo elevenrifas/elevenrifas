@@ -76,12 +76,29 @@ export function TicketsTable({
 
   // Construir opciones de filtro de rifa desde los tickets cargados (fallback a rifas globales)
   const rifaFilterOptions = React.useMemo(() => {
+    console.log('🔍 [TicketsTable] Rifas disponibles:', rifas)
+    console.log('🔍 [TicketsTable] Cantidad de rifas:', rifas.length)
+    
     // Mostrar SIEMPRE todas las rifas activas
     const options = rifas.map(r => ({ label: r.label, value: r.value }))
     // Ordenar alfabéticamente para UX
     options.sort((a, b) => a.label.localeCompare(b.label))
+    
+    console.log('🔍 [TicketsTable] Opciones de filtro de rifa:', options)
     return options
   }, [rifas])
+
+  // Opciones de filtro de estado (estados reales del ticket según lógica de negocio)
+  const estadoFilterOptions = React.useMemo(() => [
+    { label: "Reservado", value: "reservado" },
+    { label: "Pagado", value: "pagado" }
+  ], [])
+
+  // Opciones de filtro para tickets especiales
+  const especialFilterOptions = React.useMemo(() => [
+    { label: "Especiales", value: "true" },
+    { label: "Normales", value: "false" }
+  ], [])
 
   // Cargar tickets al montar el componente (solo si no hay hook compartido)
   React.useEffect(() => {
@@ -210,6 +227,7 @@ export function TicketsTable({
             correo: ticket.correo,
             fecha_compra: ticket.fecha_compra,
             rifa_id: ticket.rifa_id,
+            es_ticket_especial: ticket.es_ticket_especial, // ✅ AGREGAR CAMPO ESPECIAL
             rifas: ticket.rifas ? {
               id: ticket.rifas.id,
               titulo: ticket.rifas.titulo,
@@ -269,27 +287,16 @@ export function TicketsTable({
       cell: ({ row }) => {
         const nombre = row.getValue("nombre") as string
         const cedula = row.original.cedula
-        const isEspecial = nombre === 'TICKET RESERVADO' && cedula === '000000000'
         
         return (
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <User className="h-4 w-4 text-muted-foreground" />
               <span className="font-medium">{nombre}</span>
-              {isEspecial && (
-                <span className="text-xs font-medium text-purple-600 bg-purple-100 px-2 py-1 rounded">
-                  ESPECIAL
-                </span>
-              )}
             </div>
             <div className="text-sm text-muted-foreground font-mono">
               {cedula}
             </div>
-            {isEspecial && (
-              <div className="text-xs text-purple-600">
-                Ticket reservado para premio
-              </div>
-            )}
           </div>
         )
       },
@@ -322,8 +329,9 @@ export function TicketsTable({
       size: 200,
     },
     {
-      accessorKey: "rifas.titulo",
+      accessorKey: "rifa_titulo",
       header: "Rifa",
+      accessorFn: (row) => row.rifas?.titulo || 'No especificada',
       filterFn: (row, _columnId, filterValue) => {
         if (!filterValue || (Array.isArray(filterValue) && filterValue.length === 0)) return true
         const selected = Array.isArray(filterValue) ? filterValue : [String(filterValue)]
@@ -354,24 +362,20 @@ export function TicketsTable({
       size: 100,
     },
     {
-      id: "pago_status",
-      header: "Estado Pago",
+      accessorKey: "estado",
+      header: "Estado",
       cell: ({ row }) => {
-        const ticket = row.original
-        const tienePago = ticket.pago_id && ticket.pagos
-        const estadoPago = ticket.pagos?.estado || 'pendiente'
+        const estado = row.getValue("estado") as string
         
         const getEstadoBadge = (estado: string) => {
           const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-            'pendiente': 'outline',
-            'verificado': 'default',
-            'rechazado': 'destructive'
+            'reservado': 'outline',
+            'pagado': 'default'
           }
           
           const colors: Record<string, string> = {
-            'pendiente': 'bg-yellow-100 text-yellow-800 border-yellow-200',
-            'verificado': 'bg-green-100 text-green-800 border-green-200',
-            'rechazado': 'bg-red-100 text-red-800 border-red-200'
+            'reservado': 'bg-amber-100 text-amber-800 border-amber-200',
+            'pagado': 'bg-green-100 text-green-800 border-green-200'
           }
 
           return (
@@ -383,17 +387,41 @@ export function TicketsTable({
         
         return (
           <div className="text-center">
-            {tienePago ? (
-              getEstadoBadge(estadoPago)
+            {getEstadoBadge(estado)}
+          </div>
+        )
+      },
+      size: 120,
+    },
+    {
+      accessorKey: "es_ticket_especial",
+      header: "Tipo",
+      accessorFn: (row) => row.es_ticket_especial === true ? 'true' : 'false',
+      filterFn: (row, _columnId, filterValue) => {
+        if (!filterValue || (Array.isArray(filterValue) && filterValue.length === 0)) return true
+        const selected = Array.isArray(filterValue) ? filterValue : [String(filterValue)]
+        const isEspecial = row.original.es_ticket_especial === true
+        const value = isEspecial ? 'true' : 'false'
+        return selected.includes(value)
+      },
+      cell: ({ row }) => {
+        const isEspecial = row.original.es_ticket_especial === true
+        
+        return (
+          <div className="text-center">
+            {isEspecial ? (
+              <Badge variant="outline" className="bg-purple-100 text-purple-800 border-purple-200">
+                Especial
+              </Badge>
             ) : (
-              <Badge variant="secondary" className="text-xs">
-                Sin Pago
+              <Badge variant="outline" className="bg-gray-100 text-gray-800 border-gray-200">
+                Normal
               </Badge>
             )}
           </div>
         )
       },
-      size: 120,
+      size: 100,
     },
     {
       id: "actions",
@@ -419,6 +447,15 @@ export function TicketsTable({
       },
     },
   ]
+
+  // Debug: verificar configuración de filtros
+  React.useEffect(() => {
+    console.log('🔍 [TicketsTable] Configuración de filtros:')
+    console.log('🔍 [TicketsTable] - showFacetedFilters: true')
+    console.log('🔍 [TicketsTable] - rifaFilterOptions:', rifaFilterOptions)
+    console.log('🔍 [TicketsTable] - estadoFilterOptions:', estadoFilterOptions)
+    console.log('🔍 [TicketsTable] - especialFilterOptions:', especialFilterOptions)
+  }, [rifaFilterOptions, estadoFilterOptions, especialFilterOptions])
 
   return (
     <div className="space-y-4">
@@ -455,9 +492,21 @@ export function TicketsTable({
         showFacetedFilters: true,
         facetedFilters: [
           {
-            column: "rifas.titulo",
+            column: "rifa_titulo",
             title: "Rifa",
             options: rifaFilterOptions,
+            multiple: false,
+          },
+          {
+            column: "estado",
+            title: "Estado",
+            options: estadoFilterOptions,
+            multiple: false,
+          },
+          {
+            column: "es_ticket_especial",
+            title: "Tipo",
+            options: especialFilterOptions,
             multiple: false,
           },
         ],

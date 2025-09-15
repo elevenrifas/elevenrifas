@@ -11,7 +11,8 @@ export async function POST(request: NextRequest) {
     const { type, secret, data } = body;
 
     // Verificar secret para seguridad (especialmente importante en Vercel)
-    if (secret !== process.env.REVALIDATE_SECRET) {
+    const validSecret = process.env.REVALIDATE_SECRET || 'dev-secret';
+    if (secret !== validSecret) {
       console.error('❌ Revalidate: Secret inválido');
       return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
     }

@@ -17,6 +17,7 @@ import * as LucideIcons from "lucide-react"
 import { formatCurrency } from "@/lib/formatters"
 import { useCrudRifas } from "@/hooks/use-crud-rifas"
 import type { AdminRifa } from "@/lib/database/admin_database/rifas"
+import { exportRifasToExcel } from "@/lib/utils/excel-export"
 import { RifaFormModal } from "../modals/RifaFormModal"
 import { RifaTicketsModal } from "../modals/RifaTicketsModal"
 import { DeleteConfirmModal } from "../modals/DeleteConfirmModal"
@@ -139,40 +140,35 @@ export function RifasTable({
   // Función para manejar la exportación
   const handleExport = () => {
     try {
+      console.log('🚀 [handleExport] Iniciando exportación...')
+      console.log('🚀 [handleExport] selectedRifas:', selectedRifas.length)
+      console.log('🚀 [handleExport] rifas totales:', rifas.length)
+      console.log('🚀 [handleExport] onExport callback:', !!onExport)
+      
       // Si hay elementos seleccionados, exportar solo esos
       // Si no hay selección, exportar todos
       const dataToExport = selectedRifas.length > 0 ? selectedRifas : rifas
-      
-      // Validar que los datos tengan la estructura correcta según el nuevo schema
-      const datosValidados = dataToExport.map(rifa => ({
-        id: rifa.id || '',
-        titulo: rifa.titulo || '',
-        descripcion: rifa.descripcion || '',
-        precio_ticket: rifa.precio_ticket || 0,
-        imagen_url: rifa.imagen_url || '',
-        estado: rifa.estado || 'activa',
-        fecha_creacion: rifa.fecha_creacion || '',
-        fecha_cierre: rifa.fecha_cierre || '',
-        total_tickets: rifa.total_tickets || 0,
-        categoria_id: rifa.categoria_id || '',
-        numero_tickets_comprar: rifa.numero_tickets_comprar || [1, 2, 3, 5, 10, 15, 20, 25, 50]
-      }))
+      console.log('🚀 [handleExport] dataToExport:', dataToExport.length, 'elementos')
       
       if (onExport) {
         // Si hay callback personalizado, usarlo
-        onExport(datosValidados)
-        console.log(`🔄 Exportando ${datosValidados.length} rifas (callback personalizado)`)
+        console.log('🔄 [handleExport] Usando callback personalizado')
+        onExport(dataToExport)
+        console.log(`🔄 Exportando ${dataToExport.length} rifas (callback personalizado)`)
       } else {
-        // Exportación automática a CSV si no hay callback
-        exportToCSV(datosValidados, 'rifas')
-        console.log(`📊 Exportando ${datosValidados.length} rifas a CSV`)
+        // Exportación automática a Excel usando la función específica
+        console.log('📊 [handleExport] Usando exportación automática a Excel')
+        console.log('📊 [handleExport] Primer elemento:', dataToExport[0])
+        exportRifasToExcel(dataToExport, 'rifas')
+        console.log(`📊 Exportando ${dataToExport.length} rifas a Excel`)
       }
     } catch (error) {
-      console.error('Error al exportar:', error)
+      console.error('❌ [handleExport] Error al exportar:', error)
     }
   }
 
-  // Función para exportar a CSV
+
+  // Función de fallback para exportar a CSV (mantener por compatibilidad)
   const exportToCSV = (data: any[], filename: string) => {
     try {
       // Crear headers del CSV
@@ -671,7 +667,7 @@ export function RifasTable({
         title: "Rifas",
         description: "Gestiona todas las rifas del sistema",
         searchKey: "titulo",
-        searchPlaceholder: "Buscar en título, descripción, categoría, marca, modelo...",
+        searchPlaceholder: "Buscar rifas...",
         loading: isLoading || isRefreshing,
         error: error,
         onRowSelectionChange: selectMultipleRifas,

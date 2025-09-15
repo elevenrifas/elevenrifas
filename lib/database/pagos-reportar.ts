@@ -226,7 +226,8 @@ export async function reportarPagoConTicketsTS(
       cedula_pago: datos.cedula_pago || null,
       fecha_visita: datos.fecha_visita || null,
       rifa_id: datos.rifa_id,
-      comprobante_url: datos.comprobante_url || null
+      comprobante_url: datos.comprobante_url || null,
+      nombre_titular: datos.nombre_titular || null
     };
 
     console.log('📝 Datos del pago a insertar:', pagoData);

@@ -29,3 +29,7 @@ AND column_name IN ('comprobante_pago_url', 'comprobante_pago_nombre');
 
 
 
+
+
+
+

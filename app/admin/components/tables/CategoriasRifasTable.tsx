@@ -273,8 +273,6 @@ export function CategoriasRifasTable({
       {createCRUDTable({
         columns: categoriasColumns,
         data: categorias as Categoria[],
-        title: "Categorías",
-        description: "Gestiona las categorías para organizar las rifas",
         searchKey: "nombre",
         searchPlaceholder: "Buscar categorías...",
         loading: isLoading,

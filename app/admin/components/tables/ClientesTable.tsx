@@ -11,7 +11,7 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu"
-import { MoreHorizontal, User, Mail, Phone, CreditCard, Calendar, Eye, Ticket, Gift, Download } from "lucide-react"
+import { MoreHorizontal, User, Mail, Phone, CreditCard, Calendar, Eye, Ticket, Gift, Download, Receipt } from "lucide-react"
 import type { AdminCliente } from "@/types"
 import { useAdminClientes } from "@/hooks/use-admin-clientes"
 import { exportClientesToExcel } from "@/lib/utils/excel-export"
@@ -307,20 +307,34 @@ export function ClientesTable({
         const cliente = row.original
 
         return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">Abrir menú</span>
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => handleViewCliente(cliente)}>
-                <Eye className="mr-2 h-4 w-4" />
-                Ver Detalles
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex items-center gap-2">
+            {/* Botón de detalles principal */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleViewCliente(cliente)}
+              className="h-8"
+            >
+              <Receipt className="mr-2 h-4 w-4" />
+              Detalles
+            </Button>
+            
+            {/* Menú de opciones adicionales */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="h-8 w-8 p-0">
+                  <span className="sr-only">Abrir menú</span>
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleViewCliente(cliente)}>
+                  <Eye className="mr-2 h-4 w-4" />
+                  Ver Detalles
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         )
       },
     },

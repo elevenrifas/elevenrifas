@@ -17,7 +17,7 @@ import {
   XCircle,
   Bug
 } from 'lucide-react'
-import { useAdminAuthState } from '@/lib/context/AdminAuthContextSimple'
+import { useAdminAuthState } from '@/lib/context/AdminAuthContextSimpleStorage'
 import { useLogger } from '@/hooks/use-logger'
 import { supabase } from '@/lib/database'
 

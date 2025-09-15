@@ -31,6 +31,7 @@ export interface DatosPagoCompleto {
   fecha_visita?: string;
   estado?: string;
   comprobante_url?: string;
+  nombre_titular?: string;
   
   // Datos de los tickets
   cantidad_tickets: number;

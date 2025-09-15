@@ -55,7 +55,8 @@ export async function adminListTickets(options: {
             cedula_pago,
             fecha_visita,
             verificado_por,
-            estado
+            estado,
+            nombre_titular
           )
         `)
         // Removemos el límite hardcodeado de 5
@@ -206,7 +207,8 @@ export async function adminGetTicketsByRifa(rifa_id: string): Promise<{
             cedula_pago,
             fecha_visita,
             verificado_por,
-            estado
+            estado,
+            nombre_titular
           )
         `)
         .eq('rifa_id', rifa_id)
@@ -430,7 +432,8 @@ export async function adminChangeTicketState(id: string, estado: 'pendiente' | '
             cedula_pago,
             fecha_visita,
             verificado_por,
-            estado
+            estado,
+            nombre_titular
           )
         `)
         .eq('id', id)
@@ -499,12 +502,11 @@ export async function adminListSpecialTicketsByRifa(rifa_id: string): Promise<{ 
 
       const { data, error } = await adminSupabase
         .from('tickets')
-        .select('id, numero_ticket, pago_id')
+        .select('id, numero_ticket, pago_id, es_ticket_especial, nombre, cedula')
         .eq('rifa_id', rifa_id)
         .eq('estado', 'reservado')
         .is('pago_id', null)
-        .eq('nombre', 'TICKET RESERVADO')
-        .eq('cedula', '000000000')
+        .eq('es_ticket_especial', true)
         .order('numero_ticket', { ascending: true })
 
       if (error) throw error
@@ -531,6 +533,7 @@ export async function adminCreateTicketReservado(data: {
   cedula?: string
   telefono?: string
   correo?: string
+  es_ticket_especial?: boolean
 }): Promise<{ success: boolean; data?: AdminTicket; error?: string }> {
   return safeAdminQuery(
     async () => {
@@ -560,7 +563,8 @@ export async function adminCreateTicketReservado(data: {
         correo: data.correo || 'N/A',
         estado: 'reservado',
         reserva_id: crypto.randomUUID(),
-        reservado_hasta: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() // 1 año
+        reservado_hasta: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 año
+        es_ticket_especial: data.es_ticket_especial ?? true // Marcar como especial por defecto
       }
 
       const { data: ticket, error } = await adminSupabase

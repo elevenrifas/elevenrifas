@@ -14,6 +14,12 @@ interface CacheInvalidationOptions {
 export function useCacheInvalidation() {
   const invalidateCache = useCallback(async (options: CacheInvalidationOptions) => {
     try {
+      // Verificar si estamos en el cliente y si hay secret disponible
+      if (typeof window === 'undefined') {
+        console.log('⚠️ Cache invalidation skipped: Server-side execution');
+        return { success: true, message: 'Skipped on server' };
+      }
+
       const response = await fetch('/api/revalidate', {
         method: 'POST',
         headers: {
@@ -21,13 +27,15 @@ export function useCacheInvalidation() {
         },
         body: JSON.stringify({
           ...options,
-          secret: process.env.NEXT_PUBLIC_REVALIDATE_SECRET || 'fallback-secret'
+          secret: process.env.NEXT_PUBLIC_REVALIDATE_SECRET || 'dev-secret'
         })
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Error invalidando caché');
+        console.warn('⚠️ Cache invalidation failed:', errorData.error || 'Error invalidando caché');
+        // No lanzar error para no interrumpir el flujo del usuario
+        return { success: false, error: errorData.error || 'Error invalidando caché' };
       }
 
       const result = await response.json();
@@ -35,7 +43,7 @@ export function useCacheInvalidation() {
       
       return result;
     } catch (error) {
-      console.error('❌ Error invalidando caché:', error);
+      console.warn('⚠️ Error invalidando caché:', error);
       // No lanzar error para no interrumpir el flujo del usuario
       return { success: false, error: error instanceof Error ? error.message : 'Error desconocido' };
     }

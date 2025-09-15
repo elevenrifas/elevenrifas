@@ -22,7 +22,8 @@ import {
   Clock, 
   DollarSign,
   CreditCard,
-  Smartphone,
+  Phone,
+  Building,
   Globe,
   AlertTriangle,
   User,
@@ -50,7 +51,7 @@ import { PagoDetallesModal } from "../modals/PagoDetallesModal"
 const getTipoPagoIcon = (tipo: string) => {
   switch (tipo) {
     case 'pago_movil':
-      return <Smartphone className="h-4 w-4" />
+      return <Phone className="h-4 w-4" />
     case 'binance':
       return <Globe className="h-4 w-4" />
     case 'zelle':
@@ -375,18 +376,30 @@ export function PagosVerificacionTable({
       cell: ({ row }) => {
         const pago = row.original
         
-        // Para pagos rechazados, usar rifa_id del pago
+        // Para pagos rechazados, usar información de la rifa directamente del pago
         if (pago.estado === 'rechazado') {
-          return (
-            <div className="space-y-1">
-              <div className="font-medium text-sm">
-                Rifa ID: {(pago as any).rifa_id || 'No especificada'}
+          const rifa = pago.rifas
+          if (rifa) {
+            return (
+              <div className="space-y-1">
+                <div className="font-medium text-sm">{rifa.titulo}</div>
+                <div className="text-xs text-muted-foreground">
+                  ${rifa.precio_ticket} por ticket
+                </div>
               </div>
-              <div className="text-xs text-muted-foreground">
-                Información de rifa no disponible
+            )
+          } else {
+            return (
+              <div className="space-y-1">
+                <div className="font-medium text-sm">
+                  Rifa ID: {(pago as any).rifa_id || 'No especificada'}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Información de rifa no disponible
+                </div>
               </div>
-            </div>
-          )
+            )
+          }
         }
         
         // Para otros estados, usar información del primer ticket
@@ -413,6 +426,15 @@ export function PagosVerificacionTable({
       enableColumnFilter: true,
       filterFn: (row, id, value) => {
         const pago = row.original
+        
+        // Para pagos rechazados, usar rifa_id del pago
+        if (pago.estado === 'rechazado') {
+          const rifaId = pago.rifa_id
+          if (!rifaId || !value || value.length === 0) return true
+          return value.includes(rifaId)
+        }
+        
+        // Para otros estados, usar rifa_id del primer ticket
         const primerTicket = pago.tickets?.[0]
         const rifaId = primerTicket?.rifa_id
         if (!rifaId || !value || value.length === 0) return true
@@ -591,23 +613,27 @@ export function PagosVerificacionTable({
           const clienteCedula = primerTicket?.cedula?.toLowerCase() || ''
           const referencia = (pago.referencia || '').toLowerCase()
           const rifaTitulo = primerTicket?.rifas?.titulo?.toLowerCase() || ''
+          const nombreTitular = (pago.nombre_titular || '').toLowerCase()
 
           return (
             clienteNombre.includes(searchTerm) ||
             clienteCedula.includes(searchTerm) ||
             referencia.includes(searchTerm) ||
-            rifaTitulo.includes(searchTerm)
+            rifaTitulo.includes(searchTerm) ||
+            nombreTitular.includes(searchTerm)
           )
         } catch {
           return true
         }
       },
       cell: ({ row }) => {
+        const pago = row.original
         const referencia = row.getValue("referencia") as string
-        const telefono = row.original.telefono_pago
-        const banco = row.original.banco_pago
+        const telefono = pago.telefono_pago
+        const banco = pago.banco_pago
+        const nombreTitular = pago.nombre_titular
         
-        if (!referencia && !telefono && !banco) {
+        if (!referencia && !telefono && !banco && !nombreTitular) {
           return (
             <div className="text-sm text-muted-foreground">
               Sin referencia
@@ -620,18 +646,24 @@ export function PagosVerificacionTable({
             {referencia && (
               <div className="font-medium text-sm">{referencia}</div>
             )}
-                         {telefono && (
-               <div className="text-xs text-muted-foreground">
-                 <Smartphone className="inline h-3 w-3 mr-1" />
-                 {telefono}
-               </div>
-             )}
-             {banco && (
-               <div className="text-xs text-muted-foreground">
-                 <CreditCard className="inline h-3 w-3 mr-1" />
-                 {banco}
-               </div>
-             )}
+            {nombreTitular && (
+              <div className="text-xs text-muted-foreground">
+                <User className="inline h-3 w-3 mr-1" />
+                {nombreTitular}
+              </div>
+            )}
+            {telefono && (
+              <div className="text-xs text-muted-foreground">
+                <Phone className="inline h-3 w-3 mr-1" />
+                {telefono}
+              </div>
+            )}
+            {banco && (
+              <div className="text-xs text-muted-foreground">
+                <Building className="inline h-3 w-3 mr-1" />
+                {banco}
+              </div>
+            )}
           </div>
         )
       },
@@ -755,7 +787,7 @@ export function PagosVerificacionTable({
         // Usar filtros facetados integrados
         showFacetedFilters: true,
         facetedFilters: facetedFilters,
-        searchPlaceholder: "Buscar por cédula, cliente, referencia o rifa...",
+        searchPlaceholder: "Buscar por cédula, cliente, referencia, rifa o nombre titular...",
         enableGlobalFilter: true,
         globalFilterFn: (row: any, _columnId: string, filterValue: any) => {
           try {
@@ -767,11 +799,13 @@ export function PagosVerificacionTable({
             const clienteCedula = primerTicket?.cedula?.toLowerCase() || ''
             const referencia = (pago.referencia || '').toLowerCase()
             const rifaTitulo = primerTicket?.rifas?.titulo?.toLowerCase() || ''
+            const nombreTitular = (pago.nombre_titular || '').toLowerCase()
             return (
               clienteNombre.includes(value) ||
               clienteCedula.includes(value) ||
               referencia.includes(value) ||
-              rifaTitulo.includes(value)
+              rifaTitulo.includes(value) ||
+              nombreTitular.includes(value)
             )
           } catch {
             return true

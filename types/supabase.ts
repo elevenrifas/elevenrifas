@@ -139,6 +139,7 @@ export interface Database {
           pago_bloqueador_id?: string
           pago_id?: string
           email?: string
+          es_ticket_especial?: boolean
           rifas?: {
             id: string
             titulo: string
@@ -164,6 +165,7 @@ export interface Database {
           pago_bloqueador_id?: string
           pago_id?: string
           email?: string
+          es_ticket_especial?: boolean
         }
         Update: {
           id?: string
@@ -184,6 +186,7 @@ export interface Database {
           pago_bloqueador_id?: string
           pago_id?: string
           email?: string
+          es_ticket_especial?: boolean
         }
       }
       pagos: {
@@ -209,6 +212,7 @@ export interface Database {
           fecha_visita?: string
           verificado_por?: string
           notas?: string
+          nombre_titular?: string
           tickets?: {
             id: string
             numero_ticket: string
@@ -238,6 +242,7 @@ export interface Database {
           fecha_visita?: string
           verificado_por?: string
           notas?: string
+          nombre_titular?: string
         }
         Update: {
           id?: string
@@ -261,6 +266,7 @@ export interface Database {
           fecha_visita?: string
           verificado_por?: string
           notas?: string
+          nombre_titular?: string
         }
       }
       profiles: {

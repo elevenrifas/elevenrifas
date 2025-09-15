@@ -74,11 +74,6 @@ export function ClienteViewModal({
         <div className="space-y-6">
           {/* Datos del Cliente */}
           <div className="space-y-4">
-            <h3 className="text-lg font-medium flex items-center gap-2">
-              <User className="h-4 w-4" />
-              Datos del Cliente
-            </h3>
-            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-500">Nombre Completo</label>
@@ -190,44 +185,6 @@ export function ClienteViewModal({
             </>
           )}
 
-          {/* Historial de Tickets */}
-          {cliente.tickets && cliente.tickets.length > 0 && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium flex items-center gap-2">
-                <Ticket className="h-4 w-4" />
-                Historial de Tickets ({cliente.total_tickets})
-              </h3>
-              
-              <div className="max-h-60 overflow-y-auto">
-                <div className="space-y-2">
-                  {cliente.tickets.map((ticket) => (
-                    <div key={ticket.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <Ticket className="h-4 w-4 text-blue-600" />
-                        <span className="font-mono text-sm">#{ticket.numero_ticket}</span>
-                        <span className="text-sm text-gray-600">
-                          {formatDateShort(ticket.fecha_compra)}
-                        </span>
-                      </div>
-                      
-                      <div className="flex items-center gap-2">
-                        {ticket.pago_id ? (
-                          <Badge variant="default" className="text-xs">
-                            <CreditCard className="h-3 w-3 mr-1" />
-                            Con Pago
-                          </Badge>
-                        ) : (
-                          <Badge variant="secondary" className="text-xs">
-                            Sin Pago
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
         </div>
 
         <DialogFooter>

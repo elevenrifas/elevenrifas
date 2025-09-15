@@ -153,6 +153,7 @@ export interface Ticket {
   correo: string
   fecha_compra: string | null
   pago_id: string | null
+  es_ticket_especial?: boolean
 }
 
 export interface AdminTicket extends Ticket {
@@ -178,6 +179,7 @@ export interface CreateTicketData {
   cedula: string
   telefono?: string
   correo: string
+  es_ticket_especial?: boolean
 }
 
 export interface UpdateTicketData extends Partial<CreateTicketData> {
