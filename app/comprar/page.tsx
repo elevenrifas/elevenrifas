@@ -8,6 +8,7 @@ import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { formatCurrencyVE } from "@/lib/formatters";
 import { useRifas, useTicketNumbersFromContext } from "@/lib/context/RifasContext";
+import { convertCurrency, getRifaExchangeRate, calculateTicketTotals, formatCurrencyUSD } from "@/lib/utils/currency-converter";
 import { Rifa, DatosPersona, DatosPago } from "@/types";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { reportarPagoConTickets, DatosPagoCompleto } from '@/lib/database/pagos';
@@ -128,38 +129,7 @@ function PasoCantidad({ cantidad, setCantidad, precioTicket, rifaId }: {
         <h2 className="text-3xl font-bold text-[#fb0413]">¿Cuántos tickets quieres?</h2>
         <p className="text-xl text-slate-200">Selecciona la cantidad de tickets para participar</p>
         
-        {/* Información de disponibilidad */}
-        {availability && (
-          <div className="max-w-lg mx-auto">
-            <div className="grid grid-cols-2 gap-8">
-              <div className="text-center">
-                <div className="text-green-300 text-3xl font-bold mb-2">
-                  {availability.available}
-                </div>
-                <div className="text-green-200 text-sm font-medium flex items-center justify-center">
-                  <CheckCircle className="h-5 w-5 mr-2" />
-                  Disponibles
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="text-orange-300 text-3xl font-bold mb-2">
-                  {availability.existing}
-                </div>
-                <div className="text-orange-200 text-sm font-medium flex items-center justify-center">
-                  <Clock className="h-5 w-5 mr-2" />
-                  Reservados
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
         
-        {/* Loading de disponibilidad */}
-        {loadingAvailability && (
-          <div className="text-slate-300 text-sm">
-            🔄 Verificando disponibilidad...
-          </div>
-        )}
         
 
       </div>
@@ -421,7 +391,7 @@ function PasoDatosPersona({ datos, setDatos }: {
 }
 
 // Componente para el Paso 4: Datos del método de pago
-function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTicket, tituloRifa, remainingMs }: {
+function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTicket, tituloRifa, remainingMs, exchangeRate }: {
   metodoPago: string;
   datosPago: DatosPago;
   setDatosPago: (datos: DatosPago) => void;
@@ -429,6 +399,7 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
   precioTicket: number;
   tituloRifa: string;
   remainingMs: number | null;
+  exchangeRate: number;
 }) {
   
   // Función mejorada para manejar archivo con validación
@@ -529,7 +500,7 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
 
   const copiarPagoMovilTodo = async () => {
     try {
-      const monto = (cantidad * precioTicket).toFixed(2);
+      const monto = (cantidad * convertCurrency(precioTicket, 'USD', 'VES', exchangeRate)).toFixed(2);
       const contenido = `0102\nJ12345678\n0412550123\n${monto}`;
       await navigator.clipboard.writeText(contenido);
       toast.success("¡Datos de Pago Móvil copiados!");
@@ -598,9 +569,9 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
                   </button>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span>• <strong>Monto:</strong> {formatCurrencyVE(cantidad * precioTicket)}</span>
+                  <span>• <strong>Monto:</strong> {formatCurrencyVE(cantidad * convertCurrency(precioTicket, 'USD', 'VES', exchangeRate))}</span>
                   <button
-                    onClick={() => copiarAlPortapapeles((cantidad * precioTicket).toString())}
+                    onClick={() => copiarAlPortapapeles((cantidad * convertCurrency(precioTicket, 'USD', 'VES', exchangeRate)).toString())}
                     className="ml-2 p-1 hover:bg-gray-100 rounded transition-colors"
                     title="Copiar monto"
                   >
@@ -727,9 +698,9 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
                   </button>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span>• <strong>Monto:</strong> ${((cantidad * precioTicket) / 145).toFixed(2)} USD</span>
+                  <span>• <strong>Monto:</strong> {formatCurrencyUSD(cantidad * precioTicket)}</span>
                   <button
-                    onClick={() => copiarAlPortapapeles(((cantidad * precioTicket) / 145).toFixed(2))}
+                    onClick={() => copiarAlPortapapeles((cantidad * precioTicket).toFixed(2))}
                     className="ml-2 p-1 hover:bg-white/20 rounded transition-colors"
                     title="Copiar monto"
                   >
@@ -820,9 +791,9 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
                   </button>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span>• <strong>Monto:</strong> ${((cantidad * precioTicket) / 145).toFixed(2)} USD</span>
+                  <span>• <strong>Monto:</strong> {formatCurrencyUSD(cantidad * precioTicket)}</span>
                   <button
-                    onClick={() => copiarAlPortapapeles(((cantidad * precioTicket) / 145).toFixed(2))}
+                    onClick={() => copiarAlPortapapeles((cantidad * precioTicket).toFixed(2))}
                     className="ml-2 p-1 hover:bg-white/20 rounded transition-colors"
                     title="Copiar monto"
                   >
@@ -900,9 +871,9 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
                     </button>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span>• <strong>Monto:</strong> {formatCurrencyVE(cantidad * precioTicket)}</span>
+                    <span>• <strong>Monto:</strong> {formatCurrencyVE(cantidad * convertCurrency(precioTicket, 'USD', 'VES', exchangeRate))}</span>
                     <button
-                      onClick={() => copiarAlPortapapeles((cantidad * precioTicket).toString())}
+                      onClick={() => copiarAlPortapapeles((cantidad * convertCurrency(precioTicket, 'USD', 'VES', exchangeRate)).toString())}
                       className="ml-2 p-1 hover:bg-white/20 rounded transition-colors"
                       title="Copiar monto"
                     >
@@ -993,9 +964,9 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
                     </button>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span>• <strong>Monto:</strong> ${((cantidad * precioTicket) / 145).toFixed(2)} USD</span>
+                    <span>• <strong>Monto:</strong> {formatCurrencyUSD(cantidad * precioTicket)}</span>
                     <button
-                      onClick={() => copiarAlPortapapeles(((cantidad * precioTicket) / 145).toFixed(2))}
+                      onClick={() => copiarAlPortapapeles((cantidad * precioTicket).toFixed(2))}
                       className="ml-2 p-1 hover:bg-white/20 rounded transition-colors"
                       title="Copiar monto"
                     >
@@ -1096,9 +1067,9 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
                     </button>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span>• <strong>Monto:</strong> {formatCurrencyVE(cantidad * precioTicket)}</span>
+                    <span>• <strong>Monto:</strong> {formatCurrencyVE(cantidad * convertCurrency(precioTicket, 'USD', 'VES', exchangeRate))}</span>
                     <button
-                      onClick={() => copiarAlPortapapeles((cantidad * precioTicket).toString())}
+                      onClick={() => copiarAlPortapapeles((cantidad * convertCurrency(precioTicket, 'USD', 'VES', exchangeRate)).toString())}
                       className="ml-2 p-1 hover:bg-white/20 rounded transition-colors"
                       title="Copiar monto"
                     >
@@ -1157,9 +1128,9 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
                   </button>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span>• <strong>Monto:</strong> ${(cantidad * precioTicket / 145).toFixed(2)} USD</span>
+                  <span>• <strong>Monto:</strong> {formatCurrencyUSD(cantidad * precioTicket)}</span>
                   <button
-                    onClick={() => copiarAlPortapapeles((cantidad * precioTicket / 145).toFixed(2))}
+                    onClick={() => copiarAlPortapapeles((cantidad * precioTicket).toFixed(2))}
                     className="ml-2 p-1 hover:bg-gray-100 rounded transition-colors"
                     title="Copiar monto"
                   >
@@ -1248,9 +1219,9 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
                   </button>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span>• <strong>Monto:</strong> ${(cantidad * precioTicket / 145).toFixed(2)} USD</span>
+                  <span>• <strong>Monto:</strong> {formatCurrencyUSD(cantidad * precioTicket)}</span>
                   <button
-                    onClick={() => copiarAlPortapapeles((cantidad * precioTicket / 145).toFixed(2))}
+                    onClick={() => copiarAlPortapapeles((cantidad * precioTicket).toFixed(2))}
                     className="ml-2 p-1 hover:bg-white/20 rounded transition-colors"
                     title="Copiar monto"
                   >
@@ -1328,9 +1299,9 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
                   </button>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span>• <strong>Monto:</strong> ${(cantidad * precioTicket / 145).toFixed(2)} USD</span>
+                  <span>• <strong>Monto:</strong> {formatCurrencyUSD(cantidad * precioTicket)}</span>
                   <button
-                    onClick={() => copiarAlPortapapeles((cantidad * precioTicket / 145).toFixed(2))}
+                    onClick={() => copiarAlPortapapeles((cantidad * precioTicket).toFixed(2))}
                     className="ml-2 p-1 hover:bg-white/20 rounded transition-colors"
                     title="Copiar monto"
                   >
@@ -1418,9 +1389,9 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
                   </button>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span>• <strong>Monto:</strong> {formatCurrencyVE(cantidad * precioTicket)}</span>
+                  <span>• <strong>Monto:</strong> {formatCurrencyVE(cantidad * convertCurrency(precioTicket, 'USD', 'VES', exchangeRate))}</span>
                   <button
-                    onClick={() => copiarAlPortapapeles((cantidad * precioTicket).toString())}
+                    onClick={() => copiarAlPortapapeles((cantidad * convertCurrency(precioTicket, 'USD', 'VES', exchangeRate)).toString())}
                     className="ml-2 p-1 hover:bg-gray-100 rounded transition-colors"
                     title="Copiar monto"
                   >
@@ -1517,11 +1488,12 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
 }
 
 // Componente para el Paso 5: Reporte del pago
-function PasoReportePago({ rifa, cantidad, metodoPago, datosPersona }: {
+function PasoReportePago({ rifa, cantidad, metodoPago, datosPersona, exchangeRate }: {
   rifa: Rifa;
   cantidad: number;
   metodoPago: string;
   datosPersona: DatosPersona;
+  exchangeRate: number;
 }) {
   return (
     <div className="space-y-8">
@@ -1559,7 +1531,7 @@ function PasoReportePago({ rifa, cantidad, metodoPago, datosPersona }: {
                 </div>
                 <div>
                   <span className="font-medium text-white">Total:</span>
-                  <p className="text-white font-semibold">{formatCurrencyVE(cantidad * rifa.precio_ticket)}</p>
+                  <p className="text-white font-semibold">{formatCurrencyVE(cantidad * convertCurrency(rifa.precio_ticket, 'USD', 'VES', exchangeRate))}</p>
                 </div>
                 <div>
                   <span className="font-medium text-white">Método:</span>
@@ -1619,6 +1591,9 @@ function PasoReportePago({ rifa, cantidad, metodoPago, datosPersona }: {
 
 function ComprarPageContent() {
   const { rifas, rifaActiva } = useRifas();
+  
+  // Obtener tasa de cambio individual de la rifa o usar fallback
+  const exchangeRate = rifaActiva ? getRifaExchangeRate(rifaActiva.tasa) : 145;
   
   // Hook del loading overlay
   const { showLoading, hideLoading, updateMessage, LoadingComponent } = useLoadingOverlay();
@@ -1785,7 +1760,7 @@ function ComprarPageContent() {
         cantidad,
         metodoPago,
         precio_ticket: rifa.precio_ticket,
-        total_bs: rifa.precio_ticket * cantidad * 145,
+        total_bs: rifa.precio_ticket * cantidad * exchangeRate,
         total_usd: rifa.precio_ticket * cantidad,
         reservaId,
         tieneComprobante: !!datosPago.comprobantePago,
@@ -1881,8 +1856,8 @@ function ComprarPageContent() {
       const datosPagoCompleto: DatosPagoCompleto = {
         tipo_pago: metodoPago as 'pago_movil' | 'binance' | 'zelle' | 'zinli' | 'paypal' | 'efectivo',
         monto_usd: rifa.precio_ticket * cantidad,
-        monto_bs: rifa.precio_ticket * cantidad * 145,
-        tasa_cambio: 145,
+        monto_bs: rifa.precio_ticket * cantidad * exchangeRate,
+        tasa_cambio: exchangeRate,
         referencia: datosPago.referencia || `REF-${Date.now()}`,
         telefono_pago: datosPago.telefonoPago || datosPersona.telefono,
         banco_pago: datosPago.bancoPago,
@@ -2183,6 +2158,7 @@ function ComprarPageContent() {
             precioTicket={rifa.precio_ticket}
             tituloRifa={rifa.titulo}
             remainingMs={remainingMs}
+            exchangeRate={exchangeRate}
           />
         );
       case 5:
@@ -2192,6 +2168,7 @@ function ComprarPageContent() {
             cantidad={cantidad}
             metodoPago={metodoPago}
             datosPersona={datosPersona}
+            exchangeRate={exchangeRate}
           />
         );
       default:
@@ -2297,25 +2274,20 @@ function ComprarPageContent() {
                   <div className="space-y-1 text-sm">
                     {cantidad > 0 ? (
                       <>
-                                                                          <div className={`font-semibold ${
+                        <div className={`font-semibold ${
                           cantidadExcedeDisponibilidad() ? 'text-red-300' : 'text-white'
                         }`}>
-                          {formatCurrencyVE(rifa.precio_ticket)} × {cantidad}
+                          {formatCurrencyVE(convertCurrency(rifa.precio_ticket, 'USD', 'VES', exchangeRate))} × {cantidad}
                         </div>
-                        <div className={`${
-                          cantidadExcedeDisponibilidad() ? 'text-red-200' : 'text-slate-200'
-                        }`}>
-                          Tasa: 145 | ${(rifa.precio_ticket / 145).toFixed(2)} USD c/u
-                        </div>
-                                                  <div className={`font-semibold text-base ${
+                        <div className={`font-semibold text-base ${
                           cantidadExcedeDisponibilidad() ? 'text-red-300' : 'text-white'
                         }`}>
-                          Total: {formatCurrencyVE(cantidad * rifa.precio_ticket)}
+                          Total: {formatCurrencyVE(cantidad * convertCurrency(rifa.precio_ticket, 'USD', 'VES', exchangeRate))}
                         </div>
                         <div className={`text-xs ${
                           cantidadExcedeDisponibilidad() ? 'text-red-200' : 'text-slate-300'
                         }`}>
-                          Total USD: ${((cantidad * rifa.precio_ticket) / 145).toFixed(2)}
+                          Total USD: {formatCurrencyUSD(cantidad * rifa.precio_ticket)}
                         </div>
                         
 
@@ -2323,10 +2295,10 @@ function ComprarPageContent() {
                     ) : (
                       <>
                         <div className="text-slate-200">
-                          Precio: {formatCurrencyVE(rifa.precio_ticket)}
+                          Precio: {formatCurrencyUSD(rifa.precio_ticket)} USD
                         </div>
                         <div className="text-slate-200">
-                          Tasa: 145 | ${(rifa.precio_ticket / 145).toFixed(2)} USD c/u
+                          Precio: {formatCurrencyVE(convertCurrency(rifa.precio_ticket, 'USD', 'VES', exchangeRate))} Bs
                         </div>
                         
 

@@ -64,6 +64,9 @@ const rifaFormSchema = z.object({
   categoria_id: z.string().optional(),
   numero_tickets_comprar: z.array(z.number()).optional(),
   progreso_manual: z.number().min(0).max(100).optional().nullable(),
+  tasa: z.number()
+    .min(0.01, "La tasa debe ser mayor a 0")
+    .max(10000, "La tasa no puede exceder 10000"),
   fecha_cierre: z.string()
     .optional()
     .nullable()
@@ -190,11 +193,12 @@ export function RifaFormModal({
       precio_ticket: rifa?.precio_ticket || 0,
       imagen_url: rifa?.imagen_url || "",
       estado: (rifa?.estado as "activa" | "cerrada") || "activa",
-      total_tickets: rifa?.total_tickets || 1000,
+      total_tickets: rifa?.total_tickets || 0,
       tickets_disponibles: rifa?.tickets_disponibles || 100,
       categoria_id: rifa?.categoria_id || "none",
       numero_tickets_comprar: rifa?.numero_tickets_comprar || [1, 2, 3, 5, 10, 15, 20, 25, 50],
       progreso_manual: rifa?.progreso_manual || null,
+      tasa: rifa?.tasa || 0,
       fecha_cierre: rifa?.fecha_cierre || "",
     },
   })
@@ -208,11 +212,12 @@ export function RifaFormModal({
         precio_ticket: rifa?.precio_ticket || 0,
         imagen_url: rifa?.imagen_url || "",
         estado: (rifa?.estado as "activa" | "cerrada") || "activa",
-        total_tickets: rifa?.total_tickets || 1000,
+        total_tickets: rifa?.total_tickets || 0,
         tickets_disponibles: rifa?.tickets_disponibles || 100,
         categoria_id: rifa?.categoria_id || "none",
         numero_tickets_comprar: rifa?.numero_tickets_comprar || [1, 2, 3, 5, 10, 15, 20, 25, 50],
         progreso_manual: rifa?.progreso_manual || null,
+        tasa: rifa?.tasa || 0,
         fecha_cierre: rifa?.fecha_cierre || "",
       })
     } else {
@@ -222,11 +227,12 @@ export function RifaFormModal({
         precio_ticket: 0,
         imagen_url: "",
         estado: "activa",
-        total_tickets: 100,
+        total_tickets: 0,
         tickets_disponibles: 100,
         categoria_id: "none",
         numero_tickets_comprar: [1, 2, 3, 5, 10, 15, 20, 25, 50],
         progreso_manual: null,
+        tasa: 0,
         fecha_cierre: "",
       })
     }
@@ -424,7 +430,7 @@ export function RifaFormModal({
                   name="titulo"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-base font-semibold text-gray-900">Título *</FormLabel>
+                      <FormLabel className="text-base font-semibold text-gray-900">Título</FormLabel>
                       <FormControl>
                         <Input
                           placeholder="Ej: Toyota 4Runner TRD Pro 2024"
@@ -467,7 +473,7 @@ export function RifaFormModal({
                   name="estado"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-base font-semibold text-gray-900">Estado *</FormLabel>
+                      <FormLabel className="text-base font-semibold text-gray-900">Estado</FormLabel>
                       <FormControl>
                         <Select 
                           onValueChange={field.onChange} 
@@ -655,13 +661,37 @@ export function RifaFormModal({
 
             {/* Configuración de Tickets */}
             <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {/* Total de Tickets */}
+                <FormField
+                  control={form.control}
+                  name="total_tickets"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-base font-semibold text-gray-900">Total de Tickets</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min="1000"
+                          max="10000"
+                          placeholder=""
+                          className="h-11 border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 text-base"
+                          {...field}
+                          onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Precio por Ticket */}
                 <FormField
                   control={form.control}
                   name="precio_ticket"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-base font-semibold text-gray-900">Precio por Ticket *</FormLabel>
+                      <FormLabel className="text-base font-semibold text-gray-900">Precio por Ticket</FormLabel>
                       <FormControl>
                         <div className="relative">
                           <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 font-medium">
@@ -683,22 +713,32 @@ export function RifaFormModal({
                   )}
                 />
 
+                {/* Tasa de Cambio */}
                 <FormField
                   control={form.control}
-                  name="total_tickets"
+                  name="tasa"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-base font-semibold text-gray-900">Total de Tickets *</FormLabel>
+                      <FormLabel className="text-base font-semibold text-gray-900">Tasa de Cambio</FormLabel>
                       <FormControl>
-                        <Input
-                          type="number"
-                          min="1000"
-                          max="10000"
-                          placeholder="1000"
-                          className="h-11 border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 text-base"
-                          {...field}
-                          onChange={(e) => field.onChange(parseInt(e.target.value) || 1000)}
-                        />
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 font-medium">
+                            Bs
+                          </span>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0.01"
+                            max="10000"
+                            placeholder=""
+                            className="h-11 border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 text-base pl-8"
+                            {...field}
+                            onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                            onBlur={field.onBlur}
+                            name={field.name}
+                            ref={field.ref}
+                          />
+                        </div>
                       </FormControl>
                       <FormMessage />
                     </FormItem>

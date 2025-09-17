@@ -28,6 +28,7 @@ export interface Rifa {
   numero_tickets_comprar: number[];
   categoria_id?: string;
   progreso_manual?: number;
+  tasa?: number;
   categorias_rifas?: {
     id: string;
     nombre: string;

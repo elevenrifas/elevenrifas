@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { formatCurrencyVE } from "@/lib/formatters";
 import type { Rifa } from "@/types";
 import { getRifaFull } from "@/lib/database/rifas";
+import { convertCurrency, getRifaExchangeRate, formatCurrencyUSD } from "@/lib/utils/currency-converter";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useRifas } from "@/lib/context/RifasContext";
@@ -74,17 +75,11 @@ export function RifaCard({ rifa }: Props) {
     return 0;
   };
 
-  // Función para formatear precio en USD
-  const formatCurrencyUSD = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2
-    }).format(amount);
-  };
-
-  // Calcular precio en Bs usando tasa fija de 145 Bs/USD (el precio ya viene en USD)
-  const precioBs = rifa.precio_ticket * 145;
+  // Obtener tasa de cambio individual de la rifa o usar fallback
+  const exchangeRate = getRifaExchangeRate(rifa.tasa);
+  
+  // Calcular precio en Bs usando tasa individual
+  const precioBs = convertCurrency(rifa.precio_ticket, 'USD', 'VES', exchangeRate);
 
   const handleComprar = () => {
     setRifaActiva(rifa);
@@ -174,7 +169,6 @@ export function RifaCard({ rifa }: Props) {
             <div className="flex items-center gap-2">
               <span className="font-medium">{formatCurrencyVE(precioBs)}</span>
               <span className="text-xs">Bs</span>
-              <span className="text-xs text-muted-foreground">(145 Bs/USD)</span>
             </div>
           </div>
           

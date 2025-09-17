@@ -308,6 +308,7 @@ export function RifasTable({
           categoria_id: data.categoria_id,
           numero_tickets_comprar: data.numero_tickets_comprar || [1, 2, 3, 5, 10, 15, 20, 25, 50],
           progreso_manual: data.progreso_manual,
+          tasa: data.tasa,
           fecha_cierre: data.fecha_cierre,
         }
         const result = await updateRifa(selectedRifa.id, datosActualizados)

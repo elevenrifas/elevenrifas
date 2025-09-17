@@ -362,6 +362,37 @@ export function PagoDetallesModal({
             </div>
           </div>
 
+          {/* Comprobante */}
+          {pago.comprobante_url && pago.comprobante_url.trim() !== '' && (
+            <div className="bg-gray-50 rounded-lg border border-gray-300 p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <FileText className="h-5 w-5 text-blue-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900">Comprobante de Pago</h3>
+              </div>
+              <div
+                className="h-40 bg-gray-100 rounded-lg border border-gray-200 overflow-hidden cursor-pointer hover:border-blue-500 transition-colors"
+                onClick={() => pago.comprobante_url && window.open(pago.comprobante_url, '_blank')}
+              >
+                <img
+                  src={pago.comprobante_url}
+                  alt="Comprobante de pago"
+                  className="w-full h-full object-cover"
+                  loading="eager"
+                  decoding="async"
+                  fetchPriority="high"
+                  onError={() => {
+                    console.log('Error cargando imagen:', pago.comprobante_url)
+                  }}
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-2 text-center">
+                Haz clic en la imagen para ver en tamaño completo
+              </p>
+            </div>
+          )}
+
           {/* Sección de Tickets - Estilo mejorado como en RifaTicketsModal */}
           {pago.tickets && pago.tickets.length > 0 && (
             <div className="bg-gray-50 rounded-lg border border-gray-300 p-6">

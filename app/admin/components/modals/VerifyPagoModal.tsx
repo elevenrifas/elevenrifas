@@ -462,10 +462,6 @@ export function VerifyPagoModal({
                     setReferenciaError(null)
                     setReferenciaDuplicada(false)
                   }}
-                  onPaste={(e) => {
-                    e.preventDefault()
-                    setReferenciaError("No se permite pegar texto en este campo")
-                  }}
                   placeholder="Escribe la referencia aquí"
                       disabled={isSubmitting || success || isValidatingReferencia || referenciaValidada}
                   className="flex-1 border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 bg-gray-50"

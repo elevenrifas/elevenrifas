@@ -18,6 +18,7 @@ export interface CrudRifaData {
   categoria_id?: string | null
   numero_tickets_comprar?: number[]
   progreso_manual?: number | null
+  tasa?: number | null
   fecha_cierre?: string | null
 }
 

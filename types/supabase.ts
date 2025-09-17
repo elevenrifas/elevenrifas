@@ -51,6 +51,7 @@ export interface Database {
           orden: number
           slug?: string
           progreso_manual?: number
+          tasa?: number
           categorias_rifas?: {
             id: string
             nombre: string
@@ -87,6 +88,7 @@ export interface Database {
           orden?: number
           slug?: string
           progreso_manual?: number
+          tasa?: number
         }
         Update: {
           id?: string
@@ -117,6 +119,7 @@ export interface Database {
           orden?: number
           slug?: string
           progreso_manual?: number
+          tasa?: number
         }
       }
       tickets: {
