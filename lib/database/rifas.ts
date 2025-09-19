@@ -275,7 +275,7 @@ export async function actualizarRifa(id: string, datos: RifasUpdate): Promise<{ 
 /**
  * Cambiar estado de rifa
  */
-export async function cambiarEstadoRifa(id: string, nuevoEstado: 'activa' | 'cerrada'): Promise<{ success: boolean; error?: string }> {
+export async function cambiarEstadoRifa(id: string, nuevoEstado: 'activa' | 'cerrada' | 'pausada'): Promise<{ success: boolean; error?: string }> {
   try {
     const { error } = await supabase
       .from('rifas')
@@ -439,7 +439,7 @@ export async function getRifasFull() {
       return []
     }
 
-    // Obtener datos completos de todas las rifas
+    // Obtener datos completos de todas las rifas (activas y pausadas)
     const { data: rifasCompletas, error: rifasError } = await supabase
       .from('rifas')
       .select(`
@@ -451,7 +451,7 @@ export async function getRifasFull() {
           descripcion
         )
       `)
-      .eq('estado', 'activa')
+      .in('estado', ['activa', 'pausada'])
       .order('fecha_creacion', { ascending: false })
 
     if (rifasError) {

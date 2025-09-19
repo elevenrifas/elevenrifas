@@ -6,7 +6,7 @@ export interface Rifa {
   descripcion: string;
   precio_ticket: number;
   imagen_url: string;
-  estado: 'activa' | 'cerrada' | 'finalizada';
+  estado: 'activa' | 'cerrada' | 'pausada' | 'finalizada';
   fecha_creacion: string;
   fecha_culminacion?: string;
   fecha_cierre?: string;

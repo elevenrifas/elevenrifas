@@ -12,7 +12,7 @@ export interface CrudRifaData {
   descripcion?: string
   precio_ticket: number
   imagen_url?: string
-  estado: 'activa' | 'cerrada'
+  estado: 'activa' | 'cerrada' | 'pausada'
   total_tickets: number
   tickets_disponibles?: number // Opcional ya que es un campo calculado
   categoria_id?: string | null
@@ -75,7 +75,7 @@ export interface UseCrudRifasReturn {
   updateRifa: (id: string, data: Partial<CrudRifaData>) => Promise<{ success: boolean; error?: string }>
   deleteRifa: (id: string) => Promise<{ success: boolean; error?: string }>
   deleteMultipleRifas: (ids: string[]) => Promise<{ success: boolean; error?: string }>
-  changeRifaState: (id: string, estado: 'activa' | 'cerrada') => Promise<{ success: boolean; error?: string }>
+  changeRifaState: (id: string, estado: 'activa' | 'cerrada' | 'pausada') => Promise<{ success: boolean; error?: string }>
   
   // Operaciones de UI
   openCreateModal: () => void
@@ -284,7 +284,7 @@ export function useCrudRifas(options: {
     }
   }, [refreshRifas])
 
-  const changeRifaState = useCallback(async (id: string, estado: 'activa' | 'cerrada') => {
+  const changeRifaState = useCallback(async (id: string, estado: 'activa' | 'cerrada' | 'pausada') => {
     try {
       const result = await baseChangeRifaState(id, estado)
       

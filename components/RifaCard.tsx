@@ -13,6 +13,7 @@ import { Car, Clock, Zap, Building, DollarSign, CreditCard } from "lucide-react"
 
 type Props = {
   rifa: Rifa;
+  showAsActive?: boolean; // Para mostrar rifas pausadas como activas
 };
 
 // Función para obtener el icono de la categoría
@@ -37,7 +38,7 @@ function getCategoryIcon(iconName: string) {
   return iconMap[iconName] || <Car className="w-6 h-6 text-primary" />;
 }
 
-export function RifaCard({ rifa }: Props) {
+export function RifaCard({ rifa, showAsActive = false }: Props) {
   const router = useRouter();
   const { setRifaActiva } = useRifas();
   const [stats, setStats] = useState<{ progreso: number; disponibles: number } | null>(null);
@@ -81,7 +82,12 @@ export function RifaCard({ rifa }: Props) {
   // Calcular precio en Bs usando tasa individual
   const precioBs = convertCurrency(rifa.precio_ticket, 'USD', 'VES', exchangeRate);
 
+  // Calcular progreso y determinar si está completa (100%)
+  const progreso = calcularProgresoRifa();
+  const rifaAgotada = progreso >= 100;
+
   const handleComprar = () => {
+    if (rifaAgotada) return;
     setRifaActiva(rifa);
     router.push('/comprar');
   };
@@ -109,7 +115,8 @@ export function RifaCard({ rifa }: Props) {
             {/* Badge de estado */}
             <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm text-foreground px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1">
               <Zap className="w-3 h-3 text-primary" />
-              {rifa.estado === 'activa' ? 'Activa' : rifa.estado}
+              {/* Mostrar siempre "Activa" si showAsActive es true, sino mostrar el estado real */}
+              {showAsActive ? 'Activa' : (rifa.estado === 'activa' ? 'Activa' : rifa.estado)}
             </div>
           </div>
         )}
@@ -180,12 +187,13 @@ export function RifaCard({ rifa }: Props) {
           {/* Botón de acción mejorado */}
           <Button 
             onClick={handleComprar}
-            className="group relative w-full px-12 py-6 rounded-2xl font-bold text-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 active:scale-95 overflow-hidden bg-gradient-to-r from-primary via-red-500 to-amber-500 bg-[length:200%_100%] animate-gradient-move"
+            disabled={rifaAgotada}
+            className="group relative w-full px-12 py-6 rounded-2xl font-bold text-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 active:scale-95 overflow-hidden bg-gradient-to-r from-primary via-red-500 to-amber-500 bg-[length:200%_100%] animate-gradient-move disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:active:scale-100 disabled:animate-none"
           >
             {/* Contenido del botón */}
             <div className="relative flex items-center justify-center gap-3 text-white">
               <span className="text-2xl animate-cart-slide">🛒</span>
-              <span className="text-xl tracking-wide">COMPRAR AHORA</span>
+              <span className="text-xl tracking-wide">{rifaAgotada ? 'AGOTADO' : 'COMPRAR AHORA'}</span>
             </div>
           </Button>
         </CardContent>

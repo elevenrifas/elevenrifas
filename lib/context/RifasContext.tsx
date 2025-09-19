@@ -28,12 +28,23 @@ export function RifasProvider({ children, rifas }: RifasProviderProps) {
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
-          // Verificar que la rifa existe en la lista actual
-          if (rifas.find(r => r.id === parsed.id)) {
-            return parsed;
+          
+          // Validar que los datos estén correctos
+          if (parsed && typeof parsed === 'object' && parsed.id) {
+            // Verificar que la rifa existe en la lista actual
+            const rifaEncontrada = rifas.find(r => r.id === parsed.id);
+            if (rifaEncontrada) {
+              // Usar la rifa de la lista actual para asegurar datos correctos
+              return rifaEncontrada;
+            }
           }
-        } catch {
-          console.log('Error al parsear rifa activa del localStorage');
+          
+          // Si los datos están corruptos, limpiar localStorage
+          console.log('Datos de rifa corruptos en localStorage, limpiando...');
+          localStorage.removeItem('rifaActiva');
+        } catch (error) {
+          console.log('Error al parsear rifa activa del localStorage:', error);
+          localStorage.removeItem('rifaActiva');
         }
       }
     }

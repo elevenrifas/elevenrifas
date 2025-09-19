@@ -11,12 +11,24 @@ type Props = {
 export function RifaClientSection({ rifas }: Props) {
   const [currentPage, setCurrentPage] = useState(1);
   const rifasPerPage = 2;
-  const totalPages = Math.ceil(rifas.length / rifasPerPage);
+  
+  // Filtrar solo rifas activas y pausadas (las pausadas se muestran como activas)
+  const rifasDisponibles = rifas.filter(rifa => 
+    rifa.estado === 'activa' || rifa.estado === 'pausada'
+  );
+  
+  // Debug: Verificar filtrado
+  // console.debug('🔍 RifaClientSection - Rifas recibidas:', rifas.length);
+  // console.debug('🔍 RifaClientSection - Estados recibidos:', rifas.map(r => ({ titulo: r.titulo, estado: r.estado })));
+  // console.debug('🔍 RifaClientSection - Rifas disponibles después del filtro:', rifasDisponibles.length);
+  // console.debug('🔍 RifaClientSection - Estados disponibles:', rifasDisponibles.map(r => ({ titulo: r.titulo, estado: r.estado })));
+  
+  const totalPages = Math.ceil(rifasDisponibles.length / rifasPerPage);
   
   // Obtener las rifas de la página actual
   const startIndex = (currentPage - 1) * rifasPerPage;
   const endIndex = startIndex + rifasPerPage;
-  const currentRifas = rifas.slice(startIndex, endIndex);
+  const currentRifas = rifasDisponibles.slice(startIndex, endIndex);
   
 
   
@@ -68,7 +80,11 @@ export function RifaClientSection({ rifas }: Props) {
               return firstIndex === index;
             })
             .map((rifa, index) => (
-              <RifaCard key={`${rifa.id}-${index}-${currentPage}`} rifa={rifa} />
+              <RifaCard 
+                key={`${rifa.id}-${index}-${currentPage}`} 
+                rifa={rifa} 
+                showAsActive={rifa.estado === 'pausada'} // Las pausadas se muestran como activas
+              />
             ))}
         </div>
 
@@ -112,7 +128,7 @@ export function RifaClientSection({ rifas }: Props) {
         
         {/* Información adicional */}
         <div className="text-center text-sm text-muted-foreground">
-          Mostrando {startIndex + 1}-{Math.min(endIndex, rifas.length)} de {rifas.length} rifas disponibles
+          Mostrando {startIndex + 1}-{Math.min(endIndex, rifasDisponibles.length)} de {rifasDisponibles.length} rifas disponibles
         </div>
       </div>
     </section>

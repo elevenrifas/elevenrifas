@@ -30,7 +30,7 @@ interface RifasInsertCustom {
   descripcion?: string;
   precio_ticket: number;
   imagen_url?: string;
-  estado?: 'activa' | 'cerrada' | 'finalizada';
+  estado?: 'activa' | 'cerrada' | 'pausada' | 'finalizada';
   fecha_creacion?: string;
   fecha_cierre?: string;
   total_tickets?: number;
@@ -49,7 +49,7 @@ interface RifasUpdateCustom {
   descripcion?: string;
   precio_ticket?: number;
   imagen_url?: string;
-  estado?: 'activa' | 'cerrada' | 'finalizada';
+  estado?: 'activa' | 'cerrada' | 'pausada' | 'finalizada';
   fecha_cierre?: string;
   total_tickets?: number;
   tickets_disponibles?: number;
@@ -370,7 +370,7 @@ export async function adminUpdateRifa(id: string, datos: RifasUpdateCustom): Pro
 }
 
 // 5. CAMBIAR ESTADO DE RIFA
-export async function adminChangeRifaState(id: string, estado: 'activa' | 'cerrada'): Promise<{ success: boolean; error?: string }> {
+export async function adminChangeRifaState(id: string, estado: 'activa' | 'cerrada' | 'pausada'): Promise<{ success: boolean; error?: string }> {
   return safeAdminQuery(
     async () => {
       const { error } = await createAdminQuery('rifas')

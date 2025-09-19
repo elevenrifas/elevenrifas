@@ -24,6 +24,7 @@ import { supabase } from '@/lib/database'
 interface DashboardStats {
   totalRifas: number
   rifasActivas: number
+  rifasPausadas: number
   rifasFinalizadas: number
   totalTickets: number
   ticketsReservados: number
@@ -46,6 +47,7 @@ export default function AdminDashboardPage() {
   const [stats, setStats] = useState<DashboardStats>({
     totalRifas: 0,
     rifasActivas: 0,
+    rifasPausadas: 0,
     rifasFinalizadas: 0,
     totalTickets: 0,
     ticketsReservados: 0,
@@ -120,6 +122,7 @@ export default function AdminDashboardPage() {
       
       // Calcular estadísticas
       const rifasActivas = rifas?.filter(r => r.estado === 'activa').length || 0
+      const rifasPausadas = rifas?.filter(r => r.estado === 'pausada').length || 0
       const rifasFinalizadas = rifas?.filter(r => r.estado === 'finalizada').length || 0
       
       // Si no hay tickets, usar valores por defecto
@@ -135,6 +138,7 @@ export default function AdminDashboardPage() {
       const newStats = {
         totalRifas: rifas?.length || 0,
         rifasActivas,
+        rifasPausadas,
         rifasFinalizadas,
         totalTickets: tickets?.length || 0,
         ticketsReservados,
@@ -333,7 +337,7 @@ export default function AdminDashboardPage() {
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalRifas}</div>
             <p className="text-xs text-muted-foreground">
-              {stats.rifasActivas} activas, {stats.rifasFinalizadas} finalizadas
+              {stats.rifasActivas} activas, {stats.rifasPausadas} pausadas, {stats.rifasFinalizadas} finalizadas
             </p>
           </CardContent>
         </Card>

@@ -56,7 +56,7 @@ const rifaFormSchema = z.object({
   descripcion: z.string().optional(),
   precio_ticket: z.number().min(0.01, "El precio del ticket debe ser mayor a 0"),
   imagen_url: z.string().optional(),
-  estado: z.enum(["activa", "cerrada"]),
+  estado: z.enum(["activa", "cerrada", "pausada"]),
   total_tickets: z.number()
     .min(1000, "El total de tickets debe ser mínimo 1000")
     .max(10000, "El total de tickets debe ser máximo 10000"),
@@ -192,7 +192,7 @@ export function RifaFormModal({
       descripcion: rifa?.descripcion || "",
       precio_ticket: rifa?.precio_ticket || 0,
       imagen_url: rifa?.imagen_url || "",
-      estado: (rifa?.estado as "activa" | "cerrada") || "activa",
+      estado: (rifa?.estado as "activa" | "cerrada" | "pausada") || "activa",
       total_tickets: rifa?.total_tickets || 0,
       tickets_disponibles: rifa?.tickets_disponibles || 100,
       categoria_id: rifa?.categoria_id || "none",
@@ -211,7 +211,7 @@ export function RifaFormModal({
         descripcion: rifa?.descripcion || "",
         precio_ticket: rifa?.precio_ticket || 0,
         imagen_url: rifa?.imagen_url || "",
-        estado: (rifa?.estado as "activa" | "cerrada") || "activa",
+        estado: (rifa?.estado as "activa" | "cerrada" | "pausada") || "activa",
         total_tickets: rifa?.total_tickets || 0,
         tickets_disponibles: rifa?.tickets_disponibles || 100,
         categoria_id: rifa?.categoria_id || "none",
@@ -484,7 +484,11 @@ export function RifaFormModal({
                             <SelectValue placeholder="Seleccionar estado">
                               {field.value && (
                                 <div className="flex items-center gap-2">
-                                  <div className={`w-2 h-2 rounded-full ${field.value === 'activa' ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                                  <div className={`w-2 h-2 rounded-full ${
+                                    field.value === 'activa' ? 'bg-green-500' : 
+                                    field.value === 'cerrada' ? 'bg-red-500' : 
+                                    'bg-yellow-500'
+                                  }`}></div>
                                   <span className="capitalize">{field.value}</span>
                                 </div>
                               )}
@@ -501,6 +505,12 @@ export function RifaFormModal({
                               <div className="flex items-center gap-2">
                                 <div className="w-2 h-2 bg-red-500 rounded-full"></div>
                                 <span>Cerrada</span>
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="pausada">
+                              <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                                <span>Pausada</span>
                               </div>
                             </SelectItem>
                           </SelectContent>

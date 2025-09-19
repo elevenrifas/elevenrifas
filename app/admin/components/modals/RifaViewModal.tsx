@@ -56,6 +56,8 @@ export function RifaViewModal({
         return { variant: 'default', label: 'Activa', icon: Play, color: 'text-green-600' }
       case 'cerrada':
         return { variant: 'secondary', label: 'Cerrada', icon: Square, color: 'text-orange-600' }
+      case 'pausada':
+        return { variant: 'secondary', label: 'Pausada', icon: Square, color: 'text-yellow-600' }
       case 'finalizada':
         return { variant: 'outline', label: 'Finalizada', icon: CheckCircle, color: 'text-blue-600' }
       default:

@@ -116,6 +116,7 @@ export const DB_CONFIG = {
     ESTADOS_RIFA: [
       'activa',
       'cerrada',
+      'pausada',
       'finalizada'
     ],
 

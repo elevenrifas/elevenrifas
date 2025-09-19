@@ -7,8 +7,8 @@ import { getRifasFull } from "@/lib/database/rifas";
 import WithRifasLayout from "@/app/with-rifas-layout";
 
 // 🚀 Configuración profesional para Vercel
-// Revalidación cada 5 minutos como fallback de seguridad
-export const revalidate = 300;
+// Revalidación cada 30 segundos para testing (cambiar a 300 en producción)
+export const revalidate = 30;
 // Forzar renderizado dinámico para evitar caché agresivo
 export const dynamic = 'force-dynamic';
 
@@ -18,6 +18,7 @@ export default async function Home() {
   
   // Debug: Verificar que las rifas tengan IDs únicos
   // console.debug('🔍 Rifas obtenidas:', rifas);
+  // console.debug('🔍 Estados de rifas:', rifas.map(r => ({ id: r.id, titulo: r.titulo, estado: r.estado })));
   // console.debug('🔍 IDs de rifas:', rifas.map(r => r.id));
   // console.debug('🔍 IDs únicos:', [...new Set(rifas.map(r => r.id))]);
   // console.debug('🔍 Hay duplicados:', rifas.length !== [...new Set(rifas.map(r => r.id))].length);

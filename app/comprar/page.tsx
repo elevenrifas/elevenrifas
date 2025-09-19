@@ -1,5 +1,5 @@
 "use client";
-import { useState, Suspense, useEffect, useRef } from "react";
+import React, { useState, Suspense, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowRight, CheckCircle, Copy, Smartphone, Wallet, ChevronDown, FileText, Check, CreditCard, Zap, Globe, Banknote, Plus, Minus, Clock, XCircle } from "lucide-react";
@@ -10,7 +10,9 @@ import { formatCurrencyVE } from "@/lib/formatters";
 import { useRifas, useTicketNumbersFromContext } from "@/lib/context/RifasContext";
 import { convertCurrency, getRifaExchangeRate, calculateTicketTotals, formatCurrencyUSD } from "@/lib/utils/currency-converter";
 import { Rifa, DatosPersona, DatosPago } from "@/types";
+import { getRifaFull } from "@/lib/database/rifas";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { PausedRifaModal } from "@/components/ui/paused-rifa-modal";
 import { reportarPagoConTickets, DatosPagoCompleto } from '@/lib/database/pagos';
 import { reservarTickets, cancelarReservaPorIds } from '@/lib/database/reservas';
 import { useLoadingOverlay } from '@/components/ui/loading-overlay';
@@ -18,11 +20,13 @@ import { useTicketAvailability } from '@/hooks';
 import { getTicketAvailabilityStats } from '@/lib/database/utils/ticket-generator';
 
 // Componente para el Paso 1: Cantidad de tickets
-function PasoCantidad({ cantidad, setCantidad, precioTicket, rifaId }: {
+function PasoCantidad({ cantidad, setCantidad, precioTicket, rifaId, isRifaPausada, onShowPausedModal }: {
   cantidad: number;
   setCantidad: (cantidad: number) => void;
   precioTicket: number;
   rifaId: string;
+  isRifaPausada?: boolean | null;
+  onShowPausedModal?: () => void;
 }) {
   const { ticketNumbers: opciones, loading, error } = useTicketNumbersFromContext(rifaId);
   const { availability, loading: loadingAvailability, error: availabilityError } = useTicketAvailability(rifaId);
@@ -34,6 +38,13 @@ function PasoCantidad({ cantidad, setCantidad, precioTicket, rifaId }: {
   useEffect(() => {
     setInputValue(cantidad.toString());
   }, [cantidad]);
+
+  // Disparar el modal de "pausada" al entrar al paso 1, sin usar hooks condicionales
+  useEffect(() => {
+    if (isRifaPausada && onShowPausedModal) {
+      onShowPausedModal();
+    }
+  }, [isRifaPausada, onShowPausedModal]);
 
   // Mostrar loading mientras se cargan los números
   if (loading) {
@@ -1623,6 +1634,7 @@ function PasoReportePago({ rifa, cantidad, metodoPago, datosPersona, exchangeRat
 
 function ComprarPageContent() {
   const { rifas, rifaActiva } = useRifas();
+  const [showPausedModal, setShowPausedModal] = useState(false);
   
   // Obtener tasa de cambio individual de la rifa o usar fallback
   const exchangeRate = rifaActiva ? getRifaExchangeRate(rifaActiva.tasa) : 145;
@@ -1654,6 +1666,9 @@ function ComprarPageContent() {
   // Cargar localStorage en cliente sin afectar SSR
   const [lsInfo, setLsInfo] = useState<string | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
+  
+  // Estado para el progreso de la rifa
+  const [rifaProgreso, setRifaProgreso] = useState<number>(0);
 
   // Función para obtener el nombre del titular según el tipo de pago
   const getNombreTitular = (metodoPago: string, datosPago: DatosPago): string | undefined => {
@@ -1681,6 +1696,71 @@ function ComprarPageContent() {
       setLsInfo(localStorage.getItem('rifaActiva') || 'vacío');
     } catch {}
   }, []);
+
+  // Detectar si la rifa está pausada (pero no mostrar modal inmediatamente)
+  const isRifaPausada = rifaActiva && rifaActiva.estado === 'pausada';
+  
+  // Limpiar localStorage si hay datos corruptos
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('rifaActiva');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          // Si el estado no es válido, limpiar localStorage
+          if (parsed && parsed.estado && !['activa', 'cerrada', 'pausada', 'finalizada'].includes(parsed.estado)) {
+            console.log('Estado de rifa inválido detectado, limpiando localStorage...');
+            localStorage.removeItem('rifaActiva');
+            window.location.reload();
+          }
+        }
+      } catch (error) {
+        console.log('Error al validar localStorage, limpiando...', error);
+        localStorage.removeItem('rifaActiva');
+        window.location.reload();
+      }
+    }
+  }, []);
+  
+  // Cargar progreso correcto de la rifa activa
+  useEffect(() => {
+    if (!rifaActiva) {
+      setRifaProgreso(0);
+      return;
+    }
+    
+    let mounted = true;
+    
+    // Función para calcular el progreso (igual que en RifaCard)
+    const calcularProgreso = async () => {
+      try {
+        // PRIORIDAD 1: Si hay progreso_manual > 0, úsalo
+        if (rifaActiva.progreso_manual && rifaActiva.progreso_manual > 0) {
+          if (mounted) {
+            setRifaProgreso(Math.min(Math.max(rifaActiva.progreso_manual, 0), 100));
+          }
+          return;
+        }
+        
+        // PRIORIDAD 2: Cargar desde getRifaFull
+        const data = await getRifaFull(rifaActiva.id);
+        if (mounted && data && data.progreso !== undefined) {
+          setRifaProgreso(Math.min(Math.max(data.progreso, 0), 100));
+        }
+      } catch (error) {
+        console.error('Error cargando progreso de rifa:', error);
+        if (mounted) {
+          setRifaProgreso(0);
+        }
+      }
+    };
+    
+    calcularProgreso();
+    
+    return () => {
+      mounted = false;
+    };
+  }, [rifaActiva]);
   
   // Estado para el modal de términos y condiciones
   const [showTerminosModal, setShowTerminosModal] = useState(false);
@@ -2179,8 +2259,10 @@ function ComprarPageContent() {
           <PasoCantidad
             cantidad={cantidad}
             setCantidad={setCantidad}
-                         precioTicket={rifa.precio_ticket}
-             rifaId={rifa.id}
+            precioTicket={rifa.precio_ticket}
+            rifaId={rifa.id}
+            isRifaPausada={isRifaPausada}
+            onShowPausedModal={() => setShowPausedModal(true)}
           />
         );
       case 2:
@@ -2227,7 +2309,12 @@ function ComprarPageContent() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-gray-800 via-gray-600 to-slate-200">
-      <Navbar showBackButton={pasoActual < 5 && !(pasoActual === 4 && remainingMs !== null && remainingMs > 0)} onBack={pasoActual > 1 ? pasoAnterior : () => window.location.href = '/'} />
+      <Navbar 
+        showBackButton={pasoActual < 5 && !(pasoActual === 4 && remainingMs !== null && remainingMs > 0)} 
+        onBack={pasoActual > 1 ? pasoAnterior : () => window.location.href = '/'}
+        showProgress={true}
+        progress={rifaProgreso}
+      />
       
       {/* Modal de Términos y Condiciones */}
       <Dialog open={showTerminosModal} onOpenChange={setShowTerminosModal}>
@@ -2400,6 +2487,16 @@ function ComprarPageContent() {
       
       {/* Loading Overlay */}
       <LoadingComponent />
+      
+      {/* Modal para rifas pausadas */}
+      <PausedRifaModal
+        isOpen={showPausedModal}
+        onConfirm={() => {
+          setShowPausedModal(false);
+          // Redirigir sin mutar el router durante render del modal
+          window.location.href = '/';
+        }}
+      />
     </div>
   );
 }

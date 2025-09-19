@@ -4,7 +4,17 @@ import Image from "next/image";
 import { ArrowLeft } from "lucide-react";
 import { useState, useEffect } from "react";
 
-export default function Navbar({ showBackButton = false, onBack }: { showBackButton?: boolean; onBack?: () => void }) {
+export default function Navbar({ 
+  showBackButton = false, 
+  onBack, 
+  showProgress = false, 
+  progress = 0 
+}: { 
+  showBackButton?: boolean; 
+  onBack?: () => void;
+  showProgress?: boolean;
+  progress?: number;
+}) {
   const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
@@ -63,6 +73,30 @@ export default function Navbar({ showBackButton = false, onBack }: { showBackBut
           </Link>
         </div>
       </div>
+      
+      {/* Barra de progreso minimalista como parte del borde */}
+      {showProgress && (
+        <div className="w-full border-t border-white/10">
+          <div className="container mx-auto px-4 sm:px-6 py-2">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-slate-300/70">Progreso de ventas</span>
+              <span className="font-medium text-amber-400">{progress}%</span>
+            </div>
+            <div className="w-full bg-slate-800/30 rounded-full h-1 mt-1 overflow-hidden">
+              <div 
+                className="bg-gradient-to-r from-amber-400 to-red-400 h-1 rounded-full transition-all duration-700 ease-out relative" 
+                style={{ width: `${progress}%` }}
+              >
+                {/* Efecto de brillo hacia adelante */}
+                <div 
+                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-progress-shine" 
+                  style={{width: '100%'}}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 }
