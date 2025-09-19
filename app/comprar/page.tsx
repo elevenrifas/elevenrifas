@@ -690,7 +690,7 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
 
             {/* Input de comprobante SIMPLE */}
             <div className="space-y-3 mb-6">
-              <div className="text-white font-medium">📎 Comprobante de Pago (Opcional)</div>
+              <div className="text-white font-medium">📎 Comprobante de Pago</div>
               <div className="text-xs text-slate-300 mb-2">Formatos permitidos: PNG, JPG, JPEG, PDF (máx. 35MB)</div>
 
               <input
@@ -783,7 +783,7 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
 
             {/* Input de comprobante SIMPLE */}
             <div className="space-y-3 mb-6">
-              <div className="text-white font-medium">📎 Comprobante de Pago (Opcional)</div>
+              <div className="text-white font-medium">📎 Comprobante de Pago</div>
               <div className="text-xs text-slate-300 mb-2">Formatos permitidos: PNG, JPG, JPEG, PDF (máx. 35MB)</div>
 
               <input
@@ -873,7 +873,7 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
 
             {/* Input de comprobante SIMPLE */}
             <div className="space-y-3 mb-6">
-              <div className="text-white font-medium">📎 Comprobante de Pago (Opcional)</div>
+              <div className="text-white font-medium">📎 Comprobante de Pago</div>
               <div className="text-xs text-slate-300 mb-2">Formatos permitidos: PNG, JPG, JPEG, PDF (máx. 35MB)</div>
 
               <input
@@ -960,7 +960,7 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
 
               {/* Input de comprobante SIMPLE */}
               <div className="space-y-3 mb-6">
-                <div className="text-white font-medium">📎 Comprobante de Pago (Opcional)</div>
+                <div className="text-white font-medium">📎 Comprobante de Pago</div>
                 <div className="text-xs text-slate-300 mb-2">Formatos permitidos: PNG, JPG, JPEG, PDF (máx. 35MB)</div>
 
                 <input
@@ -1053,7 +1053,7 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
 
               {/* Input de comprobante SIMPLE */}
               <div className="space-y-3 mb-6">
-                <div className="text-white font-medium">📎 Comprobante de Pago (Opcional)</div>
+                <div className="text-white font-medium">📎 Comprobante de Pago</div>
                 <div className="text-xs text-slate-300 mb-2">Formatos permitidos: PNG, JPG, JPEG, PDF (máx. 35MB)</div>
 
                 <input
@@ -1221,7 +1221,7 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
 
             {/* Input de comprobante SIMPLE */}
             <div className="space-y-3 mb-6">
-              <div className="text-white font-medium">📎 Comprobante de Pago (Opcional)</div>
+              <div className="text-white font-medium">📎 Comprobante de Pago</div>
               <div className="text-xs text-slate-300 mb-2">Formatos permitidos: PNG, JPG, JPEG, PDF (máx. 35MB)</div>
 
               <input
@@ -1301,7 +1301,7 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
 
             {/* Input de comprobante SIMPLE */}
             <div className="space-y-3 mb-6">
-              <div className="text-white font-medium">📎 Comprobante de Pago (Opcional)</div>
+              <div className="text-white font-medium">📎 Comprobante de Pago</div>
               <div className="text-xs text-slate-300 mb-2">Formatos permitidos: PNG, JPG, JPEG, PDF (máx. 35MB)</div>
 
               <input
@@ -1381,7 +1381,7 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
 
             {/* Input de comprobante SIMPLE */}
             <div className="space-y-3 mb-6">
-              <div className="text-white font-medium">📎 Comprobante de Pago (Opcional)</div>
+              <div className="text-white font-medium">📎 Comprobante de Pago</div>
               <div className="text-xs text-slate-300 mb-2">Formatos permitidos: PNG, JPG, JPEG, PDF (máx. 35MB)</div>
 
               <input
@@ -1470,7 +1470,7 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
 
                         {/* Input de comprobante SIMPLE */}
             <div className="space-y-3 mb-6">
-              <div className="text-white font-medium">📎 Comprobante de Pago (Opcional)</div>
+              <div className="text-white font-medium">📎 Comprobante de Pago</div>
               <div className="text-xs text-slate-300 mb-2">Formatos permitidos: PNG, JPG, JPEG, PDF (máx. 35MB)</div>
 
               <input
@@ -2168,7 +2168,7 @@ function ComprarPageContent() {
           return nombreValido && cedulaValida && telefonoValido && emailValido;
         }
       case 4: // Datos del pago
-        // Validar campos requeridos por método; comprobante es opcional
+        // Validar campos requeridos por método; comprobante es obligatorio
         {
           // Función de validación genérica para largo
           const validarLargo = (valor: string, min: number, max: number) => {
@@ -2185,21 +2185,27 @@ function ComprarPageContent() {
               return validarLargo(telefonoDigitos, 7, 15)
                 && isNonEmpty((datosPago as any).bancoPago)
                 && validarLargo(cedulaDigitos, 6, 10)
-                && validarLargo((datosPago as any).referencia || '', 3, 30);
+                && validarLargo((datosPago as any).referencia || '', 3, 30)
+                && !!datosPago.comprobantePago;
             case 'binance':
               return validarLargo((datosPago as any).idBinance || '', 2, 50)
-                && validarLargo((datosPago as any).referencia || '', 3, 30);
+                && validarLargo((datosPago as any).referencia || '', 3, 30)
+                && !!datosPago.comprobantePago;
             case 'zelle':
               return validarLargo((datosPago as any).correoZelle || '', 2, 50)
-                && validarLargo((datosPago as any).referencia || '', 3, 30);
+                && validarLargo((datosPago as any).referencia || '', 3, 30)
+                && !!datosPago.comprobantePago;
             case 'zinli':
               return validarLargo((datosPago as any).usuarioZinli || '', 2, 50)
-                && validarLargo((datosPago as any).referencia || '', 3, 30);
+                && validarLargo((datosPago as any).referencia || '', 3, 30)
+                && !!datosPago.comprobantePago;
             case 'paypal':
               return validarLargo((datosPago as any).correoPaypal || '', 2, 50)
-                && validarLargo((datosPago as any).referencia || '', 3, 30);
+                && validarLargo((datosPago as any).referencia || '', 3, 30)
+                && !!datosPago.comprobantePago;
             case 'efectivo':
-              return isNonEmpty((datosPago as any).fechaVisita);
+              return isNonEmpty((datosPago as any).fechaVisita)
+                && !!datosPago.comprobantePago;
             default:
               return false;
           }

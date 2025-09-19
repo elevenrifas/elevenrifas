@@ -22,10 +22,12 @@ interface RifaTicketsModalProps {
   rifa: AdminRifa | null
 }
 
-// Generar array de todos los números de tickets (0000-9999)
-const generateAllTicketNumbers = () => {
+// Generar array de números de tickets según total_tickets de la rifa
+const generateAllTicketNumbers = (totalTickets: number) => {
   const tickets = []
-  for (let i = 0; i <= 9999; i++) {
+  // Los tickets van de 1 a totalTickets, formateados a 4 dígitos
+  const max = Math.max(0, Number(totalTickets) || 0)
+  for (let i = 1; i <= max; i++) {
     tickets.push(i.toString().padStart(4, '0'))
   }
   return tickets
@@ -49,15 +51,16 @@ export function RifaTicketsModal({
   const [currentPage, setCurrentPage] = React.useState(1)
   const ticketsPerPage = 1000 // 1000 tickets por página
   
-  // Generar todos los números de tickets
-  const allTickets = React.useMemo(() => generateAllTicketNumbers(), [])
+  // Generar todos los números de tickets basados en la rifa
+  const totalTicketsRifa = Number(rifa?.total_tickets) || 0
+  const allTickets = React.useMemo(() => generateAllTicketNumbers(totalTicketsRifa), [totalTicketsRifa])
   
   const [stats, setStats] = React.useState({
-    total: 10000,
+    total: totalTicketsRifa,
     reservados: 0,
     verificados: 0,
     especiales: 0,
-    disponibles: 10000
+    disponibles: totalTicketsRifa
   })
 
   const loadTickets = React.useCallback(async () => {
@@ -123,12 +126,13 @@ export function RifaTicketsModal({
         console.log('🎫 [RifaTicketsModal] - Verificados:', Array.from(verificados))
         console.log('🎫 [RifaTicketsModal] - Especiales:', Array.from(especiales))
         
-        // Calcular estadísticas
+        // Calcular estadísticas usando el total real de la rifa
         const totalOcupados = reservados.size + verificados.size + especiales.size
-        const disponibles = 10000 - totalOcupados
-        
+        const total = totalTicketsRifa
+        const disponibles = Math.max(0, total - totalOcupados)
+
         setStats({
-          total: 10000,
+          total,
           reservados: reservados.size,
           verificados: verificados.size,
           especiales: especiales.size,
@@ -154,9 +158,24 @@ export function RifaTicketsModal({
 
   React.useEffect(() => {
     if (isOpen && rifa?.id) {
+      // Reiniciar estado de paginación y filtros al cambiar de rifa o abrir el modal
+      setCurrentPage(1)
+      setSearchTerm("")
+      setFilterState('all')
+      setTicketsReservados(new Set())
+      setTicketsVerificados(new Set())
+      setTicketsEspeciales(new Set())
+      setStats({
+        total: totalTicketsRifa,
+        reservados: 0,
+        verificados: 0,
+        especiales: 0,
+        disponibles: totalTicketsRifa
+      })
+
       loadTickets()
     }
-  }, [isOpen, rifa?.id, loadTickets])
+  }, [isOpen, rifa?.id, loadTickets, totalTicketsRifa])
 
   // Filtrar tickets según búsqueda y estado
   const filteredTickets = React.useMemo(() => {
@@ -233,6 +252,38 @@ export function RifaTicketsModal({
     }
   }
 
+  // Construcción de páginas para paginación con ventana deslizante y elipsis
+  const buildPaginationItems = React.useCallback(
+    (current: number, total: number, maxVisible: number = 5): Array<number | 'ellipsis'> => {
+      if (total <= maxVisible) {
+        return Array.from({ length: total }, (_, i) => i + 1)
+      }
+
+      const items: Array<number | 'ellipsis'> = []
+      const half = Math.floor((maxVisible - 1) / 2)
+      let start = Math.max(2, current - half)
+      let end = Math.min(total - 1, start + maxVisible - 1)
+
+      // Ajustar inicio si estamos cerca del final
+      start = Math.max(2, Math.min(start, end - (maxVisible - 1)))
+
+      // Siempre incluir primera página
+      items.push(1)
+      if (start > 2) items.push('ellipsis')
+
+      for (let p = start; p <= end; p++) {
+        items.push(p)
+      }
+
+      if (end < total - 1) items.push('ellipsis')
+      // Siempre incluir última página
+      items.push(total)
+
+      return items
+    },
+    []
+  )
+
   if (!isOpen || !rifa) return null
 
   return (
@@ -246,7 +297,7 @@ export function RifaTicketsModal({
               Tickets de la Rifa
             </h2>
             <p className="text-sm text-muted-foreground mt-1">
-              {rifa.titulo} - Sistema de 10,000 tickets (0000-9999)
+              {rifa.titulo} - {totalTicketsRifa.toLocaleString()} tickets (001 - {String(totalTicketsRifa).padStart(4, '0')})
             </p>
           </div>
           <Button
@@ -381,10 +432,15 @@ export function RifaTicketsModal({
                   >
                     Anterior
                   </Button>
-                  
-                  <div className="flex gap-1">
-                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                      const page = i + 1
+
+                  <div className="flex gap-1 items-center">
+                    {buildPaginationItems(currentPage, totalPages, 5).map((item, idx) => {
+                      if (item === 'ellipsis') {
+                        return (
+                          <span key={`ellipsis-${idx}`} className="px-2 text-muted-foreground">…</span>
+                        )
+                      }
+                      const page = item as number
                       return (
                         <Button
                           key={page}
@@ -398,7 +454,7 @@ export function RifaTicketsModal({
                       )
                     })}
                   </div>
-                  
+
                   <Button
                     variant="outline"
                     size="sm"

@@ -300,29 +300,32 @@ export async function adminVerifyPago(
         }
 
         if (modo === 'agregar') {
-          // Obtener datos del cliente desde el pago (más confiable)
+          // Obtener datos del cliente desde el pago (para fallback)
           const { data: pagoData, error: pagoError } = await createAdminQuery('pagos')
             .select('nombre_titular, cedula_pago, telefono_pago')
             .eq('id', id)
             .single()
-          
           if (pagoError) throw pagoError
-          
-          // Obtener datos del cliente desde el primer ticket existente como fallback
+
+          // Obtener datos del cliente desde un ticket del mismo pago (preferido)
           const { data: ticketExistente, error: ticketError } = await createAdminQuery('tickets')
             .select('nombre, cedula, telefono, correo, es_ticket_especial')
             .eq('pago_id', id)
             .limit(1)
-          
           if (ticketError) throw ticketError
-          
-          // Para tickets especiales, usar datos del ticket existente, no del pago
+
+          // Combinar datos: priorizar ticket existente, hacer fallback a datos del pago
+          const nombre = (ticketExistente?.[0]?.nombre || pagoData?.nombre_titular || 'TICKET RESERVADO')
+          const cedula = (ticketExistente?.[0]?.cedula || pagoData?.cedula_pago || '000000000')
+          const telefono = (ticketExistente?.[0]?.telefono || pagoData?.telefono_pago || '000000000')
+          const correo = (ticketExistente?.[0]?.correo || 'N/A')
+
           const datosCliente = {
-            nombre: ticketExistente?.[0]?.nombre || 'TICKET RESERVADO', // ✅ DATOS DEL TICKET
-            cedula: ticketExistente?.[0]?.cedula || '000000000',        // ✅ DATOS DEL TICKET
-            telefono: ticketExistente?.[0]?.telefono || '000000000',    // ✅ DATOS DEL TICKET
-            correo: ticketExistente?.[0]?.correo || 'N/A',              // ✅ DATOS DEL TICKET
-            es_ticket_especial: true // ✅ MANTIENE IDENTIDAD ESPECIAL
+            nombre,
+            cedula,
+            telefono,
+            correo,
+            es_ticket_especial: true
           }
           
           // Agregar tickets especiales al pago (mantener tickets existentes)
@@ -381,8 +384,9 @@ export async function adminVerifyPago(
           }
         } else if (modo === 'reemplazar') {
           // Reemplazar aleatoriamente tickets actuales por especiales
+          // Obtener tickets con datos de contacto para poder copiar ANTES de eliminar
           const { data: ticketsDelPago, error: listError } = await createAdminQuery('tickets')
-            .select('id, rifa_id')
+            .select('id, rifa_id, nombre, cedula, telefono, correo')
             .eq('pago_id', id)
           if (listError) throw listError
 
@@ -396,6 +400,23 @@ export async function adminVerifyPago(
           }
           const idsSeleccionados = ids.slice(0, aReemplazar)
 
+          // Capturar datos de contacto de uno de los tickets seleccionados (si hay)
+          const ticketFuente = (ticketsDelPago || []).find((t: any) => idsSeleccionados.includes(t.id)) || ticketsDelPago?.[0]
+
+          // Obtener datos del pago para fallback
+          const { data: pagoData2, error: pagoError2 } = await createAdminQuery('pagos')
+            .select('nombre_titular, cedula_pago, telefono_pago')
+            .eq('id', id)
+            .single()
+          if (pagoError2) throw pagoError2
+
+          const nombre = (ticketFuente?.nombre || pagoData2?.nombre_titular || 'TICKET RESERVADO')
+          const cedula = (ticketFuente?.cedula || pagoData2?.cedula_pago || '000000000')
+          const telefono = (ticketFuente?.telefono || pagoData2?.telefono_pago || '000000000')
+          const correo = (ticketFuente?.correo || 'N/A')
+
+          const datosCliente = { nombre, cedula, telefono, correo }
+
           // Eliminar seleccionados
           if (idsSeleccionados.length > 0) {
             const { error: delError } = await createAdminQuery('tickets')
@@ -403,63 +424,39 @@ export async function adminVerifyPago(
               .in('id', idsSeleccionados)
             if (delError) throw delError
           }
-
-          // Obtener datos del cliente desde el pago (más confiable)
-          const { data: pagoData, error: pagoError } = await createAdminQuery('pagos')
-            .select('nombre_titular, cedula_pago, telefono_pago')
-            .eq('id', id)
-            .single()
-          
-          if (pagoError) throw pagoError
-          
-          // Obtener datos completos de los tickets antes de eliminarlos para obtener el correo
-          const { data: ticketsCompletos, error: ticketsCompletosError } = await createAdminQuery('tickets')
-            .select('nombre, cedula, telefono, correo')
-            .eq('pago_id', id)
-            .limit(1)
-          
-          if (ticketsCompletosError) throw ticketsCompletosError
-          
-          // Para tickets especiales, usar datos del ticket existente, no del pago
-          const datosCliente = {
-            nombre: ticketsCompletos?.[0]?.nombre || 'TICKET RESERVADO', // ✅ DATOS DEL TICKET
-            cedula: ticketsCompletos?.[0]?.cedula || '000000000',        // ✅ DATOS DEL TICKET
-            telefono: ticketsCompletos?.[0]?.telefono || '000000000',    // ✅ DATOS DEL TICKET
-            correo: ticketsCompletos?.[0]?.correo || 'N/A',              // ✅ DATOS DEL TICKET
-          }
           
           // Reutilizar especiales existentes seleccionados o crear nuevos
           const usarExistentes = Math.min(aReemplazar, especialesIds.length)
-          if (usarExistentes > 0) {
-            const idsUsar = especialesIds.slice(0, usarExistentes)
+          // Actualizar especiales existentes mapeando 1 a 1 con los tickets reemplazados
+          for (let i = 0; i < usarExistentes; i++) {
+            const especialId = especialesIds[i]
+            const fuente = (ticketsDelPago || []).find((t: any) => idsSeleccionados[i] === t.id) || ticketFuente
             const { error: updError } = await createAdminQuery('tickets')
               .update({ 
                 estado: 'pagado', 
                 pago_id: id, 
                 fecha_compra: new Date().toISOString() as any,
-                // Actualizar con datos del cliente real
-                nombre: datosCliente.nombre,
-                cedula: datosCliente.cedula,
-                telefono: datosCliente.telefono,
-                correo: datosCliente.correo,
-                // Mantener solo la identidad especial
+                nombre: (fuente?.nombre || nombre),
+                cedula: (fuente?.cedula || cedula),
+                telefono: (fuente?.telefono || telefono),
+                correo: (fuente?.correo || correo),
                 es_ticket_especial: true
               })
-              .in('id', idsUsar)
+              .eq('id', especialId)
             if (updError) throw updError
           }
           const restantes = aReemplazar - usarExistentes
           for (let i = 0; i < restantes; i++) {
             const numero = numerosEspeciales[i]
+            const fuente = (ticketsDelPago || []).find((t: any) => idsSeleccionados[usarExistentes + i] === t.id) || ticketFuente
             const { error: insertError } = await createAdminQuery('tickets')
               .insert({
                 rifa_id,
                 numero_ticket: numero,
-                // Usar datos del cliente real
-                nombre: datosCliente.nombre,
-                cedula: datosCliente.cedula,
-                telefono: datosCliente.telefono,
-                correo: datosCliente.correo,
+                nombre: (fuente?.nombre || nombre),
+                cedula: (fuente?.cedula || cedula),
+                telefono: (fuente?.telefono || telefono),
+                correo: (fuente?.correo || correo),
                 estado: 'pagado',
                 pago_id: id,
                 fecha_compra: new Date().toISOString() as any,

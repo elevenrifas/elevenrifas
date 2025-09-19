@@ -1,8 +1,8 @@
 "use client"
 
-import {
-  LogOut,
-} from "lucide-react"
+import { LogOut } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { supabase } from "@/lib/database"
 
 import {
   Avatar,
@@ -24,9 +24,15 @@ export function NavUser({
     avatar: string
   }
 }) {
-  const handleLogout = () => {
-    // Aquí implementarías la lógica de logout
-    console.log('Logout clicked')
+  const router = useRouter()
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut()
+      router.push('/admin/login')
+    } catch (error) {
+      console.error('Error al cerrar sesión:', error)
+    }
   }
 
   return (
@@ -47,21 +53,14 @@ export function NavUser({
             </span>
           </div>
         </SidebarMenuButton>
-        <div
+        <button
           className="absolute top-1.5 right-1.5 p-1.5 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-md transition-colors cursor-pointer"
           onClick={handleLogout}
           title="Cerrar sesión"
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault()
-              handleLogout()
-            }
-          }}
+          aria-label="Cerrar sesión"
         >
           <LogOut className="size-4" />
-        </div>
+        </button>
       </SidebarMenuItem>
     </SidebarMenu>
   )
