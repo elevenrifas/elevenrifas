@@ -314,13 +314,27 @@ function PasoDatosPersona({ datos, setDatos }: {
     setDatos({ ...datos, [campo]: valor });
   };
 
-  // Validaciones básicas
-  const nombreValido = datos.nombre.trim().length >= 2;
+  // Función de validación genérica para largo
+  const validarLargo = (valor: string, min: number, max: number) => {
+    const valorLimpio = valor.trim();
+    return {
+      valido: valorLimpio.length >= min && valorLimpio.length <= max,
+      mensaje: valorLimpio.length < min 
+        ? `Mínimo ${min} caracteres` 
+        : valorLimpio.length > max 
+        ? `Máximo ${max} caracteres`
+        : ''
+    };
+  };
+
+  // Validaciones básicas con límites de largo
+  const nombreValido = validarLargo(datos.nombre, 2, 50).valido;
   const cedulaDigitos = datos.cedula.replace(/\D/g, "");
-  const cedulaValida = cedulaDigitos.length >= 6;
+  const cedulaValida = validarLargo(cedulaDigitos, 6, 10).valido;
   const telefonoDigitos = datos.telefono.replace(/\D/g, "");
-  const telefonoValido = telefonoDigitos.length >= 10;
-  const emailValido = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(datos.correo.trim());
+  const telefonoValido = validarLargo(telefonoDigitos, 10, 15).valido;
+  const emailValido = validarLargo(datos.correo, 5, 100).valido && 
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(datos.correo.trim());
 
   return (
     <div className="space-y-8">
@@ -340,7 +354,7 @@ function PasoDatosPersona({ datos, setDatos }: {
             className={`w-full px-4 py-3 rounded-xl border ${datos.nombre && !nombreValido ? 'border-red-500' : 'border-slate-300'} bg-white/10 text-white placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-white backdrop-blur-sm`}
           />
           {datos.nombre && !nombreValido && (
-            <p className="text-red-400 text-xs mt-1">Ingresa al menos 2 caracteres.</p>
+            <p className="text-red-400 text-xs mt-1">{validarLargo(datos.nombre, 2, 50).mensaje}</p>
           )}
         </div>
 
@@ -354,7 +368,7 @@ function PasoDatosPersona({ datos, setDatos }: {
               className={`w-full px-4 py-3 rounded-xl border ${datos.cedula && !cedulaValida ? 'border-red-500' : 'border-slate-300'} bg-white/10 text-white placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-white backdrop-blur-sm`}
             />
             {datos.cedula && !cedulaValida && (
-              <p className="text-red-400 text-xs mt-1">Cédula inválida. Solo números (mín. 6).</p>
+              <p className="text-red-400 text-xs mt-1">{validarLargo(cedulaDigitos, 6, 10).mensaje}</p>
             )}
           </div>
 
@@ -368,7 +382,7 @@ function PasoDatosPersona({ datos, setDatos }: {
             className={`w-full px-4 py-3 rounded-xl border ${datos.telefono && !telefonoValido ? 'border-red-500' : 'border-slate-300'} bg-white/10 text-white placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-white backdrop-blur-sm`}
           />
           {datos.telefono && !telefonoValido && (
-            <p className="text-red-400 text-xs mt-1">Teléfono inválido. Mínimo 10 dígitos.</p>
+            <p className="text-red-400 text-xs mt-1">{validarLargo(telefonoDigitos, 10, 15).mensaje}</p>
           )}
         </div>
 
@@ -382,7 +396,11 @@ function PasoDatosPersona({ datos, setDatos }: {
             className={`w-full px-4 py-3 rounded-xl border ${datos.correo && !emailValido ? 'border-red-500' : 'border-slate-300'} bg-white/10 text-white placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-white backdrop-blur-sm`}
           />
           {datos.correo && !emailValido && (
-            <p className="text-red-400 text-xs mt-1">Correo electrónico inválido.</p>
+            <p className="text-red-400 text-xs mt-1">
+              {!validarLargo(datos.correo, 5, 100).valido 
+                ? validarLargo(datos.correo, 5, 100).mensaje 
+                : 'Correo electrónico inválido.'}
+            </p>
           )}
         </div>
       </div>
@@ -428,35 +446,49 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
     }
   };
 
+  // Función de validación genérica para largo
+  const validarLargo = (valor: string, min: number, max: number) => {
+    const valorLimpio = valor.trim();
+    return {
+      valido: valorLimpio.length >= min && valorLimpio.length <= max,
+      mensaje: valorLimpio.length < min 
+        ? `Mínimo ${min} caracteres` 
+        : valorLimpio.length > max 
+        ? `Máximo ${max} caracteres`
+        : ''
+    };
+  };
+
   // Validaciones para campos de pago según método
   const validarCamposPago = () => {
     switch (metodoPago) {
       case 'pago_movil':
         const telefonoDigitos = (datosPago.telefonoPago || '').replace(/\D/g, '');
-        const telefonoValido = telefonoDigitos.length >= 7;
+        const telefonoValido = validarLargo(telefonoDigitos, 7, 15).valido;
         const bancoValido = (datosPago.bancoPago || '').trim() !== '';
-        const cedulaValida = (datosPago.cedulaPago || '').trim() !== '';
-        const referenciaValida = (datosPago.referencia || '').trim() !== '';
+        const cedulaDigitos = (datosPago.cedulaPago || '').replace(/\D/g, '');
+        const cedulaValida = validarLargo(cedulaDigitos, 6, 10).valido;
+        const referenciaValida = validarLargo(datosPago.referencia || '', 3, 30).valido;
         return { telefonoValido, bancoValido, cedulaValida, referenciaValida };
       
       case 'binance':
-        const idBinanceValido = (datosPago.idBinance || '').trim() !== '';
-        const referenciaValidaBinance = (datosPago.referencia || '').trim() !== '';
+        const idBinanceValido = validarLargo(datosPago.idBinance || '', 2, 50).valido;
+        const referenciaValidaBinance = validarLargo(datosPago.referencia || '', 3, 30).valido;
         return { idBinanceValido, referenciaValida: referenciaValidaBinance };
       
       case 'zelle':
-        const correoZelleValido = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((datosPago.correoZelle || '').trim());
-        const referenciaValidaZelle = (datosPago.referencia || '').trim() !== '';
+        const correoZelleValido = validarLargo(datosPago.correoZelle || '', 2, 50).valido;
+        const referenciaValidaZelle = validarLargo(datosPago.referencia || '', 3, 30).valido;
         return { correoZelleValido, referenciaValida: referenciaValidaZelle };
       
       case 'zinli':
-        const usuarioZinliValido = (datosPago.usuarioZinli || '').trim() !== '';
-        const referenciaValidaZinli = (datosPago.referencia || '').trim() !== '';
+        const usuarioZinliValido = validarLargo(datosPago.usuarioZinli || '', 2, 50).valido;
+        const referenciaValidaZinli = validarLargo(datosPago.referencia || '', 3, 30).valido;
         return { usuarioZinliValido, referenciaValida: referenciaValidaZinli };
       
       case 'paypal':
-        const correoPaypalValido = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((datosPago.correoPaypal || '').trim());
-        const referenciaValidaPaypal = (datosPago.referencia || '').trim() !== '';
+        const correoPaypalValido = validarLargo(datosPago.correoPaypal || '', 2, 50).valido;
+        const referenciaValidaPaypal = validarLargo(datosPago.referencia || '', 3, 30).valido;
         return { correoPaypalValido, referenciaValida: referenciaValidaPaypal };
       
       case 'efectivo':
@@ -587,11 +619,11 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
                 type="tel"
                 value={datosPago.telefonoPago || ""}
                 onChange={(e) => handleChange("telefonoPago", e.target.value)}
-                placeholder="0412-1234567"
+                placeholder="Número de teléfono del pago"
                 className={`w-full px-4 py-3 rounded-xl border ${datosPago.telefonoPago && !validaciones.telefonoValido ? 'border-red-500' : 'border-slate-300'} bg-white/10 text-white placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-white backdrop-blur-sm`}
               />
               {datosPago.telefonoPago && !validaciones.telefonoValido && (
-                <p className="text-red-400 text-xs mt-1">Ingresa un teléfono válido (mínimo 7 dígitos).</p>
+                <p className="text-red-400 text-xs mt-1">{validarLargo((datosPago.telefonoPago || '').replace(/\D/g, ''), 7, 15).mensaje}</p>
               )}
             </div>
 
@@ -623,11 +655,11 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
                 type="text"
                 value={datosPago.cedulaPago || ""}
                 onChange={(e) => handleChange("cedulaPago", e.target.value)}
-                placeholder="12345678"
+                placeholder="Cédula del titular del pago"
                 className={`w-full px-4 py-3 rounded-xl border ${datosPago.cedulaPago && !validaciones.cedulaValida ? 'border-red-500' : 'border-slate-300'} bg-white/10 text-white placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-white backdrop-blur-sm`}
               />
               {datosPago.cedulaPago && !validaciones.cedulaValida && (
-                <p className="text-red-400 text-xs mt-1">Ingresa la cédula de pago.</p>
+                <p className="text-red-400 text-xs mt-1">{validarLargo((datosPago.cedulaPago || '').replace(/\D/g, ''), 6, 10).mensaje}</p>
               )}
             </div>
 
@@ -637,11 +669,11 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
                 type="text"
                 value={datosPago.referencia || ""}
                 onChange={(e) => handleChange("referencia", e.target.value)}
-                placeholder="REF123456"
+                placeholder="Referencia del pago"
                 className={`w-full px-4 py-3 rounded-xl border ${datosPago.referencia && !validaciones.referenciaValida ? 'border-red-500' : 'border-slate-300'} bg-white/10 text-white placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-white backdrop-blur-sm`}
               />
               {datosPago.referencia && !validaciones.referenciaValida && (
-                <p className="text-red-400 text-xs mt-1">Ingresa la referencia de pago.</p>
+                <p className="text-red-400 text-xs mt-1">{validarLargo(datosPago.referencia || '', 3, 30).mensaje}</p>
               )}
             </div>
 
@@ -720,7 +752,7 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
                   className={`w-full px-4 py-3 rounded-xl border ${datosPago.idBinance && !validaciones.idBinanceValido ? 'border-red-500' : 'border-slate-300'} bg-white/10 text-white placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-white backdrop-blur-sm`}
                 />
                 {datosPago.idBinance && !validaciones.idBinanceValido && (
-                  <p className="text-red-400 text-xs mt-1">Ingresa el nombre del pagador.</p>
+                  <p className="text-red-400 text-xs mt-1">{validarLargo(datosPago.idBinance || '', 2, 50).mensaje}</p>
                 )}
             </div>
 
@@ -730,11 +762,11 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
                 type="text"
                 value={datosPago.referencia || ""}
                 onChange={(e) => handleChange("referencia", e.target.value)}
-                placeholder="REF123456"
+                placeholder="Referencia del pago"
                 className={`w-full px-4 py-3 rounded-xl border ${datosPago.referencia && !validaciones.referenciaValida ? 'border-red-500' : 'border-slate-300'} bg-white/10 text-white placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-white backdrop-blur-sm`}
               />
               {datosPago.referencia && !validaciones.referenciaValida && (
-                <p className="text-red-400 text-xs mt-1">Ingresa la referencia de pago.</p>
+                <p className="text-red-400 text-xs mt-1">{validarLargo(datosPago.referencia || '', 3, 30).mensaje}</p>
               )}
             </div>
 
@@ -820,11 +852,11 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
                 type="text"
                 value={datosPago.referencia || ""}
                 onChange={(e) => handleChange("referencia", e.target.value)}
-                placeholder="REF123456"
+                placeholder="Referencia del pago"
                 className={`w-full px-4 py-3 rounded-xl border ${datosPago.referencia && !validaciones.referenciaValida ? 'border-red-500' : 'border-slate-300'} bg-white/10 text-white placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-white backdrop-blur-sm`}
               />
               {datosPago.referencia && !validaciones.referenciaValida && (
-                <p className="text-red-400 text-xs mt-1">Ingresa la referencia de pago.</p>
+                <p className="text-red-400 text-xs mt-1">{validarLargo(datosPago.referencia || '', 3, 30).mensaje}</p>
               )}
             </div>
 
@@ -910,7 +942,7 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
                   type="text"
                   value={datosPago.referencia || ""}
                   onChange={(e) => handleChange("referencia", e.target.value)}
-                  placeholder="REF123456"
+                  placeholder="Referencia del pago"
                   className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white/10 text-white placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-white backdrop-blur-sm"
                 />
               </div>
@@ -1003,7 +1035,7 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
                   type="text"
                   value={datosPago.referencia || ""}
                   onChange={(e) => handleChange("referencia", e.target.value)}
-                  placeholder="REF123456"
+                  placeholder="Referencia del pago"
                   className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white/10 text-white placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-white backdrop-blur-sm"
                 />
               </div>
@@ -1168,11 +1200,11 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
                 type="text"
                 value={datosPago.referencia || ""}
                 onChange={(e) => handleChange("referencia", e.target.value)}
-                placeholder="REF123456"
+                placeholder="Referencia del pago"
                 className={`w-full px-4 py-3 rounded-xl border ${datosPago.referencia && !validaciones.referenciaValida ? 'border-red-500' : 'border-slate-300'} bg-white/10 text-white placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-white backdrop-blur-sm`}
               />
               {datosPago.referencia && !validaciones.referenciaValida && (
-                <p className="text-red-400 text-xs mt-1">Ingresa la referencia de pago.</p>
+                <p className="text-red-400 text-xs mt-1">{validarLargo(datosPago.referencia || '', 3, 30).mensaje}</p>
               )}
             </div>
 
@@ -1248,11 +1280,11 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
                 type="text"
                 value={datosPago.referencia || ""}
                 onChange={(e) => handleChange("referencia", e.target.value)}
-                placeholder="REF123456"
+                placeholder="Referencia del pago"
                 className={`w-full px-4 py-3 rounded-xl border ${datosPago.referencia && !validaciones.referenciaValida ? 'border-red-500' : 'border-slate-300'} bg-white/10 text-white placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-white backdrop-blur-sm`}
               />
               {datosPago.referencia && !validaciones.referenciaValida && (
-                <p className="text-red-400 text-xs mt-1">Ingresa la referencia de pago.</p>
+                <p className="text-red-400 text-xs mt-1">{validarLargo(datosPago.referencia || '', 3, 30).mensaje}</p>
               )}
             </div>
 
@@ -1328,11 +1360,11 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
                 type="text"
                 value={datosPago.referencia || ""}
                 onChange={(e) => handleChange("referencia", e.target.value)}
-                placeholder="REF123456"
+                placeholder="Referencia del pago"
                 className={`w-full px-4 py-3 rounded-xl border ${datosPago.referencia && !validaciones.referenciaValida ? 'border-red-500' : 'border-slate-300'} bg-white/10 text-white placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-white backdrop-blur-sm`}
               />
               {datosPago.referencia && !validaciones.referenciaValida && (
-                <p className="text-red-400 text-xs mt-1">Ingresa la referencia de pago.</p>
+                <p className="text-red-400 text-xs mt-1">{validarLargo(datosPago.referencia || '', 3, 30).mensaje}</p>
               )}
             </div>
 
@@ -1421,7 +1453,7 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
                 className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white/10 text-white placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-white backdrop-blur-sm resize-none"
               />
               {datosPago.referencia && !validaciones.referenciaValida && (
-                <p className="text-red-400 text-xs mt-1">Ingresa la referencia de pago.</p>
+                <p className="text-red-400 text-xs mt-1">{validarLargo(datosPago.referencia || '', 3, 30).mensaje}</p>
               )}
             </div>
 
@@ -2040,35 +2072,52 @@ function ComprarPageContent() {
         return metodoPago !== "";
       case 3: // Datos de la persona
         {
-          const nombreValido = datosPersona.nombre.trim().length >= 2;
-          const cedulaValida = datosPersona.cedula.replace(/\D/g, "").length >= 6;
-          const telefonoValido = datosPersona.telefono.replace(/\D/g, "").length >= 10;
-          const emailValido = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(datosPersona.correo.trim());
+          // Función de validación genérica para largo
+          const validarLargo = (valor: string, min: number, max: number) => {
+            const valorLimpio = valor.trim();
+            return valorLimpio.length >= min && valorLimpio.length <= max;
+          };
+          
+          const nombreValido = validarLargo(datosPersona.nombre, 2, 50);
+          const cedulaDigitos = datosPersona.cedula.replace(/\D/g, "");
+          const cedulaValida = validarLargo(cedulaDigitos, 6, 10);
+          const telefonoDigitos = datosPersona.telefono.replace(/\D/g, "");
+          const telefonoValido = validarLargo(telefonoDigitos, 10, 15);
+          const emailValido = validarLargo(datosPersona.correo, 5, 100) && 
+            /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(datosPersona.correo.trim());
           return nombreValido && cedulaValida && telefonoValido && emailValido;
         }
       case 4: // Datos del pago
         // Validar campos requeridos por método; comprobante es opcional
         {
+          // Función de validación genérica para largo
+          const validarLargo = (valor: string, min: number, max: number) => {
+            const valorLimpio = valor.trim();
+            return valorLimpio.length >= min && valorLimpio.length <= max;
+          };
+          
           const isNonEmpty = (v: string | undefined) => typeof v === 'string' && v.trim() !== '';
-          const hasDigits = (v: string | undefined, min: number) => typeof v === 'string' && v.replace(/\D/g, '').length >= min;
+          
           switch (metodoPago) {
             case 'pago_movil':
-              return hasDigits((datosPago as any).telefonoPago, 7)
+              const telefonoDigitos = (datosPago as any).telefonoPago?.replace(/\D/g, '') || '';
+              const cedulaDigitos = (datosPago as any).cedulaPago?.replace(/\D/g, '') || '';
+              return validarLargo(telefonoDigitos, 7, 15)
                 && isNonEmpty((datosPago as any).bancoPago)
-                && isNonEmpty((datosPago as any).cedulaPago)
-                && isNonEmpty((datosPago as any).referencia);
+                && validarLargo(cedulaDigitos, 6, 10)
+                && validarLargo((datosPago as any).referencia || '', 3, 30);
             case 'binance':
-              return isNonEmpty((datosPago as any).idBinance)
-                && isNonEmpty((datosPago as any).referencia);
+              return validarLargo((datosPago as any).idBinance || '', 2, 50)
+                && validarLargo((datosPago as any).referencia || '', 3, 30);
             case 'zelle':
-              return isNonEmpty((datosPago as any).correoZelle)
-                && isNonEmpty((datosPago as any).referencia);
+              return validarLargo((datosPago as any).correoZelle || '', 2, 50)
+                && validarLargo((datosPago as any).referencia || '', 3, 30);
             case 'zinli':
-              return isNonEmpty((datosPago as any).usuarioZinli)
-                && isNonEmpty((datosPago as any).referencia);
+              return validarLargo((datosPago as any).usuarioZinli || '', 2, 50)
+                && validarLargo((datosPago as any).referencia || '', 3, 30);
             case 'paypal':
-              return isNonEmpty((datosPago as any).correoPaypal)
-                && isNonEmpty((datosPago as any).referencia);
+              return validarLargo((datosPago as any).correoPaypal || '', 2, 50)
+                && validarLargo((datosPago as any).referencia || '', 3, 30);
             case 'efectivo':
               return isNonEmpty((datosPago as any).fechaVisita);
             default:

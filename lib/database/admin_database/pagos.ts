@@ -479,6 +479,105 @@ export async function adminVerifyPago(
 
       console.log('🎉 Verificación de pago completada exitosamente')
       console.log('📋 Tickets asociados al pago tras verificación:', ticketsFinales?.map((t: any) => t.numero_ticket))
+
+      // 📧 ENVIAR EMAIL DE CONFIRMACIÓN
+      try {
+        console.log('📧 Iniciando envío de email de confirmación...')
+        
+        // Obtener datos del pago para el email (consulta básica primero)
+        const { data: pagoData, error: pagoError } = await createAdminQuery('pagos')
+          .select('*')
+          .eq('id', id)
+          .single()
+
+        if (pagoError || !pagoData) {
+          console.error('❌ Error obteniendo datos del pago para email:', pagoError)
+        } else {
+          // Obtener datos de la rifa por separado
+          const rifaId = pagoData.rifa_id
+          let rifaData = null
+          
+          if (rifaId) {
+            const { data: rifaInfo, error: rifaError } = await createAdminQuery('rifas')
+              .select('id, titulo, precio_ticket, descripcion, fecha_cierre')
+              .eq('id', rifaId)
+              .single()
+            
+            if (rifaError) {
+              console.warn('⚠️ Error obteniendo datos de la rifa:', rifaError)
+            } else {
+              rifaData = rifaInfo
+            }
+          }
+          // Obtener tickets asociados
+          const { data: ticketsData, error: ticketsError } = await createAdminQuery('tickets')
+            .select(`
+              id,
+              numero_ticket,
+              nombre,
+              cedula,
+              telefono,
+              correo,
+              es_ticket_especial,
+              rifa_id
+            `)
+            .eq('pago_id', id)
+            .order('numero_ticket', { ascending: true })
+
+          if (ticketsError || !ticketsData || ticketsData.length === 0) {
+            console.error('❌ Error obteniendo tickets para email:', ticketsError)
+          } else {
+            // Usar datos reales de la rifa obtenidos por separado
+            const rifaDataFinal = {
+              id: rifaData?.id || pagoData.rifa_id || ticketsData[0]?.rifa_id || 'unknown',
+              titulo: rifaData?.titulo || 'Rifa',
+              precio_ticket: rifaData?.precio_ticket || 0,
+              premio: rifaData?.descripcion || 'Premio especial', // Usar descripción como premio
+              fecha_sorteo: rifaData?.fecha_cierre || new Date().toISOString() // Usar fecha_cierre como fecha de sorteo
+            }
+
+            console.log('📊 Datos del pago para email:', {
+              pago_id: pagoData.id,
+              monto: pagoData.monto_usd,
+              tipo_pago: pagoData.tipo_pago,
+              referencia: pagoData.referencia
+            })
+            console.log('🎯 Datos de la rifa para email:', rifaDataFinal)
+            console.log('🎫 Tickets para email:', ticketsData.map(t => ({ numero: t.numero_ticket, nombre: t.nombre, email: t.correo })))
+
+            // Enviar email usando API route (servidor)
+            try {
+              const emailData = {
+                pago: pagoData,
+                tickets: ticketsData,
+                rifa: rifaDataFinal
+              }
+
+              const response = await fetch('/api/send-payment-verification-email', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(emailData)
+              })
+
+              const result = await response.json()
+              
+              if (result.success) {
+                console.log('✅ Email de confirmación enviado exitosamente:', result.message_id)
+              } else {
+                console.error('❌ Error enviando email de confirmación:', result.error)
+              }
+            } catch (apiError) {
+              console.error('❌ Error llamando API de email:', apiError)
+            }
+          }
+        }
+      } catch (emailError) {
+        console.error('❌ Error inesperado enviando email de confirmación:', emailError)
+        // No fallar la verificación por error de email
+      }
+
       return { data: { tickets: ticketsFinales || [] }, error: null }
     },
     'Error al verificar pago'
