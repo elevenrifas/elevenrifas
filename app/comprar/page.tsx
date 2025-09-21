@@ -504,7 +504,9 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
         return { correoPaypalValido, referenciaValida: referenciaValidaPaypal };
       
       case 'efectivo':
-        const fechaVisitaValida = (datosPago.fechaVisita || '').trim() !== '';
+        const fechaVisita = datosPago.fechaVisita || '';
+        const hoyVenezuela = getVenezuelaDateClient().toISOString().slice(0, 10);
+        const fechaVisitaValida = fechaVisita.trim() !== '' && fechaVisita >= hoyVenezuela;
         return { fechaVisitaValida };
       
       default:
@@ -1451,9 +1453,29 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
                 type="date"
                 value={datosPago.fechaVisita || ""}
                 min={getVenezuelaDateClient().toISOString().slice(0, 10)}
-                onChange={(e) => handleChange("fechaVisita", e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white/10 text-white placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-white backdrop-blur-sm"
+                onChange={(e) => {
+                  const fechaSeleccionada = e.target.value;
+                  const hoyVenezuela = getVenezuelaDateClient().toISOString().slice(0, 10);
+                  
+                  // Si la fecha seleccionada es anterior a hoy, limpiar el campo
+                  if (fechaSeleccionada && fechaSeleccionada < hoyVenezuela) {
+                    e.target.value = '';
+                    handleChange("fechaVisita", '');
+                    toast.error('No puedes seleccionar una fecha anterior a hoy');
+                    return;
+                  }
+                  
+                  handleChange("fechaVisita", fechaSeleccionada);
+                }}
+                className={`w-full px-4 py-3 rounded-xl border ${
+                  datosPago.fechaVisita && new Date(datosPago.fechaVisita) < new Date(getVenezuelaDateClient().toISOString().slice(0, 10))
+                    ? 'border-red-500' 
+                    : 'border-slate-300'
+                } bg-white/10 text-white placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-white backdrop-blur-sm`}
               />
+              {datosPago.fechaVisita && new Date(datosPago.fechaVisita) < new Date(getVenezuelaDateClient().toISOString().slice(0, 10)) && (
+                <p className="text-red-400 text-xs mt-1">La fecha de visita no puede ser anterior a hoy</p>
+              )}
             </div>
 
             <div>
@@ -2207,7 +2229,9 @@ function ComprarPageContent() {
                 && validarLargo((datosPago as any).referencia || '', 3, 30)
                 && !!datosPago.comprobantePago;
             case 'efectivo':
-              return isNonEmpty((datosPago as any).fechaVisita); // Para efectivo no se requiere comprobante
+              const fechaVisita = (datosPago as any).fechaVisita;
+              const hoyVenezuela = getVenezuelaDateClient().toISOString().slice(0, 10);
+              return isNonEmpty(fechaVisita) && fechaVisita >= hoyVenezuela; // Para efectivo no se requiere comprobante
             default:
               return false;
           }
