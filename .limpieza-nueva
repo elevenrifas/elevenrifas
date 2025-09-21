@@ -1,0 +1,30 @@
+{
+  "sistema_limpieza": {
+    "version": "2.0.0",
+    "tipo": "cada_hora",
+    "migrado_el": "2025-09-21T00:09:49.820Z",
+    "sistema_anterior": "desactivado",
+    "archivos_principales": [
+      "lib/limpieza/index.ts",
+      "lib/limpieza/scheduler/cron-hourly.ts",
+      "app/api/limpieza/estado/route.ts",
+      "app/api/limpieza/ejecutar/route.ts"
+    ],
+    "scripts_control": [
+      "lib/limpieza/scripts/control.js",
+      "lib/limpieza/scripts/verificar.js"
+    ],
+    "endpoints": {
+      "estado": "/api/limpieza/estado",
+      "ejecutar": "/api/limpieza/ejecutar"
+    },
+    "configuracion": {
+      "intervalo": "1 hora",
+      "criterios": {
+        "estado": "reservado",
+        "sinPago": true,
+        "tiempoMinimo": 10
+      }
+    }
+  }
+}

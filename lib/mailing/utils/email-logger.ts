@@ -5,6 +5,7 @@
 // =====================================================
 
 import { EmailLogEntry, LoggingConfig } from '../types'
+import { getVenezuelaISOString } from '../../utils/venezuela-date'
 
 /**
  * Configuración por defecto del logger
@@ -38,7 +39,7 @@ export class EmailLogger {
   private log(level: EmailLogEntry['level'], message: string, data?: any, messageId?: string, email?: string): void {
     const logEntry: EmailLogEntry = {
       id: this.generateLogId(),
-      timestamp: new Date().toISOString(),
+      timestamp: getVenezuelaISOString(),
       level,
       message,
       data,

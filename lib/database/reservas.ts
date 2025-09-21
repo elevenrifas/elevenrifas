@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { generateMultipleTicketNumbers, TicketNumberOptions, getTicketAvailabilityStats } from './utils/ticket-generator';
+import { getVenezuelaDate } from '../utils/venezuela-date';
 
 export interface ReservaResultado {
   success: boolean;
@@ -41,7 +42,7 @@ export async function reservarTickets(
     const numeros = await generateMultipleTicketNumbers(options, cantidad);
 
     // 🆕 INSERCIÓN CON VALIDACIÓN DE UNICIDAD EN TIEMPO REAL
-    const now = new Date();
+    const now = getVenezuelaDate();
     const expires = new Date(now.getTime() + RESERVA_MINUTOS * 60 * 1000);
     
     console.log('🔄 INICIANDO INSERCIÓN CON VALIDACIÓN DE UNICIDAD:', {
@@ -478,7 +479,8 @@ export async function cancelarReservaPorIds(ticket_ids: string[]): Promise<{ suc
 
 export async function liberarReservasExpiradas(): Promise<{ success: boolean; liberadas: number; error?: string }> {
   try {
-    const limite = new Date(Date.now() - RESERVA_MINUTOS * 60 * 1000).toISOString();
+    const now = getVenezuelaDate();
+    const limite = new Date(now.getTime() - RESERVA_MINUTOS * 60 * 1000).toISOString();
     const { data, error } = await supabase
       .from('tickets')
       .delete()

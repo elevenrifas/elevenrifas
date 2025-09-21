@@ -11,6 +11,7 @@ import {
   TicketNumberOptions,
   getTicketAvailabilityStats
 } from './utils/ticket-generator';
+import { getVenezuelaISOString } from '../utils/venezuela-date';
 
 // =====================================================
 // INTERFACES Y TIPOS
@@ -264,7 +265,7 @@ export async function reportarPagoConTicketsTS(
           estado: 'pagado',
           reservado_hasta: null,
           reserva_id: null,
-          fecha_compra: new Date().toISOString()
+          fecha_compra: getVenezuelaISOString()
         })
         .eq('reserva_id', datos.reserva_id)
         .eq('estado', 'reservado')
@@ -317,7 +318,7 @@ export async function reportarPagoConTicketsTS(
         cedula: datos.cedula,
         telefono: datos.telefono,
         correo: datos.correo,
-        fecha_compra: new Date().toISOString(),
+        fecha_compra: getVenezuelaISOString(),
         estado: 'pagado'
           })
           .select()

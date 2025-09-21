@@ -34,6 +34,7 @@ import type { CrudRifaData } from "@/hooks/use-crud-rifas"
 import { ImageUpload } from '../ui/image-upload'
 import { useCategorias } from '@/hooks/use-categorias'
 import { showCreateSuccessToast, showUpdateSuccessToast, showCreateErrorToast, showUpdateErrorToast } from "@/components/ui/toast-notifications"
+import { getVenezuelaDateClient } from "@/lib/utils/venezuela-date-client"
 
 // Función simple para obtener iconos de Lucide React (igual que en la tabla)
 const getCategoryIcon = (iconName: string) => {
@@ -73,7 +74,7 @@ const rifaFormSchema = z.object({
     .refine((date) => {
       if (!date || date === '') return true; // Opcional
       const selectedDate = new Date(date);
-      const today = new Date();
+      const today = getVenezuelaDateClient();
       today.setHours(0, 0, 0, 0); // Resetear horas para comparar solo fechas
       selectedDate.setHours(0, 0, 0, 0); // Resetear horas de la fecha seleccionada
       return selectedDate >= today;
@@ -583,7 +584,7 @@ export function RifaFormModal({
                           <Input
                             ref={fechaCierreInputRef}
                             type="date"
-                            min={new Date().toISOString().slice(0, 10)}
+                            min={getVenezuelaDateClient().toISOString().slice(0, 10)}
                             value={field.value ? new Date(field.value).toISOString().slice(0, 10) : ''}
                             onChange={(e) => {
                               const value = e.target.value;

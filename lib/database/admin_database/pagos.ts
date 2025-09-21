@@ -12,6 +12,7 @@ import {
 } from '@/lib/database'
 import type { Database } from '@/types/supabase'
 import { esTicketEspecial, debeMantenerIdentidadEspecial, combinarDatosTicketEspecialAsignado } from '../../utils/ticket-especial'
+import { getVenezuelaISOString } from '../../utils/venezuela-date'
 
 type PagoRow = Database['public']['Tables']['pagos']['Row']
 type PagoInsert = Database['public']['Tables']['pagos']['Insert']
@@ -108,7 +109,7 @@ export async function adminListPagos(params?: {
         tasa_cambio: pago.tasa_cambio || 1,
         referencia: pago.referencia || '',
         estado: pago.estado || 'pendiente',
-        fecha_pago: pago.fecha_pago || new Date().toISOString(),
+        fecha_pago: pago.fecha_pago || getVenezuelaISOString(),
         fecha_verificacion: pago.fecha_verificacion || null,
         telefono_pago: pago.telefono_pago || '',
         banco_pago: pago.banco_pago || '',
@@ -184,7 +185,7 @@ export async function adminCreatePago(datos: PagoInsert) {
       const datosConValoresPorDefecto = {
         ...datos,
         estado: datos.estado || 'pendiente',
-        fecha_pago: datos.fecha_pago || new Date().toISOString()
+        fecha_pago: datos.fecha_pago || getVenezuelaISOString()
       }
 
       const { data, error } = await createAdminQuery('pagos')
@@ -241,7 +242,7 @@ export async function adminVerifyPago(
       const { error: pagoError } = await createAdminQuery('pagos')
         .update({
           estado: 'verificado',
-          fecha_verificacion: new Date().toISOString(),
+          fecha_verificacion: getVenezuelaISOString(),
           verificado_por: verificadoPor
         })
         .eq('id', id)
@@ -341,7 +342,7 @@ export async function adminVerifyPago(
               .update({ 
                 estado: 'pagado', 
                 pago_id: id, 
-                fecha_compra: new Date().toISOString() as any,
+                fecha_compra: getVenezuelaISOString() as any,
                 // Actualizar con datos del cliente real
                 nombre: datosCliente.nombre,
                 cedula: datosCliente.cedula,
@@ -375,7 +376,7 @@ export async function adminVerifyPago(
                   correo: datosCliente.correo,
                   estado: 'pagado',
                   pago_id: id,
-                  fecha_compra: new Date().toISOString() as any,
+                  fecha_compra: getVenezuelaISOString() as any,
                   es_ticket_especial: true
                 } as any)
               if (insertError) throw insertError
@@ -435,7 +436,7 @@ export async function adminVerifyPago(
               .update({ 
                 estado: 'pagado', 
                 pago_id: id, 
-                fecha_compra: new Date().toISOString() as any,
+                fecha_compra: getVenezuelaISOString() as any,
                 nombre: (fuente?.nombre || nombre),
                 cedula: (fuente?.cedula || cedula),
                 telefono: (fuente?.telefono || telefono),
@@ -459,7 +460,7 @@ export async function adminVerifyPago(
                 correo: (fuente?.correo || correo),
                 estado: 'pagado',
                 pago_id: id,
-                fecha_compra: new Date().toISOString() as any,
+                fecha_compra: getVenezuelaISOString() as any,
                 es_ticket_especial: true
               } as any)
             if (insertError) throw insertError
@@ -530,7 +531,7 @@ export async function adminVerifyPago(
               titulo: rifaData?.titulo || 'Rifa',
               precio_ticket: rifaData?.precio_ticket || 0,
               premio: rifaData?.descripcion || 'Premio especial', // Usar descripción como premio
-              fecha_sorteo: rifaData?.fecha_cierre || new Date().toISOString() // Usar fecha_cierre como fecha de sorteo
+              fecha_sorteo: rifaData?.fecha_cierre || getVenezuelaISOString() // Usar fecha_cierre como fecha de sorteo
             }
 
             console.log('📊 Datos del pago para email:', {
@@ -605,7 +606,7 @@ export async function adminRejectPago(id: string, verificadoPor: string, rechazo
       
       // PASO 2: Crear log de rechazo con toda la información de los tickets
       const rechazoLogs = {
-        fecha_rechazo: new Date().toISOString(),
+        fecha_rechazo: getVenezuelaISOString(),
         rechazado_por: verificadoPor,
         motivo: rechazoNote || 'Pago rechazado por administrador',
         tickets_eliminados: tickets?.map((ticket: any) => ({
@@ -626,7 +627,7 @@ export async function adminRejectPago(id: string, verificadoPor: string, rechazo
       const { error: pagoError } = await createAdminQuery('pagos')
         .update({ 
           estado: 'rechazado',
-          fecha_verificacion: new Date().toISOString(),
+          fecha_verificacion: getVenezuelaISOString(),
           verificado_por: verificadoPor,
           rechazo_logs: JSON.stringify(rechazoLogs),
           rechazo_note: rechazoNote || null

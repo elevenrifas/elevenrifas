@@ -8,6 +8,7 @@
 import { supabase } from './supabase'
 import type { Database } from '@/types/supabase'
 import type { Rifa } from '@/types'
+import { getVenezuelaISOString } from '../utils/venezuela-date'
 
 // Usar tipos de Supabase directamente
 type RifasInsert = Database['public']['Tables']['rifas']['Insert']
@@ -220,7 +221,7 @@ export async function crearRifa(datos: RifasInsert): Promise<{ success: boolean;
     const datosConValoresPorDefecto = {
       ...datos,
       estado: datos.estado || 'activa',
-      fecha_creacion: datos.fecha_creacion || new Date().toISOString(),
+      fecha_creacion: datos.fecha_creacion || getVenezuelaISOString(),
       total_tickets: datos.total_tickets || 0,
       tickets_disponibles: datos.tickets_disponibles || datos.total_tickets || 0,
       numero_tickets_comprar: datos.numero_tickets_comprar || [1, 2, 3, 5, 10],
@@ -281,7 +282,7 @@ export async function cambiarEstadoRifa(id: string, nuevoEstado: 'activa' | 'cer
       .from('rifas')
       .update({ 
         estado: nuevoEstado,
-        fecha_cierre: nuevoEstado !== 'activa' ? new Date().toISOString() : null
+        fecha_cierre: nuevoEstado !== 'activa' ? getVenezuelaISOString() : null
       })
       .eq('id', id)
 
@@ -531,7 +532,7 @@ export async function getRifaStatsFallback(rifa_id: string) {
       .select('*', { count: 'exact', head: true })
       .eq('rifa_id', rifa_id)
       .eq('estado', 'reservado')
-      .gt('reservado_hasta', new Date().toISOString())
+      .gt('reservado_hasta', getVenezuelaISOString())
 
     // Calcular estadísticas - MANTENER COMPATIBILIDAD
     const totalTickets = rifa.total_tickets || 0
@@ -599,7 +600,7 @@ export async function getRifasStatsFallback() {
             .select('*', { count: 'exact', head: true })
             .eq('rifa_id', rifa.id)
             .eq('estado', 'reservado')
-            .gt('reservado_hasta', new Date().toISOString())
+            .gt('reservado_hasta', getVenezuelaISOString())
 
           // Calcular estadísticas - MANTENER COMPATIBILIDAD
           const totalTickets = rifa.total_tickets || 0

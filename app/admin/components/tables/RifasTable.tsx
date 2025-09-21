@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu"
 import { MoreHorizontal, Edit, Trash2, Copy, Play, Square, CheckCircle, Tag, DollarSign, Calendar, Ticket, Eye } from "lucide-react"
+import { getVenezuelaDateClient } from "@/lib/utils/venezuela-date-client"
 import * as LucideIcons from "lucide-react"
 import { formatCurrency } from "@/lib/formatters"
 import { useCrudRifas } from "@/hooks/use-crud-rifas"
@@ -245,7 +246,7 @@ export function RifasTable({
         categoria_id: rifa.categoria_id || null,
         numero_tickets_comprar: rifa.numero_tickets_comprar || [1, 2, 3, 5, 10, 15, 20, 25, 50],
         progreso_manual: rifa.progreso_manual || null,
-        fecha_cierre: new Date().toISOString(), // Fecha actual ya que está cerrada
+        fecha_cierre: getVenezuelaDateClient().toISOString(), // Fecha actual ya que está cerrada
       }
       
       const result = await createRifa(rifaDuplicada)

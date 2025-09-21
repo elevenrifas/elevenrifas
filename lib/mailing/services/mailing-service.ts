@@ -6,6 +6,7 @@
 
 import { emailService } from './email-service'
 import { templateService } from './template-service'
+import { getVenezuelaDate } from '../../utils/venezuela-date'
 import { 
   EmailMessage, 
   EmailSendResult, 
@@ -295,7 +296,7 @@ export class MailingService {
               <div class="content">
                 <p>Hola,</p>
                 <p>Este es un email de prueba para verificar que el sistema de envío de emails está funcionando correctamente.</p>
-                <p><strong>Fecha y hora:</strong> ${new Date().toLocaleString('es-ES')}</p>
+                <p><strong>Fecha y hora:</strong> ${getVenezuelaDate().toLocaleString('es-ES')}</p>
                 <p><strong>Servidor:</strong> ${process.env.NODE_ENV || 'development'}</p>
                 <p>Si recibiste este email, significa que la configuración de MailerSend está correcta.</p>
               </div>
@@ -313,7 +314,7 @@ Hola,
 
 Este es un email de prueba para verificar que el sistema de envío de emails está funcionando correctamente.
 
-Fecha y hora: ${new Date().toLocaleString('es-ES')}
+Fecha y hora: ${getVenezuelaDate().toLocaleString('es-ES')}
 Servidor: ${process.env.NODE_ENV || 'development'}
 
 Si recibiste este email, significa que la configuración de MailerSend está correcta.

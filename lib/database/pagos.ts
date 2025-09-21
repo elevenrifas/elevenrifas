@@ -11,6 +11,7 @@
 
 import { supabase } from '@/lib/database';
 import { reportarPagoConTicketsTS as reportarPagoConTicketsNuevo } from './pagos-reportar';
+import { getVenezuelaISOString } from '../utils/venezuela-date';
 
 // Tipos no utilizados removidos para evitar warnings de ESLint
 
@@ -195,7 +196,7 @@ export async function reportarPagoConTicketsTS(datos: DatosPagoCompleto): Promis
         monto_usd: datos.monto_usd,
         tasa_cambio: datos.tasa_cambio,
         referencia: datos.referencia,
-        fecha_pago: new Date().toISOString(),
+        fecha_pago: getVenezuelaISOString(),
         telefono_pago: datos.telefono_pago,
         banco_pago: datos.banco_pago,
         cedula_pago: datos.cedula_pago,
@@ -228,7 +229,7 @@ export async function reportarPagoConTicketsTS(datos: DatosPagoCompleto): Promis
           estado: 'pagado',
           reservado_hasta: null,
           reserva_id: null,
-          fecha_compra: new Date().toISOString()
+          fecha_compra: getVenezuelaISOString()
         })
         .eq('reserva_id', datos.reserva_id)
         .eq('estado', 'reservado')
@@ -275,7 +276,7 @@ export async function reportarPagoConTicketsTS(datos: DatosPagoCompleto): Promis
             cedula: datos.cedula,
             telefono: datos.telefono,
             correo: datos.correo,
-            fecha_compra: new Date().toISOString(),
+            fecha_compra: getVenezuelaISOString(),
             estado: 'pagado'
           })
           .select()
@@ -338,7 +339,7 @@ export async function verificarPagoCompleto(
       .from('pagos')
       .update({
         estado: 'verificado',
-        fecha_verificacion: new Date().toISOString(),
+        fecha_verificacion: getVenezuelaISOString(),
         verificado_por: verificado_por,
         notas: notas
       })
@@ -362,7 +363,7 @@ export async function verificarPagoCompleto(
         fecha_bloqueo: null,
         estado_verificacion: 'verificado',
         estado: 'pagado',
-        fecha_verificacion: new Date().toISOString()
+        fecha_verificacion: getVenezuelaISOString()
       })
       .eq('pago_id', pago_id)
       .select();
@@ -406,7 +407,7 @@ export async function rechazarPagoCompleto(
       .from('pagos')
       .update({
         estado: 'rechazado',
-        fecha_verificacion: new Date().toISOString(),
+        fecha_verificacion: getVenezuelaISOString(),
         verificado_por: verificado_por,
         notas: motivo_rechazo
       })

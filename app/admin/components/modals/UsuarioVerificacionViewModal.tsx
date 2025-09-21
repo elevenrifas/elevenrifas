@@ -18,6 +18,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { showSuccessToast, showErrorToast } from "@/components/ui/toast-notifications"
 import type { AdminUsuarioVerificacion } from "@/lib/database/admin_database/usuarios_verificacion"
+import { getVenezuelaDateClient } from "@/lib/utils/venezuela-date-client"
 
 // =====================================================
 // 🎯 MODAL VER USUARIO VERIFICACION - ELEVEN RIFAS
@@ -60,7 +61,7 @@ export function UsuarioVerificacionViewModal({
     }
 
     const fechaAcceso = new Date(usuario.ultimo_acceso)
-    const ahora = new Date()
+    const ahora = getVenezuelaDateClient()
     const diffMs = ahora.getTime() - fechaAcceso.getTime()
     const diffDias = Math.floor(diffMs / (1000 * 60 * 60 * 24))
     const diffHoras = Math.floor(diffMs / (1000 * 60 * 60))

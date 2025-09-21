@@ -18,6 +18,7 @@ import { reservarTickets, cancelarReservaPorIds } from '@/lib/database/reservas'
 import { useLoadingOverlay } from '@/components/ui/loading-overlay';
 import { useTicketAvailability } from '@/hooks';
 import { getTicketAvailabilityStats } from '@/lib/database/utils/ticket-generator';
+import { getVenezuelaDateClient } from '@/lib/utils/venezuela-date-client';
 
 // Componente para el Paso 1: Cantidad de tickets
 function PasoCantidad({ cantidad, setCantidad, precioTicket, rifaId, isRifaPausada, onShowPausedModal }: {
@@ -2115,7 +2116,8 @@ function ComprarPageContent() {
       return;
     }
     const update = () => {
-      const diff = new Date(reservaExpiresAt).getTime() - Date.now();
+      const now = getVenezuelaDateClient();
+      const diff = new Date(reservaExpiresAt).getTime() - now.getTime();
       setRemainingMs(diff > 0 ? diff : 0);
       if (diff <= 0 && reservaTicketIds.length) {
         cancelarReservaPorIds(reservaTicketIds);
