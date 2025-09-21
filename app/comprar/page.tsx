@@ -504,7 +504,8 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
         return { correoPaypalValido, referenciaValida: referenciaValidaPaypal };
       
       case 'efectivo':
-        const fechaVisitaValida = (datosPago.fechaVisita || '').trim() !== '';
+        const fechaVisita = datosPago.fechaVisita || '';
+        const fechaVisitaValida = fechaVisita.trim() !== '' && new Date(fechaVisita) >= new Date();
         return { fechaVisitaValida };
       
       default:
@@ -1450,9 +1451,17 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
               <input
                 type="date"
                 value={datosPago.fechaVisita || ""}
+                min={new Date().toISOString().split('T')[0]} // Fecha mínima es hoy
                 onChange={(e) => handleChange("fechaVisita", e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white/10 text-white placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-white backdrop-blur-sm"
+                className={`w-full px-4 py-3 rounded-xl border ${
+                  datosPago.fechaVisita && new Date(datosPago.fechaVisita) < new Date() 
+                    ? 'border-red-500' 
+                    : 'border-slate-300'
+                } bg-white/10 text-white placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-white backdrop-blur-sm`}
               />
+              {datosPago.fechaVisita && new Date(datosPago.fechaVisita) < new Date() && (
+                <p className="text-red-400 text-xs mt-1">La fecha de visita no puede ser en el pasado</p>
+              )}
             </div>
 
             <div>
@@ -1469,9 +1478,9 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
               )}
             </div>
 
-                        {/* Input de comprobante SIMPLE */}
+                        {/* Input de comprobante OPCIONAL para efectivo */}
             <div className="space-y-3 mb-6">
-              <div className="text-white font-medium">📎 Comprobante de Pago</div>
+              <div className="text-white font-medium">📎 Comprobante de Pago <span className="text-slate-400 text-sm">(Opcional)</span></div>
               <div className="text-xs text-slate-300 mb-2">Formatos permitidos: PNG, JPG, JPEG, PDF (máx. 35MB)</div>
 
               <input
@@ -2206,8 +2215,9 @@ function ComprarPageContent() {
                 && validarLargo((datosPago as any).referencia || '', 3, 30)
                 && !!datosPago.comprobantePago;
             case 'efectivo':
-              return isNonEmpty((datosPago as any).fechaVisita)
-                && !!datosPago.comprobantePago;
+              const fechaVisita = (datosPago as any).fechaVisita;
+              const fechaValida = isNonEmpty(fechaVisita) && new Date(fechaVisita) >= new Date();
+              return fechaValida; // Para efectivo no se requiere comprobante
             default:
               return false;
           }
