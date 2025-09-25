@@ -524,20 +524,28 @@ export async function obtenerPagosPendientes() {
  * OBTENER ESTADÍSTICAS DE PAGOS
  * Resumen de pagos por estado y tipo
  */
-export async function obtenerEstadisticasPagos() {
+export async function obtenerEstadisticasPagos(rifaId?: string) {
   try {
     // Estadísticas por estado
-    const { data: porEstado, error: errorEstado } = await supabase
+    let porEstadoQuery = supabase
       .from('pagos')
       .select('estado, monto_usd, monto_bs');
+    if (rifaId) {
+      porEstadoQuery = porEstadoQuery.eq('rifa_id', rifaId)
+    }
+    const { data: porEstado, error: errorEstado } = await porEstadoQuery;
     
     if (errorEstado) throw errorEstado;
     
     // Estadísticas por tipo de pago
-    const { data: porTipo, error: errorTipo } = await supabase
+    let porTipoQuery = supabase
       .from('pagos')
       .select('tipo_pago, monto_usd, monto_bs')
       .eq('estado', 'verificado');
+    if (rifaId) {
+      porTipoQuery = porTipoQuery.eq('rifa_id', rifaId)
+    }
+    const { data: porTipo, error: errorTipo } = await porTipoQuery;
     
     if (errorTipo) throw errorTipo;
     

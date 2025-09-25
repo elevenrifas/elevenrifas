@@ -4,22 +4,27 @@ import { useEffect, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
 import { 
-  Ticket, 
-  Gift, 
-  Users, 
-  DollarSign, 
-  TrendingUp, 
-  RefreshCw,
-  Calendar,
-  CheckCircle,
-  Clock,
-  XCircle,
-  Bug
+  RefreshCw
 } from 'lucide-react'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { adminListRifas, type AdminRifa } from '@/lib/database/admin_database/rifas'
 import { useAdminAuthState } from '@/lib/context/AdminAuthContextSimpleStorage'
 import { useLogger } from '@/hooks/use-logger'
-import { supabase } from '@/lib/database'
+import { adminGetDashboardStats } from '@/lib/database/admin_database/dashboard'
+import { getAllChartData } from '@/lib/database/admin_database/dashboard-charts'
+import { formatCurrency } from '@/lib/formatters'
+import { getVenezuelaDateClient } from '@/lib/utils/venezuela-date-client'
+import { MetricsCards, DetailedStats, AnalysisCharts, RecentActivity, RevenueChart, RevenueMetrics, RevenueByRifa } from '@/app/admin/components/dashboard'
+import { obtenerEstadisticasPagos } from '@/lib/database/pagos'
+
+// =====================================================
+// 📊 DASHBOARD ADMIN - ELEVEN RIFAS
+// =====================================================
+// Dashboard principal del panel de administración
+// Sigue los patrones establecidos del módulo admin
+// =====================================================
 
 interface DashboardStats {
   totalRifas: number
@@ -31,11 +36,20 @@ interface DashboardStats {
   ticketsPagados: number
   ticketsVerificados: number
   ticketsCancelados: number
+  totalClientes: number
   ingresosEstimados: number
+  ingresosVerificados: number
+  sistemaActivo: boolean
+}
+
+interface ChartData {
+  revenue: Array<{ date: string; revenue: number; tickets: number }>
+  tickets: Array<{ rifa: string; vendidos: number; disponibles: number; total: number }>
+  status: Array<{ name: string; value: number; color: string }>
 }
 
 export default function AdminDashboardPage() {
-  // Usar el nuevo sistema de logging
+  // Sistema de logging siguiendo el patrón establecido
   const logger = useLogger({
     context: 'DASHBOARD',
     componentName: 'AdminDashboard',
@@ -44,6 +58,7 @@ export default function AdminDashboardPage() {
     logPerformance: true
   })
 
+  // Estados siguiendo el patrón de otras páginas admin
   const [stats, setStats] = useState<DashboardStats>({
     totalRifas: 0,
     rifasActivas: 0,
@@ -54,129 +69,129 @@ export default function AdminDashboardPage() {
     ticketsPagados: 0,
     ticketsVerificados: 0,
     ticketsCancelados: 0,
-    ingresosEstimados: 0
+    totalClientes: 0,
+    ingresosEstimados: 0,
+    ingresosVerificados: 0,
+    sistemaActivo: false
   })
+
+  const [chartData, setChartData] = useState<ChartData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [warning, setWarning] = useState<string | null>(null)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  const [ingresosBsPagoMovil, setIngresosBsPagoMovil] = useState<number>(0)
+  const [ingresosUsdOtros, setIngresosUsdOtros] = useState<number>(0)
+  const [pagosPendientes, setPagosPendientes] = useState<number>(0)
+  const [pagosVerificados, setPagosVerificados] = useState<number>(0)
+  const [pagosRechazados, setPagosRechazados] = useState<number>(0)
+  const [rifas, setRifas] = useState<AdminRifa[]>([])
+  const [rifaId, setRifaId] = useState<string | 'general'>('general')
+
+  // Efecto para recargar datos cuando cambie la rifa
+  useEffect(() => {
+    if (rifaId) {
+      loadDashboardData()
+    }
+  }, [rifaId])
 
   const { user, profile, isLoading: authLoading, isAdmin } = useAdminAuthState()
 
-  // Función para cargar datos del dashboard
+  // Función para cargar datos del dashboard siguiendo el patrón establecido
   const loadDashboardData = async () => {
+    if (isRefreshing) {
+      logger.logDebug('Ya hay una carga en progreso, saltando...')
+      return
+    }
+
     try {
+      setIsRefreshing(true)
       setIsLoading(true)
       setError(null)
-      setWarning(null)
       
       logger.logInfo('Iniciando carga de datos del dashboard')
       
-      // Verificar qué tablas están disponibles
-      logger.logDebug('Verificando tablas disponibles')
+      // Cargar estadísticas y gráficas en paralelo siguiendo el patrón
+      const [statsResult, chartsResult, rifasResult] = await Promise.all([
+        adminGetDashboardStats(),
+        getAllChartData(),
+        adminListRifas({ incluirCerradas: true })
+      ])
       
-      // Cargar rifas
-      logger.logDebug('Cargando rifas desde base de datos')
-      const { data: rifas, error: rifasError } = await supabase
-        .from('rifas')
-        .select('id, titulo, estado, fecha_creacion, fecha_cierre')
-      
-      if (rifasError) {
-        logger.logError('Error al cargar rifas', rifasError, { rifasError })
-        throw new Error(`Error cargando rifas: ${rifasError.message}`)
+      if (!statsResult.success) {
+        logger.logError('Error al cargar estadísticas del dashboard', undefined, { 
+          error: statsResult.error 
+        })
+        throw new Error(statsResult.error || 'Error desconocido al cargar dashboard')
       }
       
-      logger.logInfo('Rifas cargadas exitosamente', { count: rifas?.length || 0 })
+      if (!statsResult.data) {
+        throw new Error('No se obtuvieron datos del dashboard')
+      }
       
-      // Intentar cargar tickets (pero no fallar si hay error)
-      let tickets = null
-      let ticketsError = null
-      
-      try {
-        logger.logDebug('Cargando tickets desde base de datos')
-        const ticketsResult = await supabase
-          .from('tickets')
-          .select('id, estado, precio, rifa_id')
-        
-        tickets = ticketsResult.data
-        ticketsError = ticketsResult.error
-        
-        if (ticketsError) {
-          logger.logWarning('Advertencia al cargar tickets', { 
-            error: ticketsError.message,
-            continuing: 'Solo con rifas'
-          })
-        } else {
-          logger.logInfo('Tickets cargados exitosamente', { count: tickets?.length || 0 })
-        }
-              } catch (ticketError) {
-          logger.logWarning('Error inesperado al cargar tickets', { 
-            error: ticketError instanceof Error ? ticketError.message : String(ticketError),
-            continuing: 'Solo con rifas'
-          })
-        }
-      
-      logger.logInfo('Datos del dashboard cargados', { 
-        rifas: rifas?.length, 
-        tickets: tickets?.length 
+      logger.logInfo('Estadísticas del dashboard cargadas exitosamente', { 
+        stats: statsResult.data 
       })
       
-      // Calcular estadísticas
-      const rifasActivas = rifas?.filter(r => r.estado === 'activa').length || 0
-      const rifasPausadas = rifas?.filter(r => r.estado === 'pausada').length || 0
-      const rifasFinalizadas = rifas?.filter(r => r.estado === 'finalizada').length || 0
-      
-      // Si no hay tickets, usar valores por defecto
-      const ticketsReservados = tickets?.filter(t => t.estado === 'reservado').length || 0
-      const ticketsPagados = tickets?.filter(t => t.estado === 'pagado').length || 0
-      const ticketsVerificados = tickets?.filter(t => t.estado === 'verificado').length || 0
-      const ticketsCancelados = tickets?.filter(t => t.estado === 'cancelado').length || 0
-      
-      const ingresosEstimados = tickets
-        ?.filter(t => t.estado === 'pagado' || t.estado === 'verificado')
-        .reduce((sum, t) => sum + (t.precio || 0), 0) || 0
-
-      const newStats = {
-        totalRifas: rifas?.length || 0,
-        rifasActivas,
-        rifasPausadas,
-        rifasFinalizadas,
-        totalTickets: tickets?.length || 0,
-        ticketsReservados,
-        ticketsPagados,
-        ticketsVerificados,
-        ticketsCancelados,
-        ingresosEstimados
-      }
-
-      setStats(newStats)
-      
-      logger.logInfo('Estadísticas del dashboard calculadas', { stats: newStats })
-      
-      // Si hay problemas con tickets, mostrar advertencia pero no error
-      if (ticketsError) {
-        const warningMsg = `Dashboard cargado parcialmente. Advertencia: ${ticketsError.message}`
-        setWarning(warningMsg)
-        logger.logWarning('Dashboard cargado parcialmente', { 
-          warning: warningMsg,
-          ticketsError: ticketsError.message
-        })
+      setStats(statsResult.data)
+      if (rifasResult.success && rifasResult.data) {
+        setRifas(rifasResult.data)
       }
       
-          } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
-        logger.logError('Error crítico al cargar dashboard', error instanceof Error ? error : undefined, { 
-          error: errorMessage
+      // Cargar datos de gráficas si están disponibles
+      if (chartsResult?.success && chartsResult?.data) {
+        logger.logInfo('Datos de gráficas cargados exitosamente')
+        setChartData(chartsResult.data)
+      } else {
+        logger.logWarning('No se pudieron cargar los datos de gráficas', { 
+          error: chartsResult?.error 
         })
-        setError(errorMessage)
-      } finally {
+        setChartData({ revenue: [], tickets: [], status: [] })
+      }
+
+      // Calcular ingresos por tipo de pago (pago móvil en Bs y otros en USD)
+      try {
+        const estadisticas = await obtenerEstadisticasPagos(rifaId === 'general' ? undefined : rifaId)
+        const porTipo = (estadisticas as any)?.porTipo || {}
+        const porEstado = (estadisticas as any)?.porEstado || {}
+        const bsPagoMovil = porTipo['pago_movil']?.total_bs || 0
+        const usdOtros = Object.entries(porTipo)
+          .filter(([tipo]) => tipo !== 'pago_movil')
+          .reduce((sum, [, v]: any) => sum + (v?.total_usd || 0), 0)
+        setIngresosBsPagoMovil(bsPagoMovil)
+        setIngresosUsdOtros(usdOtros)
+
+        // Estados de pagos
+        setPagosPendientes(porEstado?.pendiente?.cantidad || 0)
+        setPagosVerificados(porEstado?.verificado?.cantidad || 0)
+        setPagosRechazados(porEstado?.rechazado?.cantidad || 0)
+      } catch (e) {
+        logger.logWarning('No se pudieron calcular ingresos por tipo de pago', { error: (e as Error)?.message })
+        setIngresosBsPagoMovil(0)
+        setIngresosUsdOtros(0)
+        setPagosPendientes(0)
+        setPagosVerificados(0)
+        setPagosRechazados(0)
+      }
+      
+      setLastUpdated(new Date())
+      
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
+      logger.logError('Error crítico al cargar dashboard', error instanceof Error ? error : undefined, { 
+        error: errorMessage
+      })
+      setError(errorMessage)
+    } finally {
       setIsLoading(false)
+      setIsRefreshing(false)
       logger.logInfo('Carga del dashboard completada')
     }
   }
 
-  // Cargar datos cuando el componente se monta
+  // Cargar datos cuando el componente se monta siguiendo el patrón
   useEffect(() => {
-    if (!authLoading && isAdmin) {
+    if (!authLoading && isAdmin && !isRefreshing) {
       logger.logDebug('Usuario autenticado y es admin, cargando dashboard')
       loadDashboardData()
     } else if (authLoading) {
@@ -184,25 +199,11 @@ export default function AdminDashboardPage() {
     } else if (!isAdmin) {
       logger.logWarning('Usuario no es admin, acceso denegado')
     }
-  }, [authLoading, isAdmin, logger])
+  }, [authLoading, isAdmin])
 
   const handleRefresh = () => {
     logger.logUserAction('Usuario refrescó dashboard manualmente')
     loadDashboardData()
-  }
-
-  const handleDebug = () => {
-    logger.logDebug('Usuario activó modo debug', {
-      user: user ? { id: user.id, email: user.email } : null,
-      profile,
-      authLoading,
-      isAdmin
-    })
-    
-    // Verificar sesión actual
-    supabase.auth.getSession().then(({ data, error }: any) => {
-      logger.logDebug('Sesión actual verificada', { data, error })
-    })
   }
 
   // Mostrar loading mientras se verifica la autenticación
@@ -241,10 +242,72 @@ export default function AdminDashboardPage() {
   // Mostrar loading mientras se cargan los datos
   if (isLoading) {
     return (
-      <div className="flex min-h-[400px] items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <RefreshCw className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">Cargando dashboard...</p>
+      <div className="px-4 lg:px-6">
+        <div className="space-y-6">
+          {/* Header del Dashboard */}
+          <div className="flex items-center justify-between">
+            <div>
+              <Skeleton className="h-8 w-48 mb-2" />
+              <Skeleton className="h-4 w-64" />
+            </div>
+            <div className="flex gap-2">
+              <Skeleton className="h-8 w-48" />
+              <Skeleton className="h-8 w-24" />
+            </div>
+          </div>
+
+          {/* Estado de Pago Skeleton */}
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-6 w-32 mb-2" />
+              <Skeleton className="h-4 w-48" />
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="flex items-center space-x-4 p-4 border rounded-lg">
+                    <Skeleton className="h-12 w-12 rounded-full" />
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-20" />
+                      <Skeleton className="h-6 w-16" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Métricas Principales Skeleton */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {[1, 2, 3, 4].map((i) => (
+              <Card key={i}>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-4 w-4 rounded" />
+                </CardHeader>
+                <CardContent>
+                  <Skeleton className="h-8 w-16 mb-2" />
+                  <Skeleton className="h-3 w-32" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Gráfico Skeleton */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <Skeleton className="h-6 w-48 mb-2" />
+                  <Skeleton className="h-4 w-64" />
+                </div>
+                <Skeleton className="h-8 w-32" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-[250px] w-full" />
+            </CardContent>
+          </Card>
         </div>
       </div>
     )
@@ -268,218 +331,84 @@ export default function AdminDashboardPage() {
     )
   }
 
+  // Calcular porcentajes y tendencias
+  const ticketsVendidos = stats.ticketsPagados + stats.ticketsVerificados
+  const porcentajeVendidos = stats.totalTickets > 0 ? Math.round((ticketsVendidos / stats.totalTickets) * 100) : 0
+  const porcentajeVerificados = stats.ingresosEstimados > 0 ? Math.round((stats.ingresosVerificados / stats.ingresosEstimados) * 100) : 0
+
   return (
-    <div className="space-y-6">
-      {/* Header del Dashboard */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground">
-            Resumen general del sistema de rifas
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button onClick={handleDebug} variant="outline" size="sm">
-            <Bug className="mr-2 h-4 w-4" />
-            Debug Auth
-          </Button>
-          <Button onClick={handleRefresh} disabled={isLoading}>
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Actualizar
-          </Button>
-        </div>
-      </div>
-
-      {/* Estado de Autenticación (Debug) */}
-      <Card className="border-orange-200 bg-orange-50">
-        <CardHeader>
-          <CardTitle className="text-orange-800">Estado de Autenticación (Debug)</CardTitle>
-          <CardDescription className="text-orange-700">
-            Información para diagnosticar problemas de autenticación
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-2 text-sm">
-            <div><strong>Usuario:</strong> {user ? `${user.email} (${user.id})` : 'No autenticado'}</div>
-            <div><strong>Perfil:</strong> {profile ? `${profile.role} - ${profile.email}` : 'No encontrado'}</div>
-            <div><strong>Es Admin:</strong> {isAdmin ? 'Sí' : 'No'}</div>
-            <div><strong>Loading Auth:</strong> {authLoading ? 'Sí' : 'No'}</div>
-            <div><strong>Loading Data:</strong> {isLoading ? 'Sí' : 'No'}</div>
+    <div className="px-4 lg:px-6">
+      <div className="space-y-6">
+        {/* Header del Dashboard */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+            <p className="text-muted-foreground">
+              Resumen general del sistema de rifas
+              {lastUpdated && (
+                <span className="ml-2 text-sm">
+                  • Actualizado {getVenezuelaDateClient(lastUpdated).toLocaleTimeString()}
+                </span>
+              )}
+            </p>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Advertencia si hay problemas con tickets */}
-      {warning && (
-        <Card className="border-yellow-200 bg-yellow-50">
-          <CardHeader>
-            <CardTitle className="text-yellow-800">⚠️ Advertencia</CardTitle>
-            <CardDescription className="text-yellow-700">
-              El dashboard se cargó parcialmente
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-yellow-700">{warning}</p>
-            <p className="text-yellow-600 text-sm mt-2">
-              Solo se muestran las estadísticas de rifas. Los datos de tickets no están disponibles.
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Estadísticas Principales */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Rifas</CardTitle>
-            <Gift className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalRifas}</div>
-            <p className="text-xs text-muted-foreground">
-              {stats.rifasActivas} activas, {stats.rifasPausadas} pausadas, {stats.rifasFinalizadas} finalizadas
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Tickets</CardTitle>
-            <Ticket className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalTickets}</div>
-            <p className="text-xs text-muted-foreground">
-              {stats.ticketsPagados + stats.ticketsVerificados} vendidos
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ingresos</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              ${stats.ingresosEstimados.toLocaleString()}
+          <div className="flex gap-2">
+            <div className="max-w-md">
+              <Select value={rifaId} onValueChange={(v) => setRifaId(v as any)}>
+                <SelectTrigger 
+                  aria-label="Seleccionar rifa"
+                  className="h-8 !border-2 !border-gray-500 hover:!border-gray-700 focus:!border-gray-700 transition-all duration-200"
+                >
+                  <SelectValue placeholder="General" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="general">General</SelectItem>
+                  {rifas.map((r) => (
+                    <SelectItem key={r.id} value={r.id}>{r.titulo}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Estimado de tickets pagados
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Estado General</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {stats.rifasActivas > 0 ? 'Activo' : 'Inactivo'}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {stats.rifasActivas} rifas en curso
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Estado de Tickets */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Reservados</CardTitle>
-            <Clock className="h-4 w-4 text-yellow-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">
-              {stats.ticketsReservados}
-            </div>
-            <Badge variant="secondary" className="mt-2">
-              Pendientes de pago
-            </Badge>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pagados</CardTitle>
-            <DollarSign className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {stats.ticketsPagados}
-            </div>
-            <Badge variant="secondary" className="mt-2">
-              Pago confirmado
-            </Badge>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Verificados</CardTitle>
-            <CheckCircle className="h-4 w-4 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
-              {stats.ticketsVerificados}
-            </div>
-            <Badge variant="secondary" className="mt-2">
-              Entregados
-            </Badge>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Cancelados</CardTitle>
-            <XCircle className="h-4 w-4 text-red-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">
-              {stats.ticketsCancelados}
-            </div>
-            <Badge variant="destructive" className="mt-2">
-              No válidos
-            </Badge>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Acciones Rápidas */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Acciones Rápidas</CardTitle>
-          <CardDescription>
-            Accede rápidamente a las funciones más utilizadas
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-4">
-            <Button variant="outline" className="flex items-center gap-2">
-              <Gift className="h-4 w-4" />
-              Nueva Rifa
-            </Button>
-            <Button variant="outline" className="flex items-center gap-2">
-              <Ticket className="h-4 w-4" />
-              Nuevo Ticket
-            </Button>
-            <Button variant="outline" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Gestionar Usuarios
-            </Button>
-            <Button variant="outline" className="flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
-              Ver Calendario
+            <Button 
+              onClick={handleRefresh} 
+              disabled={isRefreshing} 
+              variant="outline"
+              size="sm"
+              className="h-8 !border-2 !border-gray-500 hover:!border-gray-700 hover:scale-105 transition-all duration-200"
+            >
+              <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              {isRefreshing ? 'Refrescando...' : 'Actualizar'}
             </Button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+
+        {/* Estado del Sistema - eliminado */}
+
+        {/* Estado de Pago (arriba) */}
+        <DetailedStats 
+          stats={stats} 
+          pagosPendientes={pagosPendientes} 
+          pagosVerificados={pagosVerificados} 
+          pagosRechazados={pagosRechazados} 
+          rifaId={rifaId === 'general' ? undefined : rifaId}
+        />
+
+        {/* Métricas Principales (cards) antes del gráfico */}
+        <MetricsCards 
+          stats={stats} 
+          ingresosBsPagoMovil={ingresosBsPagoMovil} 
+          ingresosUsdOtros={ingresosUsdOtros} 
+        />
+
+        {/* Gráfico principal debajo de las métricas */}
+        <RevenueChart 
+          chartType="tickets"
+          title="Análisis por Período" 
+          description="Evolución de tickets e ingresos por fecha" 
+          rifaId={rifaId === 'general' ? undefined : rifaId}
+        />
+
+      </div>
     </div>
   )
 }
-
-

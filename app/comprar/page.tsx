@@ -481,7 +481,8 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
         const cedulaDigitos = (datosPago.cedulaPago || '').replace(/\D/g, '');
         const cedulaValida = validarLargo(cedulaDigitos, 6, 10).valido;
         const referenciaValida = validarLargo(datosPago.referencia || '', 3, 30).valido;
-        return { telefonoValido, bancoValido, cedulaValida, referenciaValida };
+        const nombreTitularValido = validarLargo(datosPago.nombre_titular || '', 2, 50).valido;
+        return { telefonoValido, bancoValido, cedulaValida, referenciaValida, nombreTitularValido };
       
       case 'binance':
         const idBinanceValido = validarLargo(datosPago.idBinance || '', 2, 50).valido;
@@ -638,6 +639,20 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
               />
               {datosPago.telefonoPago && !validaciones.telefonoValido && (
                 <p className="text-red-400 text-xs mt-1">{validarLargo((datosPago.telefonoPago || '').replace(/\D/g, ''), 7, 15).mensaje}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-white mb-2">Nombre del titular</label>
+              <input
+                type="text"
+                value={datosPago.nombre_titular || ""}
+                onChange={(e) => handleChange("nombre_titular", e.target.value)}
+                placeholder="Nombre completo del titular de la cuenta"
+                className={`w-full px-4 py-3 rounded-xl border ${datosPago.nombre_titular && !validaciones.nombreTitularValido ? 'border-red-500' : 'border-slate-300'} bg-white/10 text-white placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-white backdrop-blur-sm`}
+              />
+              {datosPago.nombre_titular && !validaciones.nombreTitularValido && (
+                <p className="text-red-400 text-xs mt-1">{validarLargo(datosPago.nombre_titular || '', 2, 50).mensaje}</p>
               )}
             </div>
 
@@ -1706,7 +1721,7 @@ function ComprarPageContent() {
       case 'binance':
         return datosPago.idBinance;
       case 'pago_movil':
-        return datosPago.telefonoPago;
+        return datosPago.nombre_titular;
       case 'efectivo':
         return undefined; // Efectivo no requiere nombre del titular
       default:
@@ -2211,6 +2226,7 @@ function ComprarPageContent() {
                 && isNonEmpty((datosPago as any).bancoPago)
                 && validarLargo(cedulaDigitos, 6, 10)
                 && validarLargo((datosPago as any).referencia || '', 3, 30)
+                && validarLargo((datosPago as any).nombre_titular || '', 2, 50)
                 && !!datosPago.comprobantePago;
             case 'binance':
               return validarLargo((datosPago as any).idBinance || '', 2, 50)

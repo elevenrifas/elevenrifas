@@ -49,6 +49,7 @@ export interface DatosPago {
   bancoPago?: string;
   cedulaPago?: string;
   referencia?: string;
+  nombre_titular?: string;
   idBinance?: string;
   emailZelle?: string;
   correoZelle?: string;

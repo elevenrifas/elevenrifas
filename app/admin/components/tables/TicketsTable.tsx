@@ -429,19 +429,32 @@ export function TicketsTable({
       cell: ({ row }) => {
         const ticket = row.original
         const tienePago = ticket.pago_id && ticket.pagos
+        const esEspecialSinPago = ticket.es_ticket_especial && !ticket.pago_id
 
         return (
-          <div className="flex items-center justify-center">
+          <div className="flex items-center justify-center gap-2 min-w-[200px]">
             <Button
               variant="outline"
               size="sm"
               onClick={() => tienePago && handleShowPagoDetails(ticket)}
               disabled={!tienePago}
-              className="h-8"
+              className="h-8 flex-shrink-0"
             >
               <Receipt className="mr-2 h-4 w-4" />
               Detalles
             </Button>
+            
+            {/* Botón de eliminación solo para tickets especiales sin pago */}
+            {esEspecialSinPago && (
+              <button
+                onClick={() => onDelete && onDelete([ticket])}
+                className="inline-flex items-center justify-center gap-2 h-8 px-3 py-1.5 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                title="Eliminar ticket especial sin pago"
+              >
+                <Gift className="h-4 w-4" />
+                Eliminar
+              </button>
+            )}
           </div>
         )
       },

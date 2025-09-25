@@ -247,32 +247,24 @@ export function useCrudTickets(options: {
       setIsDeleting(true)
       console.log('🔄 [useCrudTickets] deleteMultipleTickets iniciando para IDs:', ids)
       
-      // Eliminar tickets uno por uno usando la función real
-      const results = await Promise.all(ids.map(id => baseDeleteTicket(id)))
+      // Importar la función de eliminación múltiple optimizada
+      const { adminDeleteMultipleTickets } = await import('@/lib/database/admin_database/tickets')
       
-      // Verificar si todos fueron exitosos
-      const allSuccessful = results.every(result => result.success)
+      // Usar la función optimizada que valida tickets especiales sin pago
+      const result = await adminDeleteMultipleTickets(ids)
       
-      if (allSuccessful) {
-        console.log('✅ [useCrudTickets] Todos los tickets eliminados exitosamente')
+      if (result.success) {
+        console.log('✅ [useCrudTickets] Tickets eliminados exitosamente')
+        console.log('📊 [useCrudTickets] Detalles:', result.details)
         clearSelection()
         // Llamar directamente a refreshTickets como hace DataTableToolbar
         console.log('🔄 [useCrudTickets] Llamando a refreshTickets...')
         refreshTickets()
         console.log('✅ [useCrudTickets] RefreshTickets llamado')
-        return { success: true }
+        return { success: true, details: result.details }
       } else {
-        // Si algunos fallaron, retornar error
-        const failedIds = results
-          .map((result, index) => ({ result, id: ids[index] }))
-          .filter(({ result }) => !result.success)
-          .map(({ id }) => id)
-        
-        console.error('❌ [useCrudTickets] Algunos tickets fallaron al eliminar:', failedIds)
-        return { 
-          success: false, 
-          error: `Error al eliminar algunos tickets: ${failedIds.join(', ')}` 
-        }
+        console.error('❌ [useCrudTickets] Error al eliminar tickets:', result.error)
+        return { success: false, error: result.error }
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error inesperado al eliminar tickets'
@@ -281,7 +273,7 @@ export function useCrudTickets(options: {
     } finally {
       setIsDeleting(false)
     }
-  }, [baseDeleteTicket, refreshTickets])
+  }, [refreshTickets])
 
   const changeTicketState = useCallback(async (id: string, estado: 'pendiente' | 'verificado' | 'rechazado') => {
     try {

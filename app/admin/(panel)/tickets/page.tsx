@@ -38,6 +38,28 @@ export default function TicketsPage() {
     try {
       setIsDeleting(true)
       
+      // Validar que todos los tickets seleccionados son especiales sin pago
+      const ticketsInvalidos = ticketsToDelete.filter(ticket => 
+        !ticket.es_ticket_especial || ticket.pago_id
+      )
+      
+      if (ticketsInvalidos.length > 0) {
+        const motivos = ticketsInvalidos.map(ticket => {
+          if (!ticket.es_ticket_especial) {
+            return `Ticket #${ticket.numero_ticket}: No es especial`
+          }
+          if (ticket.pago_id) {
+            return `Ticket #${ticket.numero_ticket}: Tiene pago asignado`
+          }
+          return `Ticket #${ticket.numero_ticket}: No cumple condiciones`
+        })
+        
+        return { 
+          success: false, 
+          error: `Solo se pueden eliminar tickets especiales sin pago. Problemas encontrados:\n${motivos.join('\n')}` 
+        }
+      }
+      
       if (ticketsToDelete.length === 1) {
         // Eliminar un solo ticket
         const result = await deleteTicket(ticketsToDelete[0].id)
@@ -60,11 +82,12 @@ export default function TicketsPage() {
         
         if (result.success) {
           console.log("✅ Tickets eliminados exitosamente")
+          console.log("📊 Detalles de eliminación:", result.details)
           // Cerrar modal y limpiar selección
           setShowDeleteModal(false)
           setTicketsToDelete([])
           // El hook ya hace refresh automáticamente
-          return { success: true }
+          return { success: true, details: result.details }
         } else {
           console.error("❌ Error al eliminar tickets:", result.error)
           return { success: false, error: result.error }
@@ -154,9 +177,9 @@ export default function TicketsPage() {
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
         onConfirm={confirmDelete}
-        title="Eliminar Tickets"
-        description={`¿Estás seguro de que deseas eliminar ${ticketsToDelete.length} ticket(s)? Esta acción no se puede deshacer.`}
-        entityName={ticketsToDelete.length === 1 ? `ticket #${ticketsToDelete[0]?.numero_ticket}` : `${ticketsToDelete.length} tickets`}
+        title="Eliminar Tickets Especiales"
+        description={`¿Estás seguro de que deseas eliminar ${ticketsToDelete.length} ticket(s) especial(es) sin pago? Esta acción no se puede deshacer.`}
+        entityName={ticketsToDelete.length === 1 ? `ticket especial #${ticketsToDelete[0]?.numero_ticket}` : `${ticketsToDelete.length} tickets especiales`}
         isDeleting={isDeleting}
       />
     </div>

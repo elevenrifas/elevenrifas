@@ -30,12 +30,33 @@ const STORAGE_KEY = 'admin_auth_state'
 const STORAGE_EXPIRY = 24 * 60 * 60 * 1000 // 24 horas
 
 export function useAdminAuthSimpleStorage() {
-  const [authState, setAuthState] = useState<AuthState>({
-    user: null,
-    profile: null,
-    isAdmin: false,
-    isAuthenticated: false,
-    isLoading: true
+  const [authState, setAuthState] = useState<AuthState>(() => {
+    // Inicialización sin flicker: intentar cargar del storage de forma síncrona
+    try {
+      const stored = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null
+      if (stored) {
+        const authData = JSON.parse(stored)
+        const now = Date.now()
+        if (now - authData.timestamp <= STORAGE_EXPIRY) {
+          return {
+            user: authData.user,
+            profile: authData.profile,
+            isAdmin: true,
+            isAuthenticated: true,
+            isLoading: false
+          }
+        }
+      }
+    } catch {
+      // Ignorar errores y continuar con estado por defecto
+    }
+    return {
+      user: null,
+      profile: null,
+      isAdmin: false,
+      isAuthenticated: false,
+      isLoading: true
+    }
   })
   
   const router = useRouter()
@@ -82,17 +103,29 @@ export function useAdminAuthSimpleStorage() {
     console.log('⚡ Verificación instantánea desde storage...')
     
     // 1. Verificar storage primero (instantáneo)
-    const stored = getFromStorage()
-    if (stored) {
-      console.log('✅ Usuario encontrado en storage:', stored.user.email)
-      setAuthState({
-        user: stored.user,
-        profile: stored.profile,
-        isAdmin: true,
-        isAuthenticated: true,
-        isLoading: false
-      })
-      return
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY)
+      if (stored) {
+        const authData = JSON.parse(stored)
+        const now = Date.now()
+        
+        // Verificar si no ha expirado
+        if (now - authData.timestamp <= STORAGE_EXPIRY) {
+          console.log('✅ Usuario encontrado en storage:', authData.user.email)
+          setAuthState({
+            user: authData.user,
+            profile: authData.profile,
+            isAdmin: true,
+            isAuthenticated: true,
+            isLoading: false
+          })
+          return
+        } else {
+          localStorage.removeItem(STORAGE_KEY)
+        }
+      }
+    } catch {
+      localStorage.removeItem(STORAGE_KEY)
     }
 
     // 2. Si no hay storage, verificar sesión de Supabase (solo una vez)
@@ -134,7 +167,12 @@ export function useAdminAuthSimpleStorage() {
 
     // 4. Guardar en storage para próximas verificaciones
     console.log('✅ Usuario admin confirmado, guardando en storage')
-    saveToStorage(session.user, profile)
+    const authData = {
+      user: session.user,
+      profile,
+      timestamp: Date.now()
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(authData))
     
     setAuthState({
       user: session.user,
@@ -143,7 +181,7 @@ export function useAdminAuthSimpleStorage() {
       isAuthenticated: true,
       isLoading: false
     })
-  }, [getFromStorage, saveToStorage])
+  }, []) // ← SIN DEPENDENCIAS = NO SE RECREA
 
   // Función para cerrar sesión
   const signOut = useCallback(async () => {

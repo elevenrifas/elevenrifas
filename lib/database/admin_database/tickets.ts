@@ -115,19 +115,153 @@ export async function adminListTickets(options: {
   )
 }
 
-// Función para eliminar un ticket
+// Función para eliminar un ticket (solo tickets especiales sin pago)
 export async function adminDeleteTicket(id: string): Promise<{ success: boolean; error?: string }> {
   return safeAdminQuery(
     async () => {
-      const { error } = await createAdminQuery('tickets')
+      console.log('🗑️ [adminDeleteTicket] Iniciando eliminación de ticket:', id)
+      
+      // 1. Primero verificar que el ticket existe y cumple las condiciones
+      const { data: ticket, error: fetchError } = await createAdminQuery('tickets')
+        .select('id, es_ticket_especial, pago_id, numero_ticket')
+        .eq('id', id)
+        .single()
+      
+      if (fetchError) {
+        console.error('❌ [adminDeleteTicket] Error al obtener ticket:', fetchError)
+        throw fetchError
+      }
+      
+      if (!ticket) {
+        console.error('❌ [adminDeleteTicket] Ticket no encontrado')
+        throw new Error('Ticket no encontrado')
+      }
+      
+      console.log('🔍 [adminDeleteTicket] Ticket encontrado:', {
+        id: ticket.id,
+        es_ticket_especial: ticket.es_ticket_especial,
+        pago_id: ticket.pago_id,
+        numero_ticket: ticket.numero_ticket
+      })
+      
+      // 2. Validar que es un ticket especial
+      if (!ticket.es_ticket_especial) {
+        console.error('❌ [adminDeleteTicket] No se puede eliminar: no es un ticket especial')
+        throw new Error('Solo se pueden eliminar tickets especiales')
+      }
+      
+      // 3. Validar que no tiene pago asignado
+      if (ticket.pago_id) {
+        console.error('❌ [adminDeleteTicket] No se puede eliminar: tiene pago asignado')
+        throw new Error('No se pueden eliminar tickets especiales que ya tienen un pago asignado')
+      }
+      
+      console.log('✅ [adminDeleteTicket] Validaciones pasadas, procediendo con eliminación')
+      
+      // 4. Eliminar el ticket
+      const { error: deleteError } = await createAdminQuery('tickets')
         .delete()
         .eq('id', id)
       
-      if (error) throw error
+      if (deleteError) {
+        console.error('❌ [adminDeleteTicket] Error al eliminar ticket:', deleteError)
+        throw deleteError
+      }
       
+      console.log('✅ [adminDeleteTicket] Ticket eliminado exitosamente')
       return { data: null, error: null }
     },
     'Error al eliminar ticket'
+  )
+}
+
+// Función para eliminar múltiples tickets (solo tickets especiales sin pago)
+export async function adminDeleteMultipleTickets(ids: string[]): Promise<{ success: boolean; error?: string; details?: any }> {
+  return safeAdminQuery(
+    async () => {
+      console.log('🗑️ [adminDeleteMultipleTickets] Iniciando eliminación de tickets:', ids)
+      
+      if (!ids || ids.length === 0) {
+        throw new Error('No se proporcionaron IDs de tickets para eliminar')
+      }
+      
+      // 1. Verificar que todos los tickets existen y cumplen las condiciones
+      const { data: tickets, error: fetchError } = await createAdminQuery('tickets')
+        .select('id, es_ticket_especial, pago_id, numero_ticket')
+        .in('id', ids)
+      
+      if (fetchError) {
+        console.error('❌ [adminDeleteMultipleTickets] Error al obtener tickets:', fetchError)
+        throw fetchError
+      }
+      
+      if (!tickets || tickets.length === 0) {
+        throw new Error('No se encontraron tickets con los IDs proporcionados')
+      }
+      
+      console.log('🔍 [adminDeleteMultipleTickets] Tickets encontrados:', tickets.length)
+      
+      // 2. Validar cada ticket
+      const ticketsValidos: string[] = []
+      const ticketsInvalidos: Array<{ id: string; motivo: string }> = []
+      
+      for (const ticket of tickets) {
+        console.log('🔍 [adminDeleteMultipleTickets] Validando ticket:', {
+          id: ticket.id,
+          es_ticket_especial: ticket.es_ticket_especial,
+          pago_id: ticket.pago_id,
+          numero_ticket: ticket.numero_ticket
+        })
+        
+        if (!ticket.es_ticket_especial) {
+          ticketsInvalidos.push({
+            id: ticket.id,
+            motivo: 'No es un ticket especial'
+          })
+          continue
+        }
+        
+        if (ticket.pago_id) {
+          ticketsInvalidos.push({
+            id: ticket.id,
+            motivo: 'Tiene pago asignado'
+          })
+          continue
+        }
+        
+        ticketsValidos.push(ticket.id)
+      }
+      
+      console.log('✅ [adminDeleteMultipleTickets] Tickets válidos:', ticketsValidos.length)
+      console.log('❌ [adminDeleteMultipleTickets] Tickets inválidos:', ticketsInvalidos.length)
+      
+      if (ticketsValidos.length === 0) {
+        throw new Error('Ningún ticket cumple las condiciones para ser eliminado')
+      }
+      
+      // 3. Eliminar solo los tickets válidos
+      const { error: deleteError } = await createAdminQuery('tickets')
+        .delete()
+        .in('id', ticketsValidos)
+      
+      if (deleteError) {
+        console.error('❌ [adminDeleteMultipleTickets] Error al eliminar tickets:', deleteError)
+        throw deleteError
+      }
+      
+      console.log('✅ [adminDeleteMultipleTickets] Tickets eliminados exitosamente:', ticketsValidos.length)
+      
+      return { 
+        data: null, 
+        error: null,
+        details: {
+          eliminados: ticketsValidos.length,
+          rechazados: ticketsInvalidos.length,
+          ticketsInvalidos
+        }
+      }
+    },
+    'Error al eliminar tickets'
   )
 }
 

@@ -33,6 +33,11 @@ const data = {
   },
   navMain: [
     {
+      title: "Dashboard",
+      url: "/admin/dashboard",
+      icon: LayoutDashboard,
+    },
+    {
       title: "Rifas",
       url: "/admin/rifas",
       icon: FileText,
@@ -47,14 +52,11 @@ const data = {
       url: "/admin/tickets",
       icon: ListTodo,
     },
-
     {
       title: "Clientes",
       url: "/admin/clientes",
       icon: Users,
     },
-
-
   ],
 
   administration: [

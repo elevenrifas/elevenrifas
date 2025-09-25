@@ -33,6 +33,7 @@ export async function adminListClientes(options: {
       console.log('🔍 [adminListClientes] 2. Construyendo query base...')
       
       // Query para obtener clientes únicos agrupados por cédula
+      // EXCLUIR tickets especiales/internos del sistema
       let query = createAdminQuery('tickets')
         .select(`
           cedula,
@@ -48,6 +49,11 @@ export async function adminListClientes(options: {
             estado
           )
         `)
+        // Filtrar tickets especiales/internos del sistema
+        .not('nombre', 'eq', 'TICKET RESERVADO')
+        .not('cedula', 'eq', '000000000')
+        .not('correo', 'eq', 'N/A')
+        .not('telefono', 'eq', '000000000')
         .order('cedula', { ascending: true })
       
       console.log('🔍 [adminListClientes] 2. ✅ Query base construida')
@@ -199,6 +205,11 @@ export async function adminGetCliente(cedula: string): Promise<{ success: boolea
           )
         `)
         .eq('cedula', cedula)
+        // Filtrar tickets especiales/internos del sistema
+        .not('nombre', 'eq', 'TICKET RESERVADO')
+        .not('cedula', 'eq', '000000000')
+        .not('correo', 'eq', 'N/A')
+        .not('telefono', 'eq', '000000000')
         .order('fecha_compra', { ascending: false })
 
       if (error) throw error
@@ -275,6 +286,11 @@ export async function adminGetClienteStats(): Promise<{ success: boolean; data?:
     async () => {
       const { data, error } = await createAdminQuery('tickets')
         .select('cedula, nombre, fecha_compra')
+        // Filtrar tickets especiales/internos del sistema
+        .not('nombre', 'eq', 'TICKET RESERVADO')
+        .not('cedula', 'eq', '000000000')
+        .not('correo', 'eq', 'N/A')
+        .not('telefono', 'eq', '000000000')
         .limit(10000)
       
       if (error) throw error
@@ -351,6 +367,11 @@ export async function adminSearchClientes(searchTerm: string): Promise<{ success
           )
         `)
         .or(`nombre.ilike.%${searchTerm}%,cedula.ilike.%${searchTerm}%,correo.ilike.%${searchTerm}%`)
+        // Filtrar tickets especiales/internos del sistema
+        .not('nombre', 'eq', 'TICKET RESERVADO')
+        .not('cedula', 'eq', '000000000')
+        .not('correo', 'eq', 'N/A')
+        .not('telefono', 'eq', '000000000')
         .order('nombre', { ascending: true })
         .limit(50)
       
