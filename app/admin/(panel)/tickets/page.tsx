@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { TicketsTable } from "@/app/admin/components/tables"
 import { DeleteConfirmModal } from "@/app/admin/components/modals"
+import { SkeletonTable } from "@/components/ui/skeleton-table"
 import { useCrudTickets } from "@/hooks/use-crud-tickets"
 import type { AdminTicket } from "@/types"
 
@@ -158,6 +159,15 @@ export default function TicketsPage() {
     }
   }
 
+  // Mostrar skeleton mientras carga
+  if (isLoading) {
+    return (
+      <div className="px-4 lg:px-6">
+        <SkeletonTable rows={10} columns={6} />
+      </div>
+    )
+  }
+
   return (
     <div className="px-4 lg:px-6">
       <TicketsTable
@@ -166,7 +176,7 @@ export default function TicketsPage() {
         // Pasar el hook compartido para sincronizar el estado
         sharedHook={{
           tickets,
-          isLoading,
+          isLoading: false, // Ya no necesitamos pasar isLoading a la tabla
           error,
           refreshTickets
         }}

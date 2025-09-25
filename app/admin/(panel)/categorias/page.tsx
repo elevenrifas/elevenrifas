@@ -1,6 +1,8 @@
 "use client"
 
 import { CategoriasRifasTable } from "@/app/admin/components/tables/CategoriasRifasTable"
+import { SkeletonTableWithHeader } from "@/components/ui/skeleton-table"
+import { useCrudCategorias } from "@/hooks/use-crud-categorias"
 
 // =====================================================
 // 🎯 PÁGINA CATEGORÍAS - ELEVEN RIFAS
@@ -10,6 +12,12 @@ import { CategoriasRifasTable } from "@/app/admin/components/tables/CategoriasRi
 // =====================================================
 
 export default function CategoriasPage() {
+  // Hook para obtener estado de loading
+  const { isLoading } = useCrudCategorias({
+    initialFilters: {},
+    initialSort: { field: 'nombre', direction: 'asc' },
+    initialPageSize: 50
+  })
   const handleCreate = () => {
     console.log("Crear nueva categoría")
     // La tabla maneja la creación internamente
@@ -28,6 +36,18 @@ export default function CategoriasPage() {
   const handleExport = (categorias: any[]) => {
     console.log("Exportar categorías:", categorias)
     // La tabla maneja la exportación internamente
+  }
+
+  // Mostrar skeleton mientras carga
+  if (isLoading) {
+    return (
+      <SkeletonTableWithHeader 
+        title="Categorías"
+        description="Gestiona las categorías de rifas del sistema. Las categorías ayudan a organizar y clasificar las rifas."
+        rows={6} 
+        columns={4} 
+      />
+    )
   }
 
   return (

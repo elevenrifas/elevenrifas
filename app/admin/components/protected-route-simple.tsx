@@ -1,6 +1,6 @@
 "use client"
 
-import React from "react"
+import React, { useState, useEffect } from "react"
 import { usePathname } from "next/navigation"
 import { Loader2 } from "lucide-react"
 import { useAdminAuthState } from "@/lib/context/AdminAuthContextSimpleStorage"
@@ -19,10 +19,21 @@ interface ProtectedRouteProps {
 export const ProtectedRouteSimple = React.memo(({ children }: ProtectedRouteProps) => {
   const { user, isAdmin, isLoading } = useAdminAuthState()
   const pathname = usePathname()
+  const [isHydrated, setIsHydrated] = useState(false)
+  
+  // Control de hidratación para evitar flicker
+  useEffect(() => {
+    setIsHydrated(true)
+  }, [])
   
   // Si estamos en la página de login, no necesitamos protección
   if (pathname === '/admin/login') {
     return <>{children}</>
+  }
+
+  // No renderizar nada hasta que esté hidratado (evita flicker)
+  if (!isHydrated) {
+    return null
   }
 
   // Mostrar loading solo si realmente está cargando

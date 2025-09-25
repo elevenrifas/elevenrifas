@@ -1,10 +1,18 @@
 "use client"
 
 import { RifasTable } from "@/app/admin/components/tables"
+import { SkeletonTable } from "@/components/ui/skeleton-table"
+import { useCrudRifas } from "@/hooks/use-crud-rifas"
 // import * as XLSX from 'xlsx' // Temporalmente deshabilitado para el build
 // El layout del grupo `(panel)` ya incluye Sidebar y Header
 
 export default function AdminRifasPage() {
+  // Hook para obtener estado de loading
+  const { isLoading } = useCrudRifas({
+    initialFilters: {},
+    initialSort: { field: 'fecha_creacion', direction: 'desc' },
+    initialPageSize: 50
+  })
   // Los callbacks están manejados directamente por la tabla RifasTable
   // que usa el hook useCrudRifas para toda la funcionalidad CRUD
   const handleCreate = () => {
@@ -25,6 +33,15 @@ export default function AdminRifasPage() {
   const handleView = (rifa: any) => {
     // La tabla maneja la visualización automáticamente
     console.log("Ver rifa - manejado por la tabla:", rifa)
+  }
+
+  // Mostrar skeleton mientras carga
+  if (isLoading) {
+    return (
+      <div className="px-4 lg:px-6">
+        <SkeletonTable rows={8} columns={6} />
+      </div>
+    )
   }
 
   return (

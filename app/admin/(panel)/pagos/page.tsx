@@ -1,6 +1,8 @@
 "use client"
 
 import { PagosVerificacionTable } from "@/app/admin/components/tables"
+import { SkeletonTable } from "@/components/ui/skeleton-table"
+import { useCrudPagos } from "@/hooks/use-crud-pagos"
 import { exportPagosToExcel } from "@/lib/utils/excel-export"
 
 // =====================================================
@@ -11,6 +13,12 @@ import { exportPagosToExcel } from "@/lib/utils/excel-export"
 // =====================================================
 
 export default function AdminPagosPage() {
+  // Hook para obtener estado de loading
+  const { isLoading } = useCrudPagos({
+    initialFilters: {},
+    initialSort: { field: 'fecha_pago', direction: 'desc' },
+    initialPageSize: 50
+  })
   const handleCreate = () => {
     console.log("Crear nuevo pago")
     // Aquí implementarías la lógica para abrir modal de creación
@@ -40,6 +48,15 @@ export default function AdminPagosPage() {
     } catch (error) {
       console.error('Error al exportar a Excel:', error)
     }
+  }
+
+  // Mostrar skeleton mientras carga
+  if (isLoading) {
+    return (
+      <div className="px-4 lg:px-6">
+        <SkeletonTable rows={8} columns={7} />
+      </div>
+    )
   }
 
   return (

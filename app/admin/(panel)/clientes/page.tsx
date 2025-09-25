@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import { ClientesTable } from '@/app/admin/components/tables/ClientesTable'
 import { ClienteViewModal } from '@/app/admin/components/modals/ClienteViewModal'
+import { SkeletonTableWithHeader } from '@/components/ui/skeleton-table'
+import { useAdminClientes } from '@/hooks/use-admin-clientes'
 import { exportClientesToExcel } from '@/lib/utils/excel-export'
 import type { AdminCliente } from '@/types'
 
@@ -14,6 +16,8 @@ import type { AdminCliente } from '@/types'
 // =====================================================
 
 export default function AdminClientesPage() {
+  // Hook para obtener estado de loading
+  const { isLoading } = useAdminClientes()
   // Estado para el modal de vista del cliente
   const [showViewModal, setShowViewModal] = useState(false)
   const [selectedCliente, setSelectedCliente] = useState<AdminCliente | null>(null)
@@ -38,6 +42,18 @@ export default function AdminClientesPage() {
     } catch (error) {
       console.error('Error al exportar clientes:', error)
     }
+  }
+
+  // Mostrar skeleton mientras carga
+  if (isLoading) {
+    return (
+      <SkeletonTableWithHeader 
+        title="Clientes"
+        description="Gestiona todos los clientes únicos del sistema de rifas. Los clientes se extraen automáticamente desde los tickets comprados."
+        rows={8} 
+        columns={5} 
+      />
+    )
   }
 
   return (
