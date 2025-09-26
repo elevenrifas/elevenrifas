@@ -69,7 +69,9 @@ export class PaymentEmailService {
       companyAddress: 'Venezuela',
       companyUrl: process.env.NEXT_PUBLIC_BASE_URL || 'https://elevenrifas.com',
       supportEmail: resendSupportEmail,
+      // Logo predefinido solicitado: logo_circular.png
       logoUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://elevenrifas.com'}/logo_circular.png`,
+      fallbackLogoUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://elevenrifas.com'}/logoblancorojo.png`,
       baseUrl: process.env.NEXT_PUBLIC_BASE_URL || 'https://elevenrifas.com'
     }
 
