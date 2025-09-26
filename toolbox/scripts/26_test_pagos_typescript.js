@@ -81,9 +81,9 @@ async function testPagosTypeScript() {
     
     const datosPagoSimulado = {
       tipo_pago: 'pago_movil',
-      monto_bs: rifa.precio_ticket * 145,
+      monto_bs: rifa.precio_ticket * (rifa.tasa || 12.3),
       monto_usd: rifa.precio_ticket,
-      tasa_cambio: 145,
+      tasa_cambio: rifa.tasa || 12.3,
       referencia: `TEST-${Date.now()}`,
       telefono_pago: '04120000000',
       banco_pago: 'Banco de Venezuela',

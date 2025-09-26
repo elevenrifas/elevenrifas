@@ -100,10 +100,10 @@ export default function MisRifasPage() {
                       className={`flex items-center gap-2 transition-all duration-300 hover:scale-105 ${
                         tipoBusqueda === "cedula"
                           ? "bg-[#fb0413] hover:bg-[#fb0413]/90 text-white"
-                          : "border-white text-white hover:bg-white/10"
+                          : "border-white text-black hover:bg-white/10"
                       }`}
                   >
-                    <User className="h-4 w-4" />
+                    <User className={`h-4 w-4 ${tipoBusqueda === "cedula" ? "text-white" : "text-black"}`} />
                     Cédula
                   </Button>
                   <Button
@@ -112,10 +112,10 @@ export default function MisRifasPage() {
                       className={`flex items-center gap-2 transition-all duration-300 hover:scale-105 ${
                         tipoBusqueda === "email"
                           ? "bg-[#fb0413] hover:bg-[#fb0413]/90 text-white"
-                          : "border-white text-white hover:bg-white/10"
+                          : "border-white text-black hover:bg-white/10"
                       }`}
                   >
-                    <Mail className="h-4 w-4" />
+                    <Mail className={`h-4 w-4 ${tipoBusqueda === "email" ? "text-white" : "text-black"}`} />
                     Correo
                   </Button>
                 </div>

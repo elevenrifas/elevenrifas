@@ -7,5 +7,7 @@
 export * from './email-validator'
 export * from './email-formatter'
 export * from './email-logger'
+export * from './dark-mode-protection'
+export * from './template-updater'
 
 

@@ -271,6 +271,7 @@ ${data.companyUrl}
   private generatePaymentVerifiedHTML(data: any): string {
     const amountFormatted = (data as any).amountFormatted || `$${data.totalAmount} USD`
     const fallbackLogo = data.fallbackLogoUrl || 'https://elevenrifas.com/logo_circular.png'
+    const primaryLogo = (data as any).logoUrl || 'https://elevenrifas.com/logoblancorojo.png'
     const ticketPills = this.generateTicketPills(data.ticketNumbers)
     
     return `<!DOCTYPE html>
@@ -278,9 +279,12 @@ ${data.companyUrl}
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
+  <meta name="x-apple-color-scheme" content="light dark">
   <title>Pago Verificado - ${data.rifaName}</title>
   <style>
-    body { font-family: Arial, sans-serif; line-height: 1.6; color: #ffffff; margin: 0; padding: 20px; background-color: #f5f5f5; }
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #ffffff !important; margin: 0; padding: 20px; background-color: #000000 !important; }
     * { box-sizing: border-box; }
     table { border-collapse: collapse; }
     img { border: 0; outline: none; text-decoration: none; -ms-interpolation-mode: bicubic; }
@@ -302,6 +306,36 @@ ${data.companyUrl}
     .amount { color: #e11d2a; font-weight: bold; }
     .footer { text-align: center; margin-top: 30px; font-size: 12px; color: #999999; }
     .footer a { color: #e11d2a; text-decoration: none; }
+    
+    /* Protección contra modo oscuro - Mantener diseño oscuro */
+    [data-ogsc] { color: inherit !important; }
+    [data-ogsb] { background-color: inherit !important; }
+    * { -webkit-text-size-adjust: 100%; }
+    
+    /* Forzar colores oscuros específicos */
+    .card { 
+      background: #000000 !important; 
+      color: #ffffff !important; 
+      border: 2px solid #e11d2a !important;
+    }
+    .card * { 
+      color: inherit !important; 
+      background-color: transparent !important;
+    }
+    .title { color: #e11d2a !important; }
+    .tickets-title { color: #e11d2a !important; }
+    .ticket-count { color: #e11d2a !important; }
+    .details-title { color: #e11d2a !important; }
+    .amount { color: #e11d2a !important; }
+    .ticket-pill { 
+      background: #e11d2a !important; 
+      color: #ffffff !important; 
+    }
+    
+    @media (prefers-color-scheme: light) {
+      * { color-scheme: dark only !important; }
+    }
+    
     @media (max-width: 600px) { 
       .container { padding: 10px; } 
       .card { padding: 20px; background: #000000 !important; color: #ffffff !important; }
@@ -310,22 +344,25 @@ ${data.companyUrl}
     }
   </style>
 </head>
-<body>
-  <div class="container">
-    <div class="card" style="background-color: #000000 !important; color: #ffffff !important; border: 2px solid #e11d2a !important;">
-      <img src="https://eleven-rifas-master.vercel.app/logoblancorojo.png" alt="Eleven Rifas" class="logo" onerror="this.onerror=null;this.src='${fallbackLogo}';" />
+<body data-ogsc data-ogsb>
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#000000" style="background-color:#000000 !important; width:100%;">
+    <tr>
+      <td align="center" bgcolor="#000000" style="background-color:#000000 !important; padding:0; margin:0;">
+  <div class="container" data-ogsc data-ogsb>
+    <div class="card" style="background-color: #000000 !important; color: #ffffff !important; border: 2px solid #e11d2a !important;" data-ogsc data-ogsb>
+      <img src="${primaryLogo}" alt="Eleven Rifas" class="logo" onerror="this.onerror=null;this.src='${fallbackLogo}';" />
       
       <h1 class="title" style="color: #e11d2a !important;">Pago Verificado</h1>
       
       <p class="greeting" style="color: #ffffff !important;">Hola <strong style="color: #ffffff !important;">${data.userName}</strong>, tu pago para la rifa <strong style="color: #ffffff !important;">${data.rifaName}</strong> ha sido verificado exitosamente.</p>
       
-      <div class="tickets-section">
+      <div class="tickets-section" data-ogsc data-ogsb>
         <h3 class="tickets-title" style="color: #e11d2a !important;">🎫 Tickets</h3>
         <div class="ticket-count" style="color: #e11d2a !important;">${data.ticketCount} ticket(s)</div>
         <div class="ticket-numbers">${ticketPills}</div>
       </div>
       
-      <div class="payment-details">
+      <div class="payment-details" data-ogsc data-ogsb>
         <h3 class="details-title" style="color: #e11d2a !important;">💳 Detalles del Pago</h3>
         <div class="detail-row">
           <span class="detail-label" style="color: #cccccc !important;">Rifa:</span>
@@ -345,12 +382,14 @@ ${data.companyUrl}
         </div>
       </div>
       
-      <div class="footer" style="color: #999999 !important;">
+      <div class="footer" style="color: #999999 !important;" data-ogsc data-ogsb>
         <p>¿Dudas? Escríbenos a <a href="mailto:${data.supportEmail}" style="color: #e11d2a !important;">${data.supportEmail}</a></p>
         <p><strong style="color: #ffffff !important;">${data.companyName}</strong> · ${data.companyAddress}</p>
       </div>
     </div>
-  </div>
+      </td>
+    </tr>
+  </table>
 </body>
 </html>`
   }

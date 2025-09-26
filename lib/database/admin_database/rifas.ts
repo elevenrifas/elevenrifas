@@ -323,7 +323,7 @@ export async function adminCreateRifa(datos: RifasInsertCustom): Promise<{ succe
         tickets_disponibles: datos.tickets_disponibles || datos.total_tickets || 0,
         numero_tickets_comprar: datos.numero_tickets_comprar || [1, 2, 3, 5, 10],
         progreso_manual: datos.progreso_manual !== undefined ? datos.progreso_manual : null,
-        tasa: datos.tasa || 145
+        tasa: datos.tasa || 12.3
       }
 
       const { data, error } = await createAdminQuery('rifas')

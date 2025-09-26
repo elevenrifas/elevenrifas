@@ -8,7 +8,7 @@ import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { formatCurrencyVE } from "@/lib/formatters";
 import { useRifas, useTicketNumbersFromContext } from "@/lib/context/RifasContext";
-import { convertCurrency, getRifaExchangeRate, calculateTicketTotals, formatCurrencyUSD } from "@/lib/utils/currency-converter";
+import { convertCurrency, getRifaExchangeRate, getDefaultExchangeRate, calculateTicketTotals, formatCurrencyUSD } from "@/lib/utils/currency-converter";
 import { Rifa, DatosPersona, DatosPago } from "@/types";
 import { getRifaFull } from "@/lib/database/rifas";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -19,6 +19,7 @@ import { useLoadingOverlay } from '@/components/ui/loading-overlay';
 import { useTicketAvailability } from '@/hooks';
 import { getTicketAvailabilityStats } from '@/lib/database/utils/ticket-generator';
 import { getVenezuelaDateClient } from '@/lib/utils/venezuela-date-client';
+import { paymentDataConfig, getPaymentMethodData, generatePagoMovilText, formatPhoneNumber, formatCedula } from '@/lib/config/payment-data.conf';
 
 // Componente para el Paso 1: Cantidad de tickets
 function PasoCantidad({ cantidad, setCantidad, precioTicket, rifaId, isRifaPausada, onShowPausedModal }: {
@@ -279,9 +280,8 @@ function PasoMetodoPago({ metodoPago, setMetodoPago }: {
 }) {
   const metodos = [
     { id: "pago_movil", nombre: "Pago Móvil", icono: <Smartphone className="h-8 w-8" />, descripcion: "Transferencia bancaria vía móvil" },
-    { id: "binance", nombre: "Binance", icono: <Wallet className="h-8 w-8" />, descripcion: "Pago con USDT (TRC20)" },
+    { id: "binance", nombre: "Binance Pay", icono: <Wallet className="h-8 w-8" />, descripcion: "Pago con Binance Pay" },
     { id: "zelle", nombre: "Zelle", icono: <Globe className="h-8 w-8" />, descripcion: "Transferencia bancaria internacional" },
-    { id: "zinli", nombre: "Zinli", icono: <Zap className="h-8 w-8" />, descripcion: "Pago a billetera digital" },
     { id: "paypal", nombre: "PayPal", icono: <CreditCard className="h-8 w-8" />, descripcion: "Pago online internacional" },
     { id: "efectivo", nombre: "Efectivo", icono: <Banknote className="h-8 w-8" />, descripcion: "Pago físico en efectivo" }
   ];
@@ -390,7 +390,7 @@ function PasoDatosPersona({ datos, setDatos }: {
             type="tel"
             value={datos.telefono}
             onChange={(e) => handleChange("telefono", e.target.value)}
-            placeholder="0412-1234567"
+            placeholder="04121234567"
             className={`w-full px-4 py-3 rounded-xl border ${datos.telefono && !telefonoValido ? 'border-red-500' : 'border-slate-300'} bg-white/10 text-white placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-white backdrop-blur-sm`}
           />
           {datos.telefono && !telefonoValido && (
@@ -501,8 +501,7 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
       
       case 'paypal':
         const correoPaypalValido = validarLargo(datosPago.correoPaypal || '', 2, 50).valido;
-        const referenciaValidaPaypal = validarLargo(datosPago.referencia || '', 3, 30).valido;
-        return { correoPaypalValido, referenciaValida: referenciaValidaPaypal };
+        return { correoPaypalValido };
       
       case 'efectivo':
         const fechaVisita = datosPago.fechaVisita || '';
@@ -547,8 +546,8 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
 
   const copiarPagoMovilTodo = async () => {
     try {
-      const monto = (cantidad * convertCurrency(precioTicket, 'USD', 'VES', exchangeRate)).toFixed(2);
-      const contenido = `0102\nJ12345678\n0412550123\n${monto}`;
+      const monto = cantidad * convertCurrency(precioTicket, 'USD', 'VES', exchangeRate);
+      const contenido = generatePagoMovilText(monto);
       await navigator.clipboard.writeText(contenido);
       toast.success("¡Datos de Pago Móvil copiados!");
     } catch (err) {
@@ -586,9 +585,9 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
                   </button>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span>• <strong>Teléfono:</strong> 0412-555-0123</span>
+                  <span>• <strong>Teléfono:</strong> {getPaymentMethodData('pago_movil').phone}</span>
                   <button
-                    onClick={() => copiarAlPortapapeles('0412-555-0123')}
+                    onClick={() => copiarAlPortapapeles(getPaymentMethodData('pago_movil').phone)}
                     className="ml-2 p-1 hover:bg-white/20 rounded transition-colors"
                     title="Copiar teléfono"
                   >
@@ -596,9 +595,9 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
                   </button>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span>• <strong>Banco:</strong> Banco de Venezuela</span>
+                  <span>• <strong>Banco:</strong> {getPaymentMethodData('pago_movil').bank}</span>
                   <button
-                    onClick={() => copiarAlPortapapeles('Banco de Venezuela')}
+                    onClick={() => copiarAlPortapapeles(getPaymentMethodData('pago_movil').bank)}
                     className="ml-2 p-1 hover:bg-white/20 rounded transition-colors"
                     title="Copiar banco"
                   >
@@ -606,9 +605,9 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
                   </button>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span>• <strong>Cédula:</strong> 12.345.678</span>
+                  <span>• <strong>Cédula:</strong> {getPaymentMethodData('pago_movil').cedula}</span>
                   <button
-                    onClick={() => copiarAlPortapapeles('12.345.678')}
+                    onClick={() => copiarAlPortapapeles(getPaymentMethodData('pago_movil').cedula)}
                     className="ml-2 p-1 hover:bg-white/20 rounded transition-colors"
                     title="Copiar cédula"
                   >
@@ -737,23 +736,13 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
           <div className="space-y-6">
             <div className="rounded-lg border border-slate-300 p-4 bg-white/10 backdrop-blur-sm">
               <div className="text-sm text-white space-y-2">
-                <div className="font-medium">💎 Datos para Binance:</div>
+                <div className="font-medium">💎 Datos para Binance Pay:</div>
                 <div className="flex items-center justify-between">
-                  <span>• <strong>Billetera:</strong> TRC20: TQn9Y2khDD8...</span>
+                  <span>• <strong>ID Binance Pay:</strong> {getPaymentMethodData('binance').wallet}</span>
                   <button
-                    onClick={() => copiarAlPortapapeles('TQn9Y2khDD8...')}
+                    onClick={() => copiarAlPortapapeles(getPaymentMethodData('binance').wallet || '')}
                     className="ml-2 p-1 hover:bg-white/20 rounded transition-colors"
-                    title="Copiar billetera"
-                  >
-                    <Copy className="h-4 w-4 text-white hover:text-slate-200" />
-                  </button>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>• <strong>Red:</strong> TRC20 (Tron)</span>
-                  <button
-                    onClick={() => copiarAlPortapapeles('TRC20')}
-                    className="ml-2 p-1 hover:bg-white/20 rounded transition-colors"
-                    title="Copiar red"
+                    title="Copiar ID Binance Pay"
                   >
                     <Copy className="h-4 w-4 text-white hover:text-slate-200" />
                   </button>
@@ -832,9 +821,9 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
               <div className="text-sm text-white space-y-2">
                 <div className="font-medium">💳 Datos para Zelle:</div>
                 <div className="flex items-center justify-between">
-                  <span>• <strong>Correo:</strong> pagos@elevenrifas.com</span>
+                  <span>• <strong>Correo:</strong> {getPaymentMethodData('zelle').email}</span>
                   <button
-                    onClick={() => copiarAlPortapapeles('pagos@elevenrifas.com')}
+                    onClick={() => copiarAlPortapapeles(getPaymentMethodData('zelle').email || '')}
                     className="ml-2 p-1 hover:bg-white/20 rounded transition-colors"
                     title="Copiar correo"
                   >
@@ -842,9 +831,9 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
                   </button>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span>• <strong>Nombre:</strong> Eleven Rifas</span>
+                  <span>• <strong>Nombre:</strong> {getPaymentMethodData('zelle').name}</span>
                   <button
-                    onClick={() => copiarAlPortapapeles('Eleven Rifas')}
+                    onClick={() => copiarAlPortapapeles(getPaymentMethodData('zelle').name || '')}
                     className="ml-2 p-1 hover:bg-white/20 rounded transition-colors"
                     title="Copiar nombre"
                   >
@@ -932,21 +921,11 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
                     </button>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span>• <strong>Monto:</strong> {formatCurrencyVE(cantidad * convertCurrency(precioTicket, 'USD', 'VES', exchangeRate))}</span>
+                    <span>• <strong>Monto:</strong> {formatCurrencyUSD(cantidad * precioTicket)}</span>
                     <button
-                      onClick={() => copiarAlPortapapeles((cantidad * convertCurrency(precioTicket, 'USD', 'VES', exchangeRate)).toString())}
+                      onClick={() => copiarAlPortapapeles((cantidad * precioTicket).toFixed(2))}
                       className="ml-2 p-1 hover:bg-white/20 rounded transition-colors"
                       title="Copiar monto"
-                    >
-                      <Copy className="h-4 w-4 text-white hover:text-slate-200" />
-                    </button>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>• <strong>Referencia:</strong> Tu nombre + fecha</span>
-                    <button
-                      onClick={() => copiarAlPortapapeles('REF123456')}
-                      className="ml-2 p-1 hover:bg-white/20 rounded transition-colors"
-                      title="Copiar referencia"
                     >
                       <Copy className="h-4 w-4 text-white hover:text-slate-200" />
                     </button>
@@ -1015,9 +994,9 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
                 <div className="text-sm text-white space-y-2">
                   <div className="font-medium">💳 Datos para PayPal:</div>
                   <div className="flex items-center justify-between">
-                    <span>• <strong>Correo:</strong> pagos@elevenrifas.com</span>
+                    <span>• <strong>Correo:</strong> {getPaymentMethodData('paypal').email}</span>
                     <button
-                      onClick={() => copiarAlPortapapeles('pagos@elevenrifas.com')}
+                      onClick={() => copiarAlPortapapeles(getPaymentMethodData('paypal').email || '')}
                       className="ml-2 p-1 hover:bg-white/20 rounded transition-colors"
                       title="Copiar correo"
                     >
@@ -1034,16 +1013,6 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
                       <Copy className="h-4 w-4 text-white hover:text-slate-200" />
                     </button>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span>• <strong>Referencia:</strong> Tu nombre + fecha</span>
-                    <button
-                      onClick={() => copiarAlPortapapeles('REF123456')}
-                      className="ml-2 p-1 hover:bg-white/20 rounded transition-colors"
-                      title="Copiar referencia"
-                    >
-                      <Copy className="h-4 w-4 text-white hover:text-slate-200" />
-                    </button>
-                  </div>
                 </div>
               </div>
               
@@ -1054,17 +1023,6 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
                   value={datosPago.correoPaypal || ""}
                   onChange={(e) => handleChange("correoPaypal", e.target.value)}
                   placeholder="Nombre del pagador"
-                  className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white/10 text-white placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-white backdrop-blur-sm"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-white mb-2">Referencia</label>
-                <input
-                  type="text"
-                  value={datosPago.referencia || ""}
-                  onChange={(e) => handleChange("referencia", e.target.value)}
-                  placeholder="Referencia del pago"
                   className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white/10 text-white placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-white backdrop-blur-sm"
                 />
               </div>
@@ -1108,9 +1066,9 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
                 <div className="text-sm text-white space-y-2">
                   <div className="font-medium">💵 Datos para Pago en Efectivo:</div>
                   <div className="flex items-center justify-between">
-                    <span>• <strong>Dirección:</strong> Av. Principal #123, Caracas</span>
+                    <span>• <strong>Dirección:</strong> {getPaymentMethodData('efectivo').address}</span>
                     <button
-                      onClick={() => copiarAlPortapapeles('Av. Principal #123, Caracas')}
+                      onClick={() => copiarAlPortapapeles(getPaymentMethodData('efectivo').address || '')}
                       className="ml-2 p-1 hover:bg-white/20 rounded transition-colors"
                       title="Copiar dirección"
                     >
@@ -1118,9 +1076,9 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
                     </button>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span>• <strong>Horario:</strong> Lunes a Viernes 9:00 AM - 6:00 PM</span>
+                    <span>• <strong>Horario:</strong> {getPaymentMethodData('efectivo').schedule}</span>
                     <button
-                      onClick={() => copiarAlPortapapeles('Lunes a Viernes 9:00 AM - 6:00 PM')}
+                      onClick={() => copiarAlPortapapeles(getPaymentMethodData('efectivo').schedule || '')}
                       className="ml-2 p-1 hover:bg-white/20 rounded transition-colors"
                       title="Copiar horario"
                     >
@@ -1128,21 +1086,11 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
                     </button>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span>• <strong>Monto:</strong> {formatCurrencyVE(cantidad * convertCurrency(precioTicket, 'USD', 'VES', exchangeRate))}</span>
+                    <span>• <strong>Monto:</strong> {formatCurrencyUSD(cantidad * precioTicket)}</span>
                     <button
-                      onClick={() => copiarAlPortapapeles((cantidad * convertCurrency(precioTicket, 'USD', 'VES', exchangeRate)).toString())}
+                      onClick={() => copiarAlPortapapeles((cantidad * precioTicket).toFixed(2))}
                       className="ml-2 p-1 hover:bg-white/20 rounded transition-colors"
                       title="Copiar monto"
-                    >
-                      <Copy className="h-4 w-4 text-white hover:text-slate-200" />
-                    </button>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>• <strong>Contacto:</strong> 0412-555-0123</span>
-                    <button
-                      onClick={() => copiarAlPortapapeles('0412-555-0123')}
-                      className="ml-2 p-1 hover:bg-white/20 rounded transition-colors"
-                      title="Copiar contacto"
                     >
                       <Copy className="h-4 w-4 text-white hover:text-slate-200" />
                     </button>
@@ -1169,9 +1117,9 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
               <div className="text-sm text-white space-y-2">
                 <div className="font-medium">💳 Datos para Zelle:</div>
                 <div className="flex items-center justify-between">
-                  <span>• <strong>Email:</strong> pagos@elevenrifas.com</span>
+                  <span>• <strong>Email:</strong> {getPaymentMethodData('zelle').email}</span>
                   <button
-                    onClick={() => copiarAlPortapapeles('pagos@elevenrifas.com')}
+                    onClick={() => copiarAlPortapapeles(getPaymentMethodData('zelle').email || '')}
                     className="ml-2 p-1 hover:bg-white/20 rounded transition-colors"
                     title="Copiar email"
                   >
@@ -1350,9 +1298,9 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
               <div className="text-sm text-white space-y-2">
                 <div className="font-medium">💳 Datos para PayPal:</div>
                 <div className="flex items-center justify-between">
-                  <span>• <strong>Email:</strong> pagos@elevenrifas.com</span>
+                  <span>• <strong>Email:</strong> {getPaymentMethodData('paypal').email}</span>
                   <button
-                    onClick={() => copiarAlPortapapeles('pagos@elevenrifas.com')}
+                    onClick={() => copiarAlPortapapeles(getPaymentMethodData('paypal').email || '')}
                     className="ml-2 p-1 hover:bg-white/20 rounded transition-colors"
                     title="Copiar email"
                   >
@@ -1381,20 +1329,6 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
                 placeholder="Nombre del pagador"
                 className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white/10 text-white placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-white backdrop-blur-sm"
               />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-white mb-2">Referencia</label>
-              <input
-                type="text"
-                value={datosPago.referencia || ""}
-                onChange={(e) => handleChange("referencia", e.target.value)}
-                placeholder="Referencia del pago"
-                className={`w-full px-4 py-3 rounded-xl border ${datosPago.referencia && !validaciones.referenciaValida ? 'border-red-500' : 'border-slate-300'} bg-white/10 text-white placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-white backdrop-blur-sm`}
-              />
-              {datosPago.referencia && !validaciones.referenciaValida && (
-                <p className="text-red-400 text-xs mt-1">{validarLargo(datosPago.referencia || '', 3, 30).mensaje}</p>
-              )}
             </div>
 
             {/* Input de comprobante SIMPLE */}
@@ -1430,9 +1364,9 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
               <div className="text-sm text-muted-foreground space-y-2">
                 <div className="font-medium">💵 Datos para Pago en Efectivo:</div>
                 <div className="flex items-center justify-between">
-                  <span>• <strong>Dirección:</strong> Av. Principal, Caracas</span>
+                  <span>• <strong>Dirección:</strong> {getPaymentMethodData('efectivo').address}</span>
                   <button
-                    onClick={() => copiarAlPortapapeles('Av. Principal, Caracas')}
+                    onClick={() => copiarAlPortapapeles(getPaymentMethodData('efectivo').address || '')}
                     className="ml-2 p-1 hover:bg-gray-100 rounded transition-colors"
                     title="Copiar dirección"
                   >
@@ -1440,9 +1374,9 @@ function PasoDatosPago({ metodoPago, datosPago, setDatosPago, cantidad, precioTi
                   </button>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span>• <strong>Horario:</strong> Lunes a Viernes 9:00 AM - 5:00 PM</span>
+                  <span>• <strong>Horario:</strong> {getPaymentMethodData('efectivo').schedule}</span>
                   <button
-                    onClick={() => copiarAlPortapapeles('Lunes a Viernes 9:00 AM - 5:00 PM')}
+                    onClick={() => copiarAlPortapapeles(getPaymentMethodData('efectivo').schedule || '')}
                     className="ml-2 p-1 hover:bg-gray-100 rounded transition-colors"
                     title="Copiar horario"
                   >
@@ -1619,7 +1553,7 @@ function PasoReportePago({ rifa, cantidad, metodoPago, datosPersona, exchangeRat
                   <span className="font-medium text-white">Método:</span>
                   <p className="text-slate-200">{
                     metodoPago === "pago_movil" ? "Pago Móvil" : 
-                    metodoPago === "binance" ? "Binance" : 
+                    metodoPago === "binance" ? "Binance Pay" : 
                     metodoPago === "zelle" ? "Zelle" :
                     metodoPago === "zinli" ? "Zinli" :
                     metodoPago === "paypal" ? "PayPal" : 
@@ -1676,7 +1610,7 @@ function ComprarPageContent() {
   const [showPausedModal, setShowPausedModal] = useState(false);
   
   // Obtener tasa de cambio individual de la rifa o usar fallback
-  const exchangeRate = rifaActiva ? getRifaExchangeRate(rifaActiva.tasa) : 145;
+  const exchangeRate = rifaActiva ? getRifaExchangeRate(rifaActiva.tasa) : getDefaultExchangeRate();
   
   // Hook del loading overlay
   const { showLoading, hideLoading, updateMessage, LoadingComponent } = useLoadingOverlay();
@@ -2242,7 +2176,6 @@ function ComprarPageContent() {
                 && !!datosPago.comprobantePago;
             case 'paypal':
               return validarLargo((datosPago as any).correoPaypal || '', 2, 50)
-                && validarLargo((datosPago as any).referencia || '', 3, 30)
                 && !!datosPago.comprobantePago;
             case 'efectivo':
               const fechaVisita = (datosPago as any).fechaVisita;

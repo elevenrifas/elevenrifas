@@ -45,10 +45,10 @@ export function convertCurrency(
 
 /**
  * Obtiene la tasa de cambio por defecto
- * @returns Tasa de cambio por defecto (145 Bs/USD)
+ * @returns Tasa de cambio por defecto (12.3 Bs/USD)
  */
 export function getDefaultExchangeRate(): number {
-  return 145; // Fallback para rifas sin tasa configurada
+  return 12.3; // Fallback para rifas sin tasa configurada (valor por defecto del schema)
 }
 
 /**
