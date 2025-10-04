@@ -96,6 +96,8 @@ export interface UseCrudPagosReturn {
   // Utilidades
   refreshPagos: () => Promise<void>
   exportPagos: (pagos?: AdminPago[]) => void
+  // Sync local updates without fetching
+  updatePagoLocal: (id: string, updates: Partial<AdminPago>) => void
 }
 
 export function useCrudPagos(options: {
@@ -350,6 +352,13 @@ export function useCrudPagos(options: {
     }
   }, [refreshPagos])
 
+  // Actualizar pago en memoria (lista y seleccionado) sin ir a BD
+  const updatePagoLocal = useCallback((id: string, updates: Partial<AdminPago>) => {
+    if (!id) return
+    setPagos(prev => prev.map(p => p.id === id ? { ...p, ...updates } as AdminPago : p))
+    setSelectedPago(prev => prev && prev.id === id ? ({ ...prev, ...updates } as AdminPago) : prev)
+  }, [])
+
   // Operaciones de UI
   const openCreateModal = useCallback(() => setShowCreateModal(true), [])
   const closeCreateModal = useCallback(() => setShowCreateModal(false), [])
@@ -499,6 +508,7 @@ export function useCrudPagos(options: {
     
     // Utilidades
     refreshPagos,
-    exportPagos
+    exportPagos,
+    updatePagoLocal
   }
 }

@@ -14,10 +14,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { CheckCircle, AlertTriangle, User, Key, Shield, Search, CheckCircle2, XCircle, Phone, Hash, Mail, Calendar, DollarSign, IdCard, Building, Ticket, Gift } from "lucide-react"
+import { CheckCircle, AlertTriangle, User, Key, Shield, Search, CheckCircle2, XCircle, Phone, Hash, Mail, Calendar, DollarSign, IdCard, Building, Ticket, Gift, Edit, Save, X } from "lucide-react"
 import type { AdminPago } from "@/lib/database/admin_database/pagos"
 import { adminListUsuariosVerificacion, adminVerifyUsuarioPin } from "@/lib/database/admin_database/usuarios_verificacion"
-import { adminValidateReferenciaDuplicada } from "@/lib/database/admin_database/pagos"
+import { adminValidateReferenciaDuplicada, adminUpdatePago, adminUpdateTickets } from "@/lib/database/admin_database/pagos"
 import { SelectTicketsEspecialesDialog } from "./SelectTicketsEspecialesDialog"
 
 // =====================================================
@@ -36,6 +36,7 @@ interface VerifyPagoModalProps {
   ) => Promise<{ success: boolean; error?: string }>
   pago: AdminPago | null
   isSubmitting?: boolean
+  onLocalUpdate?: (updates: Partial<AdminPago>) => void
 }
 
 export function VerifyPagoModal({
@@ -43,7 +44,8 @@ export function VerifyPagoModal({
   onClose,
   onConfirm,
   pago,
-  isSubmitting = false
+  isSubmitting = false,
+  onLocalUpdate
 }: VerifyPagoModalProps) {
   const [usuarioSeleccionado, setUsuarioSeleccionado] = React.useState("")
   const [pin, setPin] = React.useState("")
@@ -68,6 +70,14 @@ export function VerifyPagoModal({
   const [especialesSeleccionados, setEspecialesSeleccionados] = React.useState<string[]>([])
   const [modoEspecialDialog, setModoEspecialDialog] = React.useState<'agregar' | 'reemplazar'>('agregar')
 
+  // Estados para edición inline
+  const [editingReferencia, setEditingReferencia] = React.useState(false)
+  const [editingCorreo, setEditingCorreo] = React.useState(false)
+  const [referenciaEditada, setReferenciaEditada] = React.useState("")
+  const [correoEditado, setCorreoEditado] = React.useState("")
+  const [isSaving, setIsSaving] = React.useState(false)
+  const [pagoLocal, setPagoLocal] = React.useState<AdminPago | null>(null)
+
   // Cargar usuarios de verificación cuando se abre el modal
   React.useEffect(() => {
     if (isOpen) {
@@ -84,8 +94,42 @@ export function VerifyPagoModal({
       setReferenciaValidada(false)
       setReferenciaError(null)
       setReferenciaDuplicada(false)
+      // Resetear estados de edición
+      setEditingReferencia(false)
+      setEditingCorreo(false)
+      setReferenciaEditada("")
+      setCorreoEditado("")
+      setIsSaving(false)
+      // Inicializar pago local
+      setPagoLocal(pago)
     }
   }, [isOpen, pago])
+
+  // Inicializar valores de edición cuando cambie el pago
+  React.useEffect(() => {
+    if (pago) {
+      setReferenciaEditada(pagoLocal?.referencia || pago.referencia || "")
+      setCorreoEditado(pagoLocal?.tickets?.[0]?.correo || pago.tickets?.[0]?.correo || "")
+    }
+  }, [pago, pagoLocal])
+
+  // Sincronizar el campo de validación de referencia cuando se actualice
+  React.useEffect(() => {
+    if (pagoLocal?.referencia) {
+      setReferencia(pagoLocal.referencia)
+    }
+  }, [pagoLocal?.referencia])
+
+  // Sincronizar el correo editado cuando se actualice pagoLocal (solo al guardar)
+  React.useEffect(() => {
+    if (pagoLocal?.tickets && pagoLocal.tickets.length > 0) {
+      const nuevoCorreo = pagoLocal.tickets[0].correo
+      // Solo actualizar si no estamos editando actualmente
+      if (nuevoCorreo && !editingCorreo) {
+        setCorreoEditado(nuevoCorreo)
+      }
+    }
+  }, [pagoLocal?.tickets, editingCorreo])
 
   // Función para cargar usuarios de verificación
   const loadUsuarios = async () => {
@@ -244,9 +288,105 @@ export function VerifyPagoModal({
     }
   }
 
+  // Función para guardar referencia editada
+  const handleSaveReferencia = async () => {
+    if (!referenciaEditada.trim() || !pago) return
+    
+    try {
+      setIsSaving(true)
+      
+      // Actualizar pago
+      const result = await adminUpdatePago(pago.id, {
+        referencia: referenciaEditada.trim()
+      })
+      
+      if (result.success) {
+        // Actualizar estado local
+        setPagoLocal(prev => prev ? { ...prev, referencia: referenciaEditada.trim() } : null)
+        // Notificar arriba para sincronizar tabla y selección
+        onLocalUpdate?.({ referencia: referenciaEditada.trim() })
+        
+        // La variable de referencia se sincroniza automáticamente via useEffect
+        // Resetear estados de validación para que se pueda validar la nueva referencia
+        setReferenciaValidada(false)
+        setReferenciaError(null)
+        setReferenciaDuplicada(false)
+        
+        setEditingReferencia(false)
+        setReferenciaEditada("")
+        
+        // Mostrar mensaje de éxito
+        console.log('✅ Referencia actualizada exitosamente')
+      } else {
+        setError(result.error || 'Error al actualizar la referencia')
+      }
+    } catch (error) {
+      console.error('Error al guardar referencia:', error)
+      setError('Error inesperado al actualizar la referencia')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  // Función para guardar correo editado
+  const handleSaveCorreo = async () => {
+    if (!correoEditado.trim() || !pago) return
+    
+    try {
+      setIsSaving(true)
+      
+      // Actualizar todos los tickets del pago
+      const ticketIds = pago.tickets?.map(t => t.id) || []
+      
+      if (ticketIds.length > 0) {
+        const result = await adminUpdateTickets(ticketIds, {
+          correo: correoEditado.trim()
+        })
+        
+        if (result.success) {
+          // Actualizar estado local
+          setPagoLocal(prev => prev ? {
+            ...prev,
+            tickets: prev.tickets?.map(t => ({ ...t, correo: correoEditado.trim() }))
+          } : null)
+          // Notificar arriba para sincronizar tabla y selección con tickets actualizados
+          onLocalUpdate?.({
+            tickets: pagoLocal?.tickets?.map(t => ({ ...t, correo: correoEditado.trim() }))
+          })
+          setEditingCorreo(false)
+          setCorreoEditado("")
+          
+          // Mostrar mensaje de éxito
+          console.log('✅ Correo actualizado exitosamente')
+          console.log('📧 Nuevo correo para tickets:', correoEditado.trim())
+        } else {
+          setError(result.error || 'Error al actualizar el correo')
+        }
+      }
+    } catch (error) {
+      console.error('Error al guardar correo:', error)
+      setError('Error inesperado al actualizar el correo')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  // Función para cancelar edición de referencia
+  const handleCancelReferencia = () => {
+    setReferenciaEditada(pagoLocal?.referencia || pago?.referencia || "")
+    setEditingReferencia(false)
+  }
+
+  // Función para cancelar edición de correo
+  const handleCancelCorreo = () => {
+    setCorreoEditado(pagoLocal?.tickets?.[0]?.correo || pago?.tickets?.[0]?.correo || "")
+    setEditingCorreo(false)
+  }
+
   if (!pago) return null
 
-  const tickets = pago.tickets || []
+  const pagoActual = pagoLocal || pago
+  const tickets = pagoActual.tickets || []
   const primerTicket = tickets[0]
   const rifa = primerTicket?.rifas
 
@@ -306,8 +446,60 @@ export function VerifyPagoModal({
                   <div className="flex items-start gap-3">
                     <Mail className="h-4 w-4 text-gray-500 mt-0.5" />
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-gray-900 break-words break-all">{primerTicket?.correo || 'N/A'}</p>
-                      <p className="text-xs text-gray-500">Correo</p>
+                      {editingCorreo ? (
+                        <div className="space-y-2">
+                          <Input
+                            type="email"
+                            value={correoEditado}
+                            onChange={(e) => setCorreoEditado(e.target.value)}
+                            placeholder="Nuevo correo electrónico"
+                            className="text-sm"
+                            disabled={isSaving}
+                            autoFocus
+                          />
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              onClick={handleSaveCorreo}
+                              disabled={isSaving || !correoEditado.trim()}
+                              className="h-6 px-2 text-xs"
+                            >
+                              {isSaving ? (
+                                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white" />
+                              ) : (
+                                <Save className="h-3 w-3" />
+                              )}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={handleCancelCorreo}
+                              disabled={isSaving}
+                              className="h-6 px-2 text-xs"
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-start gap-2">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium text-gray-900 break-words break-all">
+                              {(pagoLocal?.tickets?.[0]?.correo || primerTicket?.correo) || 'N/A'}
+                            </p>
+                            <p className="text-xs text-gray-500">Correo</p>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setEditingCorreo(true)}
+                            className="h-6 w-6 p-0 hover:bg-gray-100 mt-0.5"
+                            disabled={isSaving}
+                          >
+                            <Edit className="h-3 w-3 text-gray-400 hover:text-gray-600" />
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -317,27 +509,76 @@ export function VerifyPagoModal({
             {/* Detalles del Pago - Sección separada */}
             <div className="mb-6">
               <h4 className="font-medium text-gray-900 text-sm uppercase tracking-wide border-b border-gray-200 pb-2 mb-4">
-                Detalles del Pago - <span className="capitalize text-blue-600">{pago.tipo_pago.replace('_', ' ')}</span>
+                Detalles del Pago - <span className="capitalize text-blue-600">{pagoActual.tipo_pago.replace('_', ' ')}</span>
               </h4>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Columna Izquierda */}
                 <div className="space-y-4">
-                  {pago.referencia && (
+                  {(pagoLocal?.referencia || pago?.referencia) && (
                     <div className="flex items-center gap-3">
                       <Hash className="h-4 w-4 text-gray-500" />
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{pago.referencia}</p>
-                        <p className="text-xs text-gray-500">Referencia</p>
+                      <div className="flex-1">
+                        {editingReferencia ? (
+                          <div className="space-y-2">
+                            <Input
+                              value={referenciaEditada}
+                              onChange={(e) => setReferenciaEditada(e.target.value)}
+                              placeholder="Nueva referencia"
+                              className="text-sm"
+                              disabled={isSaving}
+                              autoFocus
+                            />
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                onClick={handleSaveReferencia}
+                                disabled={isSaving || !referenciaEditada.trim()}
+                                className="h-6 px-2 text-xs"
+                              >
+                                {isSaving ? (
+                                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white" />
+                                ) : (
+                                  <Save className="h-3 w-3" />
+                                )}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={handleCancelReferencia}
+                                disabled={isSaving}
+                                className="h-6 px-2 text-xs"
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-gray-900">{pagoLocal?.referencia || pago?.referencia}</p>
+                              <p className="text-xs text-gray-500">Referencia</p>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setEditingReferencia(true)}
+                              className="h-6 w-6 p-0 hover:bg-gray-100"
+                              disabled={isSaving}
+                            >
+                              <Edit className="h-3 w-3 text-gray-400 hover:text-gray-600" />
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
                   
-                  {pago.telefono_pago && (
+                  {pagoActual.telefono_pago && (
                     <div className="flex items-center gap-3">
                       <Phone className="h-4 w-4 text-gray-500" />
                       <div>
-                        <p className="text-sm font-medium text-gray-900">{pago.telefono_pago}</p>
+                        <p className="text-sm font-medium text-gray-900">{pagoActual.telefono_pago}</p>
                         <p className="text-xs text-gray-500">Teléfono de Pago</p>
                       </div>
                     </div>
@@ -347,7 +588,7 @@ export function VerifyPagoModal({
                     <Calendar className="h-4 w-4 text-gray-500" />
                     <div>
                       <p className="text-sm font-medium text-gray-900">
-                        {pago.fecha_pago ? new Date(pago.fecha_pago).toLocaleDateString('es-ES') : 'N/A'}
+                        {pagoActual.fecha_pago ? new Date(pagoActual.fecha_pago).toLocaleDateString('es-ES') : 'N/A'}
                       </p>
                       <p className="text-xs text-gray-500">Fecha de Pago</p>
                     </div>
@@ -356,7 +597,7 @@ export function VerifyPagoModal({
                   <div className="flex items-center gap-3">
                     <DollarSign className="h-4 w-4 text-gray-500" />
                     <div>
-                      <p className="text-sm font-medium text-gray-900 text-green-600">${pago.monto_usd.toFixed(2)}</p>
+                      <p className="text-sm font-medium text-gray-900 text-green-600">${pagoActual.monto_usd.toFixed(2)}</p>
                       <p className="text-xs text-gray-500">Monto USD</p>
                     </div>
                   </div>
@@ -364,31 +605,31 @@ export function VerifyPagoModal({
                 
                 {/* Columna Derecha */}
                 <div className="space-y-4">
-                  {pago.nombre_titular && (
+                  {pagoActual.nombre_titular && (
                     <div className="flex items-center gap-3">
                       <User className="h-4 w-4 text-gray-500" />
                       <div>
-                        <p className="text-sm font-medium text-gray-900">{pago.nombre_titular}</p>
+                        <p className="text-sm font-medium text-gray-900">{pagoActual.nombre_titular}</p>
                         <p className="text-xs text-gray-500">Nombre del Titular</p>
                       </div>
                     </div>
                   )}
                   
-                  {pago.cedula_pago && (
+                  {pagoActual.cedula_pago && (
                     <div className="flex items-center gap-3">
                       <IdCard className="h-4 w-4 text-gray-500" />
                       <div>
-                        <p className="text-sm font-medium text-gray-900">{pago.cedula_pago}</p>
+                        <p className="text-sm font-medium text-gray-900">{pagoActual.cedula_pago}</p>
                         <p className="text-xs text-gray-500">Cédula de Pago</p>
                       </div>
                     </div>
                   )}
                   
-                  {pago.banco_pago && (
+                  {pagoActual.banco_pago && (
                     <div className="flex items-center gap-3">
                       <Building className="h-4 w-4 text-gray-500" />
                       <div>
-                        <p className="text-sm font-medium text-gray-900">{pago.banco_pago}</p>
+                        <p className="text-sm font-medium text-gray-900">{pagoActual.banco_pago}</p>
                         <p className="text-xs text-gray-500">Banco</p>
                       </div>
                     </div>
@@ -414,24 +655,24 @@ export function VerifyPagoModal({
             </div>
 
             {/* Comprobante */}
-            {pago.comprobante_url && pago.comprobante_url.trim() !== '' && (
+            {pagoActual.comprobante_url && pagoActual.comprobante_url.trim() !== '' && (
               <div>
                 <h4 className="font-medium text-gray-900 text-sm uppercase tracking-wide border-b border-gray-200 pb-2 mb-4">
                   Comprobante
                 </h4>
                 <div
                   className="h-20 bg-gray-100 rounded-lg border border-gray-200 overflow-hidden cursor-pointer hover:border-blue-500 transition-colors"
-                  onClick={() => pago.comprobante_url && window.open(pago.comprobante_url, '_blank')}
+                  onClick={() => pagoActual.comprobante_url && window.open(pagoActual.comprobante_url, '_blank')}
                 >
                   <img
-                    src={pago.comprobante_url}
+                    src={pagoActual.comprobante_url}
                     alt="Comprobante de pago"
                     className="w-full h-full object-cover"
                     loading="eager"
                     decoding="async"
                     fetchPriority="high"
                     onError={() => {
-                      console.log('Error cargando imagen:', pago.comprobante_url)
+                      console.log('Error cargando imagen:', pagoActual.comprobante_url)
                     }}
                   />
                 </div>
@@ -649,6 +890,7 @@ export function VerifyPagoModal({
           setModoEspecialDialog(mode)
         }}
       />
+
     </Dialog>
   )
 }

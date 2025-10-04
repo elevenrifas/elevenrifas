@@ -186,7 +186,8 @@ export function PagosVerificacionTable({
     
     // Utilidades
     refreshPagos,
-    exportPagos
+    exportPagos,
+    updatePagoLocal
   } = useCrudPagos({
     initialFilters: {},
     initialSort: { field: 'fecha_pago', direction: 'desc' },
@@ -815,6 +816,12 @@ export function PagosVerificacionTable({
         onClose={closeVerifyModal}
         onConfirm={(verificadoPor, options) => verifyPago(selectedPago?.id || '', verificadoPor, options)}
         pago={selectedPago}
+        onLocalUpdate={(updates) => {
+          if (selectedPago?.id) {
+            // actualizar selección y fila en tabla sin fetch
+            updatePagoLocal(selectedPago.id, updates as any)
+          }
+        }}
         isSubmitting={isVerifying}
       />
 

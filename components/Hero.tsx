@@ -72,7 +72,7 @@ export function Hero() {
         {/* Recuadro rojo curvo MUCHO MÁS ALTO que se extiende más allá del viewport */}
         <div className={`relative mt-8 transition-all duration-1000 delay-600 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
           {/* Recuadro principal rojo - SIN BORDE INFERIOR */}
-          <div className="relative bg-[#fb0413] rounded-t-3xl p-6 lg:p-8 shadow-2xl min-h-[550px] lg:min-h-[600px] flex flex-col items-center justify-start">
+          <div className="relative bg-[#fb0413] rounded-t-3xl p-6 lg:p-8 shadow-2xl min-h-[400px] lg:min-h-[450px] flex flex-col items-center justify-start">
             {/* Contenido dentro del recuadro rojo - MÁS PEGADO AL TOPE */}
             <div className="text-center text-white space-y-6 mt-8 lg:mt-12">
               {/* Texto animado "¿LISTO PARA GANAR?" */}
@@ -140,7 +140,7 @@ export function Hero() {
           </div>
           
           {/* Imagen conectada con el contenedor */}
-          <div className="relative w-full h-[280px] lg:h-[320px] -mt-8 lg:-mt-12 mx-0">
+          <div className="relative w-full h-[300px] lg:h-[400px] -mt-16 lg:-mt-24 mx-0">
             <Image
               src="/3car-gift-with-red-ribbon-bqxzgz2ttsvm4e9a (1).jpg"
               alt="Familia ganadora con premios increíbles"

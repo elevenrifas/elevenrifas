@@ -671,6 +671,24 @@ export async function adminRejectPago(id: string, verificadoPor: string, rechazo
 /**
  * Validar si existe una referencia duplicada para el mismo tipo de pago y rifa
  */
+export async function adminUpdateTickets(ids: string[], data: any) {
+  return safeAdminQuery(
+    async () => {
+      if (!ids || ids.length === 0) {
+        throw new Error('No se proporcionaron IDs de tickets para actualizar')
+      }
+
+      const { error } = await createAdminQuery('tickets')
+        .update(data)
+        .in('id', ids)
+      
+      if (error) throw error
+      return { data: null, error: null }
+    },
+    'Error al actualizar tickets'
+  )
+}
+
 export async function adminValidateReferenciaDuplicada(
   referencia: string, 
   tipoPago: string, 
